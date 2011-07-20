@@ -50,7 +50,7 @@ master_doc = 'index'
 
 
 # General information about the project.
-project = 'dtlibs-doc'
+project = 'dtlibs'
 
 copyright = '2011, David Townshend'
 
@@ -181,7 +181,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'dtlibs-docdoc'
+htmlhelp_basename = 'dtlibs-doc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
