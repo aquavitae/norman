@@ -31,8 +31,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 
-              'sphinx.ext.autodoc', 
+extensions = ['sphinx.ext.todo',
+              'sphinx.ext.autodoc',
               'sphinx.ext.intersphinx']
 
 
@@ -60,7 +60,7 @@ copyright = '2011, David Townshend'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-      
+
 with open('../../version', 'r') as f:
     # The full version, including alpha/beta/rc tags.
     release = f.read()
@@ -242,4 +242,6 @@ man_pages = [('index', 'dtlibs-doc', 'dtlibs-doc Documentation', ['David Townshe
 todo_include_todos = True
 nitpicky = True
 intersphinx_mapping = {'python': ('http://docs.python.org/3.2',
-                                  'python_objects.inv')}
+                                  'python_objects.inv'),
+                       'sqlalchemy': ('http://www.sqlalchemy.org/docs',
+                                      'sqlalchemy_objects.inv')}
