@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2011 David Townshend
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 675 Mass Ave, Cambridge, MA 02139, USA.
+
+import collections
+import functools
+import weakref
+
+from .. import core
+
+from ._field import Field
+
+class _I:
+    ''' An empty, hashable and weak referenceable object.'''
+    pass
+
+
+class TableMeta(type):
+    ''' Metaclass for all tables.
+    
+    The methods provided by this metaclass are essentially those which apply
+    to the table (as opposed to those which apply records).
+    
+    Tables support a limited sequence-like interface, but support rapid
+    lookup through indexes.  Internally, each record is stored in a dict
+    with random numerical keys.  Indexes simply map record attributes to keys.
+    '''
+
+    def __new__(mcls, name, bases, cdict, database=None):
+        cls = type.__new__(mcls, name, bases, cdict)
+        cls._instances = {}
+        cls._indexes = {}
+        cls._fields = {}
+        if database is not None:
+            database.tables.add(cls)
+        for name, value in cdict.items():
+            if isinstance(value, Field):
+                value.name = name
+                cls._fields[name] = value
+                if value.index:
+                    cls._indexes[name] = collections.defaultdict(weakref.WeakSet)
+        return cls
+
+    def __init__(cls, name, bases, cdict, database=None):
+        super().__init__(name, bases, cdict)
+
+    def __len__(cls):
+        return len(cls._instances)
+
+    def __contains__(cls, record):
+        return record._key in cls._instances
+
+    def get(cls, **kwargs):
+        ''' A generator which iterates over records matching kwargs.'''
+        keys = kwargs.keys() & cls._indexes.keys()
+        if keys:
+            f = lambda a, b: a & b
+            matches = functools.reduce(f, (cls._indexes[key][kwargs[key]] for key in keys))
+            matches = [cls._instances[k] for k in matches]
+        else:
+            matches = cls._instances.values()
+        for m in matches:
+            if all(getattr(m, k) == v for k, v in kwargs.items()):
+                yield m
+
+    def delete(cls, records=None, **keywords):
+        ''' Delete records from the table.
+        
+        This will delete all instances in *records* which match *keywords*.
+        E.g.
+        
+        >>> class T(Table):
+        ...     id = Field()
+        ...     value = Field()
+        >>> records = [T(id=1, value='a'),
+        ...            T(id=2, value='b'),
+        ...            T(id=3, value='c'),
+        ...            T(id=4, value='b'),
+        ...            T(id=5, value='b'),
+        ...            T(id=6, value='c'),
+        ...            T(id=7, value='c'),
+        ...            T(id=8, value='b'),
+        ...            T(id=9, value='a'),
+        >>> [t.id for t in T.get()]
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> T.delete(records[:4], value='b')
+        >>> [t.id for t in T.get()]
+        [1, 3, 5, 6, 7, 8, 9]
+        
+        If no records are specified, then all are used.
+        
+        >>> T.delete(value='a')
+        >>> [t.id for t in T.get()]
+        [3, 5, 6, 7, 8]
+        
+        If no keywords are given, then all records in in *records* are deleted.
+        >>> T.delete(records[2:4])
+        >>> [t.id for t in T.get()]
+        [3, 5, 8]
+        
+        If neither records nor keywords are deleted, then the entire 
+        table is cleared.
+        '''
+        if records is None:
+            records = cls.get()
+        if isinstance(records, Table):
+            records = {records}
+        kwmatch = cls.get(**keywords)
+        rec = set(records) & set(kwmatch)
+        for rec in records:
+            del cls._instances[rec._key]
+
+    def fields(cls):
+        return cls._fields.keys()
+
+
+class Table(metaclass=TableMeta):
+
+    def __init__(self, **kwargs):
+        key = _I()
+        self._key = key
+        data = dict.fromkeys(self.__class__.fields(), None)
+        badkw = kwargs.keys() - data.keys()
+        if badkw:
+            raise AttributeError(badkw)
+        data.update(kwargs)
+        validate = self.validate
+        self.validate = core.none
+        try:
+            for k, v in data.items():
+                setattr(self, k, v)
+        finally:
+            self.validate = validate
+        self.validate()
+        self._instances[key] = self
+
+    def __setattr__(self, attr, value):
+        try:
+            field = getattr(self.__class__, attr)
+        except AttributeError:
+            field = None
+        if isinstance(field, Field):
+            oldvalue = getattr(self, attr)
+            # To avoid endless recursion if validate changes a value
+            if oldvalue == value:
+                return
+            super().__setattr__(attr, value)
+            try:
+                self.validate()
+            except:
+                super().__setattr__(attr, oldvalue)
+                raise
+            else:
+                if field.index:
+                    self._updateindex(attr, oldvalue, value)
+        else:
+            super().__setattr__(attr, value)
+
+    def _updateindex(self, name, oldvalue, newvalue):
+        index = self._indexes[name]
+        if oldvalue in index:
+            index[oldvalue].remove(self._key)
+        index[newvalue].add(self._key)
+
+    def validate(self):
+        return
+
