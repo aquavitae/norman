@@ -111,6 +111,14 @@ class TestTable:
         assert self.T.oid.index
         assert sorted(self.T._indexes.keys()) == ['name', 'oid']
 
+    def test_inherited_indexes(self):
+        'Test that indexes are created in inherited classes.'
+        class T(self.T):
+            pass
+        assert T.name.index
+        assert T.oid.index
+        assert sorted(T._indexes.keys()) == ['name', 'oid']
+
     def test_len(self):
         'len(Table) returns the number of records.'
         self.T(oid=1)
@@ -212,9 +220,10 @@ class TestTable:
         'Test the case where validate changes a value.'
         class T(self.T):
             def validate(self):
-                self.name = self.name.upper()
+                if self.name is not None:
+                    self.name = self.name.upper()
 
-        t = Table()
+        t = T()
         t.name = 'abc'
         assert t.name == 'ABC'
 
@@ -222,10 +231,11 @@ class TestTable:
         'Test the case where validate changes a value then fails.'
         class T(self.T):
             def validate(self):
-                self.name = self.name.upper()
-                assert len(self.name) == 3
+                if self.name is not None:
+                    self.name = self.name.upper()
+                    assert len(self.name) == 3
 
-        t = Table()
+        t = T()
         t.name = 'ABC'
         with assert_raised(ValueError):
             t.name = 'abcd'

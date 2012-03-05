@@ -253,25 +253,6 @@ class TestSimpleRecord(TestCase):
         assert i1 == {c1}, i1
         assert i2 == {c2}, i2
 
-#    def test_uniqueinstances(self):
-#        'Test that uniqueinstances returns a unique instance.'
-#        c1 = Child(name='name', id=1, number='3')
-#        c2 = Child(name='name', id=2, number='3')
-#        inst = Child.uniqueinstances(name='name', id=2)
-#        assert inst == {c2}
-
-    def test_instances_speed(self):
-        'instances should not slower than half dict lookup.'
-        count = 500
-        _ = [Child(name='name', id=i, number='3') for i in range(count)]
-        d = dict((i, i) for i in range(count))
-        timer = dev.Timer()
-        with timer(1):
-            d[100]
-        with timer(2):
-            Child.instances(name='name', id=100)
-        assert timer[2] < timer[1] / 2, (timer[1], timer[2])
-
     def test_prof(self):
         count = 1000
         _ = [Child(name='name', id=i, number='3') for i in range(count)]
@@ -341,12 +322,12 @@ class TestParent(TestCase):
         assert parent.child is None
         assert parent.child_name is None
 
-    def test_setattr_child_attribute(self):
-        'Setting a child attribute changes it in the child.'
-        child = Child(name='name', id=1, number=1)
-        parent = Parent(name='name', value=3, child=child)
-        parent.child_number = 2
-        assert child.number == 2
+#    def test_setattr_child_attribute(self):
+#        'Setting a child attribute changes it in the child.'
+#        child = Child(name='name', id=1, number=1)
+#        parent = Parent(name='name', value=3, child=child)
+#        parent.child_number = 2
+#        assert child.number == 2
 
     def test_setattr_child_unique(self):
         'Setting a unique child field sets a different child'

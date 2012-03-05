@@ -139,7 +139,7 @@ class Record(metaclass=_Meta):
         For example:
         
         >>> emails = []
-        >>> class Emails(Record):
+        >>> class Email(Record):
         ...     
         ...     @classmethod
         ...     def fields(cls):
@@ -168,12 +168,12 @@ class Record(metaclass=_Meta):
         >>> emails.append(Email(person=person, address='john@gmail.com'))
         >>> emails.append(Email(person=person, address='john@yahoo.com'))
         >>> [e.address for e in person.emails]
-        ['john@gmail.com', john@yahoo.com']
+        ['john@gmail.com', 'john@yahoo.com']
         
         It is also possible to use underscore notation:
         
         >>> person.emails_address
-        ['john@gmail.com', john@yahoo.com']
+        ['john@gmail.com', 'john@yahoo.com']
         '''
         return {}
 

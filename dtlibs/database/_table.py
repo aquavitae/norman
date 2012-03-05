@@ -18,6 +18,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import collections
+import copy
 import functools
 import weakref
 
@@ -48,7 +49,10 @@ class TableMeta(type):
         cls._fields = {}
         if database is not None:
             database.tables.add(cls)
-        for name, value in cdict.items():
+        fulldict = copy.copy(cdict)
+        for base in bases:
+            fulldict.update(base.__dict__)
+        for name, value in fulldict.items():
             if isinstance(value, Field):
                 value.name = name
                 cls._fields[name] = value
@@ -122,8 +126,8 @@ class TableMeta(type):
             records = {records}
         kwmatch = cls.get(**keywords)
         rec = set(records) & set(kwmatch)
-        for rec in records:
-            del cls._instances[rec._key]
+        for r in rec:
+            del cls._instances[r._key]
 
     def fields(cls):
         return cls._fields.keys()
@@ -159,12 +163,15 @@ class Table(metaclass=TableMeta):
             # To avoid endless recursion if validate changes a value
             if oldvalue == value:
                 return
-            super().__setattr__(attr, value)
+            field.__set__(self, value)
             try:
                 self.validate()
-            except:
-                super().__setattr__(attr, oldvalue)
-                raise
+            except Exception as err:
+                field.__set__(self, oldvalue)
+                if isinstance(err, AssertionError):
+                    raise ValueError(*err.args)
+                else:
+                    raise
             else:
                 if field.index:
                     self._updateindex(attr, oldvalue, value)
