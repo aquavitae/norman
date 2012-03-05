@@ -253,14 +253,6 @@ class TestSimpleRecord(TestCase):
         assert i1 == {c1}, i1
         assert i2 == {c2}, i2
 
-    def test_prof(self):
-        count = 1000
-        _ = [Child(name='name', id=i, number='3') for i in range(count)]
-        @dev.graph('test.pdf', 'pdf')
-        def f():
-            Child.instances(name='name', id=100)
-        f()
-
     def test_setattr(self):
         'Test setting an attribute.'
         c = Child(name='name', id=1, number=3)
