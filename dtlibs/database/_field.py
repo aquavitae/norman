@@ -17,11 +17,11 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-import collections
 
 class NotSet:
     ''' Senitinal indicating that the field value has not yet been set.'''
-    pass
+    def __new__(cls, *args, **kwargs):
+        raise TypeError("Cannot instantiate 'NotSet'")
 
 
 class Field:
@@ -39,24 +39,46 @@ class Field:
     
     Field options are set as keyword arguments when it is initialised
     
-    =========== ============================================================
-    Keyword     Description
-    =========== ============================================================
-    index       This field should be indexed.  Indexed fields are much
-                faster to look up.
-    =========== ============================================================
+    ========== ============ ===================================================
+    Keyword    Default      Description
+    ========== ============ ===================================================
+    unique     False        True if records should be unique on this field.
+                            In database terms, this is the same as setting
+                            a primary key.  If more than one field have this 
+                            set then records are expected to be unique on all
+                            of them.  Unique fields are always indexed.
+    index      False        True if the field should be indexed.  Indexed 
+                            fields are much faster to look up.  Setting
+                            ``unique = True`` implies ``index = True``
+    default    None         If missing, `NotSet` is used.
+    readonly   False        Prohibits setting the variable, unless its value
+                            is `NotSet`.  This can be used with *default*
+                            to simulate a constant.
+    ========== ============ ===================================================
+    
+    Note that *unique* and *index* are table-level controls, and are not used
+    by `Field` directly.  It is the responsibility of the table to
+    implement the necessary constraints and indexes.
     '''
 
-    def __init__(self, index=False):
-        self.index = index
+    def __init__(self, *, unique=False, index=False, default=NotSet,
+                 readonly=False):
+        self.unique = unique
+        self.index = index or unique
+        self.default = default
+        self.readonly = readonly
         self._data = {}
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
         else:
-            return self._data.get(instance, NotSet)
+            return self._data.get(instance, self.default)
 
     def __set__(self, instance, value):
         ''' Set a value for an instance.'''
+        if (self.readonly and
+            self.__get__(instance, instance.__class__) is not NotSet):
+            raise TypeError('Field is read only')
         self._data[instance] = value
+

@@ -18,11 +18,18 @@
 
 from dtlibs import core, dev
 from dtlibs.mock import assert_raised
-from dtlibs.database import Field
+from dtlibs.database import Field, NotSet
 
 class MockTable:
     _updateinstance = core.none
     validate = core.none
+
+
+def test_NotSet():
+    'Test that notset cannot be instantiated.'
+    with assert_raised(TypeError):
+        NotSet()
+
 
 class TestSingleField:
 
@@ -33,8 +40,10 @@ class TestSingleField:
 
     def test_kwargs(self):
         'Test that kwargs are set'
-        f = Field(index=True)
+        f = Field(index=True, default=1, readonly=True)
         assert f.index
+        assert f.default == 1
+        assert f.readonly
 
     def test_storage(self):
         'Test that fields store data.'
@@ -51,3 +60,28 @@ class TestSingleField:
         for i in range(10):
             assert tabs[i].a == i * 2
 
+    def test_readonly(self):
+        'Test that readonly fields cannot be written to'
+        t = self.T()
+        t.a = 4
+        self.T.a.readonly = True
+        with assert_raised(TypeError):
+            t.a = 5
+
+    def test_readonly_notset(self):
+        'Test that readonly fields can be written to if they are NotSet'
+        self.T.a.readonly = True
+        t = self.T()
+        assert t.a is NotSet
+        t.a = 4
+        assert t.a == 4
+        with assert_raised(TypeError):
+            t.a = 5
+
+    def test_default(self):
+        'Test that default values are used.'
+        self.T.a.default = 5
+        t = self.T()
+        assert t.a == 5
+        t.a = 4
+        assert t.a == 4

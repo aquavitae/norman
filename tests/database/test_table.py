@@ -46,9 +46,9 @@ def test_conv_index():
 
 
 class Test_I:
-    'Test that I is hashable and weakrefable'
 
     def test_hash(self):
+        'Test that _I is hashable.'
         i1 = database._table._I()
         i2 = database._table._I()
         h1 = hash(i1)
@@ -56,6 +56,7 @@ class Test_I:
         assert h1 != h2
 
     def test_weakref(self):
+        'Test that _I can have a weak ref.'
         i = database._table._I()
         ref = weakref.ref(i)
         assert ref() is i
@@ -73,7 +74,7 @@ class TestTable:
         self.T = T
 
     def test_init_empty(self):
-        'Test a few ways of initialising.'
+        'Test initialisation with no arguments.'
         t = self.T()
         assert t.oid is None
         assert t.name is None
@@ -83,6 +84,7 @@ class TestTable:
         assert 'age' not in t._indexes
 
     def test_init_single(self):
+        'Test initialisation with a single argument.'
         t = self.T(oid=1)
         assert t.oid == 1, t.oid
         assert t.name is None
@@ -92,6 +94,7 @@ class TestTable:
         assert 'age' not in t._indexes
 
     def test_init_many(self):
+        'Test initialisation with many arguments.'
         t = self.T(oid=1, name='Mike', age=23)
         assert t.oid == 1
         assert t.name is 'Mike'
@@ -101,7 +104,7 @@ class TestTable:
         assert 'age' not in t._indexes
 
     def test_init_bad_kwargs(self):
-        'Invalid keywords raise AttributeError'
+        'Invalid keywords raise AttributeError.'
         with assert_raised(AttributeError):
             self.T(bad='field')
 
@@ -240,3 +243,33 @@ class TestTable:
         with assert_raised(ValueError):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
+
+class TestUnique:
+
+    def setup(self):
+        class T(Table):
+            oid = Field(unique=True)
+        self.T = T
+
+    def test_unique_implies_index(self):
+        'Unique implies index'
+        assert self.T.oid.index
+
+    def test_unique_init(self):
+        'Test the initialisation of a duplicate record.'
+        t1 = self.T(oid=3)
+        with assert_raised(ValueError):
+            t2 = self.T(oid=3)
+
+    def test_unique_set(self):
+        'Test setting a record to a duplicate value.'
+        t1 = self.T(oid=1)
+        t2 = self.T(oid=2)
+        with assert_raised(ValueError):
+            t2.oid = 1
+
+    def test_unique_delete_set(self):
+        'Deleting a record allows the value to be reused.'
+        t1 = self.T(oid=1)
+        self.T.delete(t1)
+        t2 = self.T(oid=1)

@@ -134,7 +134,11 @@ class TableMeta(type):
 
 
 class Table(metaclass=TableMeta):
-
+    ''' Each instance of a Table subclass represents a record in that Table.
+    
+    This class should be inherited from to define the fields in the table.
+    It may also optionally provide a `validate` method.
+    '''
     def __init__(self, **kwargs):
         key = _I()
         self._key = key
@@ -185,5 +189,29 @@ class Table(metaclass=TableMeta):
         index[newvalue].add(self._key)
 
     def validate(self):
+        ''' Raise an excpetion of the record contains invalid data.
+        
+        This is usually reimplemented in subclasses, and checks that all
+        data in the record is valid.  If not, and exception should be raised.
+        Values may also be changed in the method, but care should be taken
+        doing so as invalid records are rolled back.  For example:
+        
+        >>> class T(Table):
+        ...     a = Field()
+        ...     b = Field()
+        ...     def validate(self):
+        ...         self.b = self.a
+        ...         assert self.a != 4
+        >>> t = T()
+        >>> t.a = 1
+        >>> t.a, t.b
+        (1, 1)
+        >>> t.a = 4
+        Traceback (Most recent call last):
+          ...
+        ValueError: 4
+        >>> t.a, t.b
+        (1, 4)
+        '''
         return
 
