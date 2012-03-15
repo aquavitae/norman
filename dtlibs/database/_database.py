@@ -18,6 +18,57 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 class Database:
+    ''' The main database class containing a list of tables.
+    
+    Tables are added to the database when they are created by giving
+    the class a *database* keyword argument.  For example
+    
+    >>> db = Database()
+    >>> class MyTable(Table, database=db):
+    ...     pass
+    >>> MyTable in db.tables
+    True
+    
+    The database can be written to a sqlite database as file storage.  So
+    if a `Database` instance represents a document state, it can be saved
+    using the following code:
+    
+    >>> db.tosqlite('file.sqlite')
+    
+    And reloaded thus:
+    
+    >>> db.fromsqlite('file.sqlite')
+    
+    :note:
+        The sqlite database created does not contain any constraints
+        at all (not even type constraints).  This is because the sqlite 
+        database is meant to be used purely for file storage.
+    
+    '''
 
     def __init__(self):
-        self.tables = set()
+        self._tables = set()
+
+    def __contains__(self, t):
+        return t in self._tables or t in {t.__name__ for t in self._tables}
+
+    def __iter__(self):
+        return iter(self._tables)
+
+    def __getitem__(self, name):
+        for t in self._tables:
+            if t.__name__ == name:
+                return t
+        raise KeyError(name)
+
+    def tables(self):
+        return iter(self._tables)
+
+    def tablenames(self):
+        for t in self._tables:
+            yield t.__name__
+
+    def reset(self):
+        ''' Delete all records from all tables. '''
+        for table in self._tables:
+            table.delete()

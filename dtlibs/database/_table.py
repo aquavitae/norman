@@ -24,7 +24,7 @@ import weakref
 
 from .. import core
 
-from ._field import Field
+from ._field import Field, NotSet
 
 class _I:
     ''' An empty, hashable and weak referenceable object.'''
@@ -48,7 +48,7 @@ class TableMeta(type):
         cls._indexes = {}
         cls._fields = {}
         if database is not None:
-            database.tables.add(cls)
+            database._tables.add(cls)
         fulldict = copy.copy(cdict)
         for base in bases:
             fulldict.update(base.__dict__)
@@ -69,13 +69,16 @@ class TableMeta(type):
     def __contains__(cls, record):
         return record._key in cls._instances
 
+    def __iter__(cls):
+        return iter(cls._instances.values())
+
     def get(cls, **kwargs):
         ''' A generator which iterates over records matching kwargs.'''
         keys = kwargs.keys() & cls._indexes.keys()
         if keys:
             f = lambda a, b: a & b
             matches = functools.reduce(f, (cls._indexes[key][kwargs[key]] for key in keys))
-            matches = [cls._instances[k] for k in matches]
+            matches = [cls._instances[k] for k in matches if k in cls._instances]
         else:
             matches = cls._instances.values()
         for m in matches:
@@ -130,6 +133,7 @@ class TableMeta(type):
             del cls._instances[r._key]
 
     def fields(cls):
+        ''' Return an iterator over field names in the table. '''
         return cls._fields.keys()
 
 
@@ -142,7 +146,7 @@ class Table(metaclass=TableMeta):
     def __init__(self, **kwargs):
         key = _I()
         self._key = key
-        data = dict.fromkeys(self.__class__.fields(), None)
+        data = dict.fromkeys(self.__class__.fields(), NotSet)
         badkw = kwargs.keys() - data.keys()
         if badkw:
             raise AttributeError(badkw)
@@ -165,33 +169,40 @@ class Table(metaclass=TableMeta):
         if isinstance(field, Field):
             oldvalue = getattr(self, attr)
             # To avoid endless recursion if validate changes a value
-            if oldvalue == value:
-                return
-            field.__set__(self, value)
-            try:
-                self.validate()
-            except Exception as err:
-                field.__set__(self, oldvalue)
-                if isinstance(err, AssertionError):
-                    raise ValueError(*err.args)
-                else:
-                    raise
-            else:
-                if field.index:
-                    self._updateindex(attr, oldvalue, value)
+            if oldvalue != value:
+                field.__set__(self, value)
+                if field.unique:
+                    table = self.__class__
+                    uniques = dict((f, getattr(self, f)) for f in table.fields()
+                                   if getattr(table, f).unique)
+                    existing = set(self.__class__.get(**uniques)) - {self}
+                    if existing:
+                        raise ValueError(value)
+                try:
+                    self.validate()
+                except Exception as err:
+                    field.__set__(self, oldvalue)
+                    if isinstance(err, AssertionError):
+                        raise ValueError(*err.args)
+                    else:
+                        raise
+            if field.index:
+                self._updateindex(attr, oldvalue, value)
         else:
             super().__setattr__(attr, value)
 
     def _updateindex(self, name, oldvalue, newvalue):
         index = self._indexes[name]
-        if oldvalue in index:
+        try:
             index[oldvalue].remove(self._key)
+        except KeyError:
+            pass
         index[newvalue].add(self._key)
 
     def validate(self):
-        ''' Raise an excpetion of the record contains invalid data.
+        ''' Raise an exception of the record contains invalid data.
         
-        This is usually reimplemented in subclasses, and checks that all
+        This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
         Values may also be changed in the method, but care should be taken
         doing so as invalid records are rolled back.  For example:

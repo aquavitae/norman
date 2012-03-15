@@ -18,29 +18,36 @@
 
 ''' Some system test for the database. '''
 
-from dtlibs import core
-from dtlibs.database import Table, Field
+import pickle
 
-class Person(Table):
+from dtlibs import core
+from dtlibs.database import Database, Table, Field
+
+db = Database()
+
+class Person(Table, database=db):
     custno = Field(unique=True)
     name = Field(index=True)
     age = Field(default=20)
-    address = Field()
+    address = Field(index=True)
 
     def validate(self):
         if not isinstance(self.age, int):
             self.age = core.int2(self.age, 0)
         assert isinstance(self.address, Address)
 
-class Address(Table):
+class Address(Table, database=db):
     street = Field(unique=True)
     town = Field(unique=True)
-    people = Field(aggregate=Person.address)
+
+    @property
+    def people(self):
+        return Person.get(address=self)
 
     def validate(self):
         assert isinstance(self.town, Town)
 
-class Town(Table):
+class Town(Table, database=db):
     name = Field(unique=True)
 
 def test_indexes():
@@ -51,5 +58,31 @@ def test_indexes():
     assert Person.address.index
     assert Address.street.index
     assert Address.town.index
-    assert not Address.people.index
     assert Town.name.index
+
+class TestCase1:
+
+    def setup(self):
+        self.t1 = Town(name='down')
+        self.t2 = Town(name='up')
+        self.a1 = Address(street='easy', town=self.t1)
+        self.a2 = Address(street='some', town=self.t2)
+        self.p1 = Person(custno=1, name='matt', age=43, address=self.a1)
+        self.p2 = Person(custno=2, name='bob', age=3, address=self.a1)
+        self.p3 = Person(custno=3, name='peter', age=29, address=self.a2)
+
+    def teardown(self):
+        db.reset()
+
+    def test_links(self):
+        assert self.a1.town is self.t1
+        assert set(self.a1.people) == {self.p1, self.p2}
+
+    def test_pickle(self):
+        b = pickle.dumps(db)
+        db2 = pickle.loads(b)
+        assert set(db2.tablenames()) == {'Town', 'Address', 'Person'}
+        assert set(a.street for a in db['Address']) == {'easy', 'some'}
+        address = next(db['Address'].get(street='easy'))
+        assert set(p.name for p in address.people) == {'matt', 'bob'}
+        assert set(p.age for p in address.people) == {43, 3}

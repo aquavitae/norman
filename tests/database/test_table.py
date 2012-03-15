@@ -21,7 +21,7 @@ import weakref
 
 from dtlibs.mock import assert_raised
 from dtlibs import dev
-from dtlibs.database import Table, Field
+from dtlibs.database import Table, Field, NotSet
 from dtlibs import database
 
 ###############################################################################
@@ -29,8 +29,9 @@ from dtlibs import database
 
 def convidx(table, index):
     'Utility to convert an index (i.e. defaultdict with a weakset) to a dict'
-    return dict((value, set(table._instances[k] for k in keys)) \
-                for value, keys in table._indexes[index].items())
+    r = [(value, set(table._instances[k] for k in keys)) \
+                for value, keys in table._indexes[index].items()]
+    return dict(a for a in r if a[1])
 
 def test_conv_index():
     class K: pass
@@ -38,12 +39,14 @@ def test_conv_index():
     k2 = K()
     class T:
         _instances = {k1: 'i1', k2: 'i2'}
-        _indexes = {'f1': collections.defaultdict(weakref.WeakSet)}
+        _indexes = {'f1': collections.defaultdict(weakref.WeakSet),
+                    'f2': collections.defaultdict(weakref.WeakSet)}
     T._indexes['f1']['a'].add(k1)
     T._indexes['f1']['a'].add(k2)
     T._indexes['f1']['b'].add(k1)
+    T._indexes['f2']['a']
     assert convidx(T, 'f1') == {'a': {'i1', 'i2'}, 'b': {'i1'}}
-
+    assert convidx(T, 'f2') == {}
 
 class Test_I:
 
@@ -76,21 +79,21 @@ class TestTable:
     def test_init_empty(self):
         'Test initialisation with no arguments.'
         t = self.T()
-        assert t.oid is None
-        assert t.name is None
-        assert t.age is None
-        assert convidx(self.T, 'oid') == {None: {t}}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {None: {t}}
+        assert t.oid is NotSet
+        assert t.name is NotSet
+        assert t.age is NotSet
+        assert convidx(self.T, 'oid') == {NotSet: {t}}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: {t}}
         assert 'age' not in t._indexes
 
     def test_init_single(self):
         'Test initialisation with a single argument.'
         t = self.T(oid=1)
         assert t.oid == 1, t.oid
-        assert t.name is None
-        assert t.age is None
-        assert convidx(self.T, 'oid') == {1: {t}}
-        assert convidx(self.T, 'name') == {None: {t}}
+        assert t.name is NotSet
+        assert t.age is NotSet
+        assert convidx(self.T, 'oid') == {1: {t}}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: {t}}
         assert 'age' not in t._indexes
 
     def test_init_many(self):
@@ -107,6 +110,10 @@ class TestTable:
         'Invalid keywords raise AttributeError.'
         with assert_raised(AttributeError):
             self.T(bad='field')
+
+    def test_name(self):
+        'Test that Table.name == "Table"'
+        assert self.T.__name__ == 'T'
 
     def test_indexes(self):
         'Test that indexes are created.'
@@ -134,6 +141,13 @@ class TestTable:
         t1 = self.T(oid=1)
         t2 = self.T(oid=2)
         assert t1 in self.T
+
+    def test_iter(self):
+        'Test iter(table)'
+        t1 = self.T(oid=1)
+        t2 = self.T(oid=2)
+        result = set(i for i in self.T)
+        assert result == {t1, t2}
 
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
@@ -223,7 +237,7 @@ class TestTable:
         'Test the case where validate changes a value.'
         class T(self.T):
             def validate(self):
-                if self.name is not None:
+                if self.name:
                     self.name = self.name.upper()
 
         t = T()
@@ -234,7 +248,7 @@ class TestTable:
         'Test the case where validate changes a value then fails.'
         class T(self.T):
             def validate(self):
-                if self.name is not None:
+                if self.name:
                     self.name = self.name.upper()
                     assert len(self.name) == 3
 
@@ -243,6 +257,7 @@ class TestTable:
         with assert_raised(ValueError):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
+
 
 class TestUnique:
 

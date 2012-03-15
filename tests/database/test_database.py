@@ -17,15 +17,42 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
-from nose.tools import assert_raises, raises
+from dtlibs.mock import assert_raised
 
 from dtlibs import core, dev
 from dtlibs.database import Database, Table
 
 class TestDatabase:
 
-    def test(self):
-        db = Database()
-        class T(Table, database=db):
+    def setup(self):
+        self.db = Database()
+        class T(Table, database=self.db):
             pass
-        assert db.tables == {T}
+        self.T = T
+
+    def test_contains_table(self):
+        assert self.T in self.db
+
+    def test_contains_name(self):
+        assert 'T' in self.db
+
+    def test_getitem(self):
+        assert self.db['T'] is self.T
+
+    def test_getitem_raises(self):
+        with assert_raised(KeyError):
+            self.db['not a table']
+
+    def test_setitem_raises(self):
+        'Cannot set a table.'
+        with assert_raised(TypeError):
+            self.db['key'] = 'value'
+
+    def test_tables(self):
+        assert set(self.db.tables()) == {self.T}
+
+    def test_tablenames(self):
+        assert set(self.db.tablenames()) == {'T'}
+
+    def test_iter(self):
+        assert set(iter(self.db)) == {self.T}

@@ -26,9 +26,13 @@ class MockTable:
 
 
 def test_NotSet():
-    'Test that notset cannot be instantiated.'
+    'Test that NotSet cannot be instantiated.'
     with assert_raised(TypeError):
         NotSet()
+
+def test_NotSet_compare():
+    'Test that bool(NotSet) is False.'
+    assert not NotSet
 
 
 class TestSingleField:
@@ -85,3 +89,18 @@ class TestSingleField:
         assert t.a == 5
         t.a = 4
         assert t.a == 4
+
+    def test_fromstr(self):
+        'Test conversion from strings.'
+        self.T.a.fromstr = int
+        t = self.T()
+        t.a = '4'
+        assert t.a == 4
+
+    def test_tostr(self):
+        'Test conversion to strings.'
+        t = self.T()
+        t.a = 4
+        assert t.a == 4
+        assert self.T.a.tostr(t.a) == '4'
+
