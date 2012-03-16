@@ -19,6 +19,7 @@
 ''' Some system test for the database. '''
 
 import pickle
+import os
 
 from dtlibs import core
 from dtlibs.database import Database, Table, Field
@@ -73,6 +74,10 @@ class TestCase1:
 
     def teardown(self):
         db.reset()
+        try:
+            os.unlink('test')
+        except OSError:
+            pass
 
     def test_links(self):
         assert self.a1.town is self.t1
@@ -81,8 +86,39 @@ class TestCase1:
     def test_pickle(self):
         b = pickle.dumps(db)
         db2 = pickle.loads(b)
-        assert set(db2.tablenames()) == {'Town', 'Address', 'Person'}
-        assert set(a.street for a in db['Address']) == {'easy', 'some'}
+        self.check_integrity(db)
+        self.check_integrity(db2)
+
+    def check_integrity(self, db):
+        assert set(db.tablenames()) == {'Town', 'Address', 'Person'}
+        streets = set(a.street for a in db['Address'])
+        assert streets == {'easy', 'some'}, streets
         address = next(db['Address'].get(street='easy'))
         assert set(p.name for p in address.people) == {'matt', 'bob'}
         assert set(p.age for p in address.people) == {43, 3}
+
+    def test_tofromsql(self):
+        db.tosqlite('test')
+        db.reset()
+        db.fromsqlite('test')
+        self.check_integrity(db)
+
+    def test_bad_sql(self):
+        'Should be tolerant of incorrect tables and fields.'
+        import logging
+        import sqlite3
+        logging.disable(logging.CRITICAL)
+        sql = '''
+            CREATE TABLE "other" ("field");
+            CREATE TABLE "provinces" ("oid", "name", "number");
+            CREATE TABLE "units" ("field");
+            CREATE TABLE "cycles" ("oid", "name");
+            INSERT INTO "units" VALUES ('a value');
+            INSERT INTO "provinces" VALUES (1, 'Eastern Cape', 42);
+            INSERT INTO "cycles" VALUES (2, 'bad value');
+            INSERT INTO "cycles" VALUES (3, '2009/10');
+        '''
+        conn = sqlite3.connect('test')
+        conn.executescript(sql)
+        conn.close()
+        db.fromsqlite('test')

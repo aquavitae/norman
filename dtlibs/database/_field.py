@@ -56,30 +56,19 @@ class Field:
     readonly   False        Prohibits setting the variable, unless its value
                             is `NotSet`.  This can be used with *default*
                             to simulate a constant.
-    fromstr    str          A callable which returns the value given a string.
-                            This is used when de-serializing data and is
-                            typically the expected datatype.
-    tostr      repr         A callable which provides a string representation
-                            of the value.
     ========== ============ ===================================================
     
     Note that *unique* and *index* are table-level controls, and are not used
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
-    
-    *tostr* and *fromstr* are used mainly when serializing and 
-    de-serializing values.  By default *fromstr* does no conversion and
-    *tostr* returns ``repr(value)``.
     '''
 
     def __init__(self, *, unique=False, index=False, default=NotSet,
-                 readonly=False, tostr=repr, fromstr=str):
+                 readonly=False, tostr=str, fromstr=lambda v: v):
         self.unique = unique
         self.index = index or unique
         self.default = default
         self.readonly = readonly
-        self.tostr = tostr
-        self.fromstr = fromstr
         self._data = {}
 
     def __get__(self, instance, owner):
@@ -93,7 +82,5 @@ class Field:
         if (self.readonly and
             self.__get__(instance, instance.__class__) is not NotSet):
             raise TypeError('Field is read only')
-        if isinstance(value, str):
-            value = self.fromstr(value)
         self._data[instance] = value
 
