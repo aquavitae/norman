@@ -18,8 +18,6 @@
 
 
 from dtlibs.mock import assert_raised
-
-from dtlibs import core, dev
 from dtlibs.database import Database, Table
 
 class TestDatabase:

@@ -107,7 +107,6 @@ class Database:
             for record in table:
                 values = [id(record)]
                 for fname in table.fields():
-                    field = getattr(table, fname)
                     value = getattr(record, fname)
                     if isinstance(value, Table):
                         value = id(value)

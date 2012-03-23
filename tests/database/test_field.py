@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from dtlibs import core, dev
+from dtlibs import core
 from dtlibs.mock import assert_raised
 from dtlibs.database import Field, NotSet
 
