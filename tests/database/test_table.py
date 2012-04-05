@@ -155,20 +155,20 @@ class TestTable:
         i = convidx(self.T, 'oid')
         assert i == {1: {t}}, i
 
-    def test_get(self):
-        'Test that get returns the matching records.'
+    def test_iter(self):
+        'Test that iter returns the matching records.'
         p1 = self.T(oid=1)
         p2 = self.T(oid=2)
         p3 = self.T(oid=3)
-        p = set(self.T.get(oid=1))
+        p = set(self.T.iter(oid=1))
         assert p == {p1}, p
 
-    def test_get_other_attr(self):
-        'Test that get finds matches for non-indexed fields.'
+    def test_iter_other_attr(self):
+        'Test that iter finds matches for non-indexed fields.'
         p1 = self.T(oid=1, name='Mike', age=23)
         p2 = self.T(oid=2, name='Mike', age=22)
         p3 = self.T(oid=3, name='Mike', age=23)
-        p = set(self.T.get(age=23))
+        p = set(self.T.iter(age=23))
         assert p == {p1, p3}, p
 
     def test_index_speed(self):
@@ -178,9 +178,9 @@ class TestTable:
             self.T(oid=i, name='Mike', age=int(i % 10))
         timer = dev.Timer()
         with timer('fast'):
-            self.T.get(id=300)
+            self.T.iter(id=300)
         with timer('slow'):
-            self.T.get(age=5)
+            self.T.iter(age=5)
         assert timer['fast'] * 10 > timer['slow']
 
     def test_delete_instance(self):

@@ -72,7 +72,7 @@ class TableMeta(type):
     def __iter__(cls):
         return iter(cls._instances.values())
 
-    def get(cls, **kwargs):
+    def iter(cls, **kwargs):
         ''' A generator which iterates over records matching kwargs.'''
         keys = kwargs.keys() & cls._indexes.keys()
         if keys:
@@ -124,10 +124,10 @@ class TableMeta(type):
         table is cleared.
         '''
         if records is None:
-            records = cls.get()
+            records = cls.iter()
         if isinstance(records, Table):
             records = {records}
-        kwmatch = cls.get(**keywords)
+        kwmatch = cls.iter(**keywords)
         rec = set(records) & set(kwmatch)
         for r in rec:
             del cls._instances[r._key]
@@ -175,7 +175,7 @@ class Table(metaclass=TableMeta):
                     table = self.__class__
                     uniques = dict((f, getattr(self, f)) for f in table.fields()
                                    if getattr(table, f).unique)
-                    existing = set(self.__class__.get(**uniques)) - {self}
+                    existing = set(self.__class__.iter(**uniques)) - {self}
                     if existing:
                         raise ValueError(value)
                 try:
