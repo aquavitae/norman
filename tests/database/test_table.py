@@ -142,6 +142,13 @@ class TestTable:
         t2 = self.T(oid=2)
         assert t1 in self.T
 
+    def test_contains_method(self):
+        'Test the `contains` method.'
+        t1 = self.T(oid=1)
+        t2 = self.T(oid=2)
+        assert self.T.contains(oid=1)
+        assert not self.T.contains(oid=3)
+
     def test_iter(self):
         'Test iter(table)'
         t1 = self.T(oid=1)
@@ -149,13 +156,7 @@ class TestTable:
         result = set(i for i in self.T)
         assert result == {t1, t2}
 
-    def test_indexes_updated(self):
-        'Test that indexes are updated when a value changes'
-        t = self.T(oid=1)
-        i = convidx(self.T, 'oid')
-        assert i == {1: {t}}, i
-
-    def test_iter(self):
+    def test_iter_method(self):
         'Test that iter returns the matching records.'
         p1 = self.T(oid=1)
         p2 = self.T(oid=2)
@@ -170,6 +171,19 @@ class TestTable:
         p3 = self.T(oid=3, name='Mike', age=23)
         p = set(self.T.iter(age=23))
         assert p == {p1, p3}, p
+
+    def test_get(self):
+        p1 = self.T(oid=1)
+        p2 = self.T(oid=2)
+        p3 = self.T(oid=3)
+        p = self.T.get(oid=1)
+        assert p == {p1}
+
+    def test_indexes_updated(self):
+        'Test that indexes are updated when a value changes'
+        t = self.T(oid=1)
+        i = convidx(self.T, 'oid')
+        assert i == {1: {t}}, i
 
     def test_index_speed(self):
         'Getting indexed fields should be ten times faster'

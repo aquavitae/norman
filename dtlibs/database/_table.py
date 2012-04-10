@@ -85,6 +85,19 @@ class TableMeta(type):
             if all(getattr(m, k) == v for k, v in kwargs.items()):
                 yield m
 
+    def contains(cls, **kwargs):
+        ''' Return `True` if the table contains any records matching *kwargs*.'''
+        it = cls.iter(**kwargs)
+        try:
+            next(it)
+        except StopIteration:
+            return False
+        return True
+
+    def get(cls, **kwargs):
+        ''' Return a set of all records matching *kwargs*.'''
+        return set(cls.iter(**kwargs))
+
     def delete(cls, records=None, **keywords):
         ''' Delete records from the table.
         
