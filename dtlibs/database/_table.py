@@ -190,7 +190,8 @@ class Table(metaclass=TableMeta):
                                    if getattr(table, f).unique)
                     existing = set(self.__class__.iter(**uniques)) - {self}
                     if existing:
-                        raise ValueError(value)
+                        raise ValueError("Not unique: {}={}".format(field.name,
+                                                                repr(value)))
                 try:
                     self.validate()
                 except Exception as err:
