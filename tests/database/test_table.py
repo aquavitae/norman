@@ -302,3 +302,14 @@ class TestUnique:
         t1 = self.T(oid=1)
         self.T.delete(t1)
         t2 = self.T(oid=1)
+
+    def test_unique_multiple(self):
+        'Test multiple unique fields'
+        class T(Table):
+            a = Field(unique=True)
+            b = Field(unique=True)
+        T(a=1, b=2)
+        T(a=1, b=3)
+        T(a=2, b=2)
+        with assert_raised(ValueError):
+            T(a=1, b=2)
