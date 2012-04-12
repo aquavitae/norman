@@ -218,25 +218,7 @@ class Table(metaclass=TableMeta):
         
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
-        Values may also be changed in the method, but care should be taken
-        doing so as invalid records are rolled back.  For example:
-        
-        >>> class T(Table):
-        ...     a = Field()
-        ...     b = Field()
-        ...     def validate(self):
-        ...         self.b = self.a
-        ...         assert self.a != 4
-        >>> t = T()
-        >>> t.a = 1
-        >>> t.a, t.b
-        (1, 1)
-        >>> t.a = 4
-        Traceback (Most recent call last):
-          ...
-        ValueError: 4
-        >>> t.a, t.b
-        (1, 4)
+        Values may also be changed in the method.
         '''
         return
 

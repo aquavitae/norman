@@ -31,8 +31,8 @@ class Database:
     
     >>> db = Database()
     >>> class MyTable(Table, database=db):
-    ...     pass
-    >>> MyTable in db.tables
+    ...     name = Field()
+    >>> MyTable in db.tables()
     True
     
     The database can be written to a sqlite database as file storage.  So

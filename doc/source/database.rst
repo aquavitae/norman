@@ -1,7 +1,12 @@
 .. module:: dtlibs.database
 
+.. testsetup::
+
+    from dtlibs.database import *
+    
+
 Database
---------
+========
 
 This framework provides a bases for creating database-like structures.
 It doesn't, however, link into any database API (e.g. sqlite) and
@@ -31,3 +36,11 @@ type of record.
 .. autoclass:: Field
     :members:
     
+.. testcleanup::
+    
+    import os
+    try:
+        os.unlink('file.sqlite')
+    except OSError:
+        pass
+        
