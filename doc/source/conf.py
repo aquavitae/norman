@@ -244,4 +244,6 @@ man_pages = [('index', 'dtlibs-doc', 'dtlibs-doc Documentation', ['David Townshe
 todo_include_todos = True
 nitpicky = True
 intersphinx_mapping = {'python': ('http://docs.python.org/3.2',
-                                  'python_objects.inv')}
+                                  'python_objects.inv'),
+                       'undo': ('http://readthedocs.org/docs/undo/en/latest/',
+                                'undo_objects.inv')}
