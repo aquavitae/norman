@@ -71,12 +71,8 @@ class Database:
                 return t
         raise KeyError(name)
 
-    def tables(self):
-        return iter(self._tables)
-
     def tablenames(self):
-        for t in self._tables:
-            yield t.__name__
+        return [t.__name__ for t in self._tables]
 
     def reset(self):
         ''' Delete all records from all tables. '''

@@ -64,7 +64,7 @@ class Field:
     '''
 
     def __init__(self, *, unique=False, index=False, default=NotSet,
-                 readonly=False, tostr=str, fromstr=lambda v: v):
+                 readonly=False):
         self.unique = unique
         self.index = index or unique
         self.default = default
