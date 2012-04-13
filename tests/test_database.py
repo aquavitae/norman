@@ -16,9 +16,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-
-from dtlibs.mock import assert_raised
-from dtlibs.database import Database, Table
+from nose.tools import assert_raises
+from norman import Database, Table
 
 class TestDatabase:
 
@@ -38,12 +37,12 @@ class TestDatabase:
         assert self.db['T'] is self.T
 
     def test_getitem_raises(self):
-        with assert_raised(KeyError):
+        with assert_raises(KeyError):
             self.db['not a table']
 
     def test_setitem_raises(self):
         'Cannot set a table.'
-        with assert_raised(TypeError):
+        with assert_raises(TypeError):
             self.db['key'] = 'value'
 
     def test_tables(self):

@@ -18,11 +18,10 @@
 
 import collections
 import weakref
+import timeit
 
-from dtlibs.mock import assert_raised
-from dtlibs import dev
-from dtlibs.database import Table, Field, NotSet
-from dtlibs import database
+from nose.tools import assert_raises
+from norman import Table, Field, NotSet, _table
 
 ###############################################################################
 # Some test data
@@ -52,15 +51,15 @@ class Test_I:
 
     def test_hash(self):
         'Test that _I is hashable.'
-        i1 = database._table._I()
-        i2 = database._table._I()
+        i1 = _table._I()
+        i2 = _table._I()
         h1 = hash(i1)
         h2 = hash(i2)
         assert h1 != h2
 
     def test_weakref(self):
         'Test that _I can have a weak ref.'
-        i = database._table._I()
+        i = _table._I()
         ref = weakref.ref(i)
         assert ref() is i
         del i
@@ -108,7 +107,7 @@ class TestTable:
 
     def test_init_bad_kwargs(self):
         'Invalid keywords raise AttributeError.'
-        with assert_raised(AttributeError):
+        with assert_raises(AttributeError):
             self.T(bad='field')
 
     def test_name(self):
@@ -190,12 +189,10 @@ class TestTable:
         count = 500
         for i in range(count):
             self.T(oid=i, name='Mike', age=int(i % 10))
-        timer = dev.Timer()
-        with timer('fast'):
-            self.T.iter(id=300)
-        with timer('slow'):
-            self.T.iter(age=5)
-        assert timer['fast'] * 10 > timer['slow']
+        number = 100000
+        fast = timeit.timeit(lambda: self.T.iter(id=300), number=number)
+        slow = timeit.timeit(lambda: self.T.iter(age=5), number=number)
+        assert fast * 10 > slow
 
     def test_delete_instance(self):
         'Test deleting a single instance'
@@ -243,7 +240,7 @@ class TestTable:
 
         t = T()
         t.oid = 2
-        with assert_raised(ValueError):
+        with assert_raises(ValueError):
             t.oid = 1
         assert t.oid == 2
 
@@ -268,7 +265,7 @@ class TestTable:
 
         t = T()
         t.name = 'ABC'
-        with assert_raised(ValueError):
+        with assert_raises(ValueError):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
 
@@ -287,21 +284,21 @@ class TestUnique:
     def test_unique_init(self):
         'Test the initialisation of a duplicate record.'
         t1 = self.T(oid=3)
-        with assert_raised(ValueError):
+        with assert_raises(ValueError):
             t2 = self.T(oid=3)
 
     def test_unique_set(self):
         'Test setting a record to a duplicate value.'
         t1 = self.T(oid=1)
         t2 = self.T(oid=2)
-        with assert_raised(ValueError):
+        with assert_raises(ValueError):
             t2.oid = 1
 
     def test_unique_delete_set(self):
         'Deleting a record allows the value to be reused.'
         t1 = self.T(oid=1)
         self.T.delete(t1)
-        t2 = self.T(oid=1)
+        self.T(oid=1)
 
     def test_unique_multiple(self):
         'Test multiple unique fields'
@@ -311,5 +308,5 @@ class TestUnique:
         T(a=1, b=2)
         T(a=1, b=3)
         T(a=2, b=2)
-        with assert_raised(ValueError):
+        with assert_raises(ValueError):
             T(a=1, b=2)

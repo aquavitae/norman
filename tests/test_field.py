@@ -16,18 +16,17 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from dtlibs import core
-from dtlibs.mock import assert_raised
-from dtlibs.database import Field, NotSet
+from nose.tools import assert_raises
+from norman import Field, NotSet
 
 class MockTable:
-    _updateinstance = core.none
-    validate = core.none
+    _updateinstance = lambda: None
+    validate = lambda: None
 
 
 def test_NotSet():
     'Test that NotSet cannot be instantiated.'
-    with assert_raised(TypeError):
+    with assert_raises(TypeError):
         NotSet()
 
 def test_NotSet_compare():
@@ -69,7 +68,7 @@ class TestSingleField:
         t = self.T()
         t.a = 4
         self.T.a.readonly = True
-        with assert_raised(TypeError):
+        with assert_raises(TypeError):
             t.a = 5
 
     def test_readonly_notset(self):
@@ -79,7 +78,7 @@ class TestSingleField:
         assert t.a is NotSet
         t.a = 4
         assert t.a == 4
-        with assert_raised(TypeError):
+        with assert_raises(TypeError):
             t.a = 5
 
     def test_default(self):

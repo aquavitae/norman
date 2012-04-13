@@ -21,8 +21,7 @@
 import pickle
 import os
 
-from dtlibs import core
-from dtlibs.database import Database, Table, Field
+from norman import Database, Table, Field, tools
 
 db = Database()
 
@@ -34,7 +33,7 @@ class Person(Table, database=db):
 
     def validate(self):
         if not isinstance(self.age, int):
-            self.age = core.int2(self.age, 0)
+            self.age = tools.int2(self.age, 0)
         assert isinstance(self.address, Address)
 
 class Address(Table, database=db):
@@ -93,7 +92,7 @@ class TestCase1:
         assert set(db.tablenames()) == {'Town', 'Address', 'Person'}
         streets = set(a.street for a in db['Address'])
         assert streets == {'easy', 'some'}, streets
-        address = next(db['Address'].get(street='easy'))
+        address = next(db['Address'].iter(street='easy'))
         assert set(p.name for p in address.people) == {'matt', 'bob'}
         assert set(p.age for p in address.people) == {43, 3}
 

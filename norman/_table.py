@@ -22,8 +22,6 @@ import copy
 import functools
 import weakref
 
-from .. import core
-
 from ._field import Field, NotSet
 
 class _I:
@@ -165,7 +163,7 @@ class Table(metaclass=TableMeta):
             raise AttributeError(badkw)
         data.update(kwargs)
         validate = self.validate
-        self.validate = core.none
+        self.validate = lambda: None
         try:
             for k, v in data.items():
                 setattr(self, k, v)
