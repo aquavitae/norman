@@ -46,7 +46,7 @@ def run_setup(*argv):
           author_email='aquavitae69@gmail.com',
           url='http://bitbucket.org/aquavitae/norman',
           download_url='http://bitbucket.org/aquavitae/norman/downloads',
-          py_modules=['norman'],
+          packages=['norman'],
           classifiers=classifiers
          )
 
