@@ -1,12 +1,12 @@
-.. module:: dtlibs.database
+.. module:: norman
 
 .. testsetup::
 
-    from dtlibs.database import *
+    from norman import *
     
 
-Database
-========
+Norman Documentation
+====================
 
 This framework provides a bases for creating database-like structures.
 It doesn't, however, link into any database API (e.g. sqlite) and
@@ -25,16 +25,36 @@ records are linked directly to each other as attributes.
 The main class is `Table` which defines the structure of a specific
 type of record.
 
+
+Database
+--------
+
 .. autoclass:: Database
     :members:
+
     
+Tables
+------
+
 .. autoclass:: Table
     :members:
     
+
+Fields
+------
+
 .. autodata:: NotSet
 
 .. autoclass:: Field
     :members:
+
+
+Tools
+-----
+
+.. automodule:: norman.tools
+    :members:
+    
     
 .. testcleanup::
     
