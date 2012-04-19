@@ -228,7 +228,7 @@ Tables
  
     .. method:: validate
     
-        Raise an exception of the record contains invalid data.
+        Raise an exception if the record contains invalid data.
         
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
