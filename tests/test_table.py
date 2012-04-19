@@ -310,3 +310,26 @@ class TestUnique:
         T(a=2, b=2)
         with assert_raises(ValueError):
             T(a=1, b=2)
+
+
+class TestValidateDelete:
+
+    def setup(self):
+        class T(Table):
+            value = Field()
+            def validate_delete(self):
+                assert self.value > 1
+        self.T = T
+
+    def test_valid(self):
+        t = self.T(value=5)
+        assert self.T.get() == {t}
+        self.T.delete(value=5)
+        assert self.T.get() == set()
+
+    def test_invalid(self):
+        t = self.T(value=0)
+        assert self.T.get() == {t}
+        with assert_raises(AssertionError):
+            self.T.delete(value=0)
+        assert self.T.get() == {t}

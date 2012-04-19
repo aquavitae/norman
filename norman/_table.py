@@ -141,7 +141,13 @@ class TableMeta(type):
         kwmatch = cls.iter(**keywords)
         rec = set(records) & set(kwmatch)
         for r in rec:
-            del cls._instances[r._key]
+            try:
+                r.validate_delete()
+            except:
+                raise
+            else:
+                del cls._instances[r._key]
+
 
     def fields(cls):
         ''' Return an iterator over field names in the table. '''
@@ -220,3 +226,36 @@ class Table(metaclass=TableMeta):
         '''
         return
 
+    def validate_delete(self):
+        ''' Raise an exception if the record cannot be deleted.
+        
+        This is called just before a record is deleted and is usually 
+        re-implemented to check for other referring instances.  For example,
+        the following structure only allows deletions of *Name* instances
+        not in a *Group*.
+        
+        >>> class Name(Table):                
+        ...  name = Field()
+        ...  group = Field(default=None)
+        ...  
+        ...  def validate_delete(self):
+        ...      assert self.group is None, "Can't delete '{}'".format(self.name)
+        ...      
+        >>> class Group(Table)
+        ...  id = Field()
+        ...  @property
+        ...  def names(self):
+        ...      return Name.get(group=self)
+        ...      
+        >>> group = Group(id=1)
+        >>> n1 = Name(name='grouped', group=group)
+        >>> n2 = Name(name='not grouped')
+        >>> Name.delete(name='not grouped')
+        >>> Name.delete(name='grouped')
+        Traceback (most recent call last):
+            ...
+        AssertionError: Can't delete "grouped"
+        >>> {name.name for name in Name.get()}
+        {'grouped'}
+        '''
+        pass
