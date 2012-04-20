@@ -37,7 +37,7 @@ The main class is `Table` which defines the structure of a specific
 type of record
 '''
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 __author__ = 'David Townshend'
 
 from ._table import Table
