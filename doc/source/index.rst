@@ -175,7 +175,7 @@ Tables
 
 
     .. method:: delete([records=None,] **keywords)
-        
+
         Delete delete all instances in *records* which match *keywords*.
         If *records* is omitted then the entire table is searched.  For 
         example:
@@ -317,6 +317,78 @@ Fields
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
 
+
+.. class Group(table, **kwargs)
+
+    This is a collection class which represents a collection of records.
+    
+    :param table:  The table which contains records returned by this `Group`.
+    :param kwargs: Keyword arguments used to filter records.
+    
+    This is typically used as a field type in a `Table`, but may be used 
+    anywhere where a dynamic subset of a `Table` is needed.
+    
+    The easiest way to demonstrating usage is through an example:
+    
+    .. doctest::
+    
+        class Child(Table):
+            name = Field()
+            parent = Field()
+            
+            def __repr__(self):
+                return "Child('{}')".format(self.name)
+                
+        class Parent(Table):
+            children = Group(Child, parent=self)
+        
+    This represents a collection of *Child* objects contained in a *Parent*.
+    *Parent.children* is a set-like container, closely representing a `Table`
+    and supports ``__len__``, ``__contains__`` and ``__iter__``.
+    
+    >>> parent = Parent()
+    >>> Child(name='a', parent=parent)
+    >>> Child(name='b', parent=parent)
+    >>> len(parent.children)
+    2
+    >>> parent.children.get(name='a')
+    {Child('a')}
+    >>> parent.children.iter(name='b')
+    <Iterator>
+    >>> parent.children.add(name='c')
+    Child('c')
+
+    .. property:: table
+    
+        Read-only property containing the `Table` object referred to by 
+        this collection.
+        
+    
+    .. method:: iter(**kwargs)
+    
+        A generator which iterates over records in the `Group` with 
+        field values matching *kwargs*.  
+        
+
+    .. method:: contains(**kwargs)
+        
+        Return `True` if the `Group` contains any records with field values
+        matching *kwargs*.
+
+
+    .. method:: get(**kwargs)
+        
+        Return a set of all records with field values matching *kwargs*.
+
+
+    .. method:: delete([records=None,] **keywords)
+        
+        Delete delete all instances in *records* which match *keywords*.
+        This only deletes instances in the `Group`, but it completely deletes 
+        them.   If *records* is omitted then the entire `Group` is searched. 
+        
+        .. seealso:: Table.delete
+        
 
 .. module:: norman.tools
 
