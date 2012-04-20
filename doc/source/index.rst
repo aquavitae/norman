@@ -328,12 +328,18 @@ Fields
     implement the necessary constraints and indexes.
 
 
-.. class Group(table, **kwargs)
+.. class Group(table[, matcher=None], **kwargs)
 
     This is a collection class which represents a collection of records.
     
-    :param table:  The table which contains records returned by this `Group`.
-    :param kwargs: Keyword arguments used to filter records.
+    :param table:   The table which contains records returned by this `Group`.
+    :param matcher: A callable which returns a dict. This can be used
+                    instead of *kwargs* if it needs to be created dynamically. 
+    :param kwargs:  Keyword arguments used to filter records.
+    
+    If *matcher* is specified, it is called with a single argument 
+    to update *kwargs*.  The argument passed to it is the instance of the 
+    owning table, so this can only be used where `Group` is in a class.
     
     This is typically used as a field type in a `Table`, but may be used 
     anywhere where a dynamic subset of a `Table` is needed.
@@ -350,8 +356,8 @@ Fields
                 return "Child('{}')".format(self.name)
                 
         class Parent(Table):
-            children = Group(Child, parent=self)
-        
+            children = Group(Child, lambda self: parent=self)
+
     This represents a collection of *Child* objects contained in a *Parent*.
     *Parent.children* is a set-like container, closely representing a `Table`
     and supports ``__len__``, ``__contains__`` and ``__iter__``.

@@ -32,6 +32,9 @@ def test_init():
     assert g.table is Object
 
 
+def test_init_matcher():
+    Group(int, lambda: None)
+
 def test_init_kwargs():
     Group(int, a=1, b=2)
 
@@ -95,3 +98,17 @@ class TestAPI:
         with assert_raises(ValueError):
             self.g.delete(self.r[1])
         assert set(T) == set(self.r)
+
+
+def test_in_class():
+    'Test usage in an owning class'
+    class Child(Table):
+        parent = Field()
+
+    class Parent(Table):
+        children = Group(Child, lambda s: {'parent': s})
+
+    p = Parent()
+    a = Child(parent=p)
+    result = set(p.children)
+    assert result == {a}
