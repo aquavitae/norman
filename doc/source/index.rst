@@ -398,6 +398,12 @@ Groups
         Return a set of all records with field values matching *kwargs*.
 
 
+    .. method:: add(**kwargs)
+    
+        Create a new record of the reference table using *kwargs*, updated
+        the keyword arguments defining this `Group`.
+        
+        
     .. method:: delete([records=None,] **keywords)
         
         Delete delete all instances in *records* which match *keywords*.
