@@ -330,6 +330,6 @@ class TestValidateDelete:
     def test_invalid(self):
         t = self.T(value=0)
         assert self.T.get() == {t}
-        with assert_raises(AssertionError):
+        with assert_raises(ValueError):
             self.T.delete(value=0)
         assert self.T.get() == {t}

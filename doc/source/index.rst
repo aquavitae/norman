@@ -232,6 +232,14 @@ Tables
         
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
+        Internal validate (e.g. uniqueness checks) occurs before this
+        method is called, and a failure will result in a `ValueError` being
+        raised.  For convience, any `AssertionError` which is raised here
+        is considered to indicate invalid data, and is re-raised as a 
+        `ValueError`.  This allows all validation errors (both from this 
+        function and from internal checks) to be captured in a single
+        `except` statment.
+          
         Values may also be changed in the method.  The default implementation
         does nothing.
 
@@ -265,9 +273,11 @@ Tables
         >>> Name.delete(name='grouped')
         Traceback (most recent call last):
             ...
-        AssertionError: Can't delete "grouped"
+        ValueError: Can't delete "grouped"
         >>> {name.name for name in Name.get()}
         {'grouped'}
+        
+        Exceptions are handled in the same was as for `validate`.
         
                 
 Fields

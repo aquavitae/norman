@@ -143,6 +143,8 @@ class TableMeta(type):
         for r in rec:
             try:
                 r.validate_delete()
+            except AssertionError as err:
+                raise ValueError(*err.args)
             except:
                 raise
             else:
