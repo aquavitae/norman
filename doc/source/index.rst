@@ -23,8 +23,9 @@ related tables by foreign keys.  Here, however, keys do not exist, and
 records are linked directly to each other as attributes.
 
 The main containing class is `Database`, and an instance of this should be
-created before creating any tables.  Tables are subclassed from the `Table`
-class and fields added to it by creating `Field` class attributes.
+created before creating any tables it contains.  Tables are subclassed
+from the `Table` class and fields added to it by creating `Field` class
+attributes.
 
 
 Example
@@ -251,29 +252,27 @@ Tables
         This is called just before a record is deleted and is usually 
         re-implemented to check for other referring instances.  For example,
         the following structure only allows deletions of *Name* instances
-        not in a *Group*.
+        not in a *Grouper*.
         
         >>> class Name(Table):                
-        ...  name = Field()
-        ...  group = Field(default=None)
+        ...     name = Field()
+        ...     group = Field(default=None)
         ...  
-        ...  def validate_delete(self):
-        ...      assert self.group is None, "Can't delete '{}'".format(self.name)
+        ...     def validate_delete(self):
+        ...         assert self.group is None, "Can't delete '{}'".format(self.group)
         ...      
-        >>> class Group(Table)
-        ...  id = Field()
-        ...  @property
-        ...  def names(self):
-        ...      return Name.get(group=self)
+        >>> class Grouper(Table):
+        ...     id = Field()
+        ...     names = Group(Name, lambda s: {'group': s})
         ...      
-        >>> group = Group(id=1)
+        >>> group = Grouper(id=1)
         >>> n1 = Name(name='grouped', group=group)
-        >>> n2 = Name(name='not grouped')
+        >>> n2 = Name(name='not grouped', group=None)
         >>> Name.delete(name='not grouped')
         >>> Name.delete(name='grouped')
         Traceback (most recent call last):
             ...
-        ValueError: Can't delete "grouped"
+        ValueError: Can't delete 'grouped'
         >>> {name.name for name in Name.get()}
         {'grouped'}
         
@@ -282,7 +281,6 @@ Tables
                 
 Fields
 ------
-
 
 .. data:: NotSet
 
@@ -411,33 +409,42 @@ Fields
 Tools
 -----
 
+.. testsetup:: tools
+
+    from norman.tools import *
+    
+    
 Some useful tools for use with Norman are provided in `norman.tools`.
 
 .. function:: float2(s[, default=0.0])
     
     Convert *s* to a float, returning *default* if it cannot be converted.
     
-    >>> float2('33.4', 42.5)
-    33.4
-    >>> float2('cannot convert this', 42.5)
-    42.5
-    >>> float2(None, 0)
-    0
-    >>> print(float2('default does not have to be a float', None))
-    None
+    .. doctest:: tools
+    
+        >>> float2('33.4', 42.5)
+        33.4
+        >>> float2('cannot convert this', 42.5)
+        42.5
+        >>> float2(None, 0)
+        0
+        >>> print(float2('default does not have to be a float', None))
+        None
 
 
 .. function:: int2(s[, default=0])
     
     Convert *s* to an int, returning *default* if it cannot be converted.
     
-    >>> int2('33', 42)
-    33
-    >>> int2('cannot convert this', 42)
-    42
-    >>> print(int2('default does not have to be an int', None))
-    None
-   
+    .. doctest:: tools
+        
+        >>> int2('33', 42)
+        33
+        >>> int2('cannot convert this', 42)
+        42
+        >>> print(int2('default does not have to be an int', None))
+        None
+       
     
 .. testcleanup::
     
