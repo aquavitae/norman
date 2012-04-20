@@ -295,7 +295,7 @@ Fields
     When a table is created, fields can be identified by using a `Field` 
     object:
     
-    >>> class Table:
+    >>> class MyTable(Table):
     ...     name = Field()
     
     `Field` objects support *get* and *set* operations, similar to 
@@ -326,7 +326,10 @@ Fields
     implement the necessary constraints and indexes.
 
 
-.. class Group(table[, matcher=None], **kwargs)
+Groups
+------
+
+.. class:: Group(table[, matcher=None], **kwargs)
 
     This is a collection class which represents a collection of records.
     
@@ -339,40 +342,41 @@ Fields
     to update *kwargs*.  The argument passed to it is the instance of the 
     owning table, so this can only be used where `Group` is in a class.
     
+    `Group` is a set-like container, closely resembling a `Table`
+    and supports ``__len__``, ``__contains__`` and ``__iter__``.
+    
     This is typically used as a field type in a `Table`, but may be used 
     anywhere where a dynamic subset of a `Table` is needed.
     
-    The easiest way to demonstrating usage is through an example:
+    The easiest way to demonstrating usage is through an example.  This 
+    represents a collection of *Child* objects contained in a *Parent*.
     
     .. doctest::
     
-        class Child(Table):
-            name = Field()
-            parent = Field()
-            
-            def __repr__(self):
-                return "Child('{}')".format(self.name)
-                
-        class Parent(Table):
-            children = Group(Child, lambda self: parent=self)
+        >>> class Child(Table):
+        ...     name = Field()
+        ...     parent = Field()
+        ...     
+        ...     def __repr__(self):
+        ...         return "Child('{}')".format(self.name)
+        ...         
+        >>> class Parent(Table):
+        ...     children = Group(Child, lambda self: {'parent': self})
+        ...
+        >>> parent = Parent()
+        >>> a = Child(name='a', parent=parent)
+        >>> b = Child(name='b', parent=parent)
+        >>> len(parent.children)
+        2
+        >>> parent.children.get(name='a')
+        {Child('a')}
+        >>> parent.children.iter(name='b')
+        <generator object iter at ...>
+        >>> parent.children.add(name='c')
+        Child('c')
 
-    This represents a collection of *Child* objects contained in a *Parent*.
-    *Parent.children* is a set-like container, closely representing a `Table`
-    and supports ``__len__``, ``__contains__`` and ``__iter__``.
-    
-    >>> parent = Parent()
-    >>> Child(name='a', parent=parent)
-    >>> Child(name='b', parent=parent)
-    >>> len(parent.children)
-    2
-    >>> parent.children.get(name='a')
-    {Child('a')}
-    >>> parent.children.iter(name='b')
-    <Iterator>
-    >>> parent.children.add(name='c')
-    Child('c')
 
-    .. property:: table
+    .. attribute:: table
     
         Read-only property containing the `Table` object referred to by 
         this collection.
@@ -395,6 +399,12 @@ Fields
         Return a set of all records with field values matching *kwargs*.
 
 
+    .. method:: add(**kwargs)
+    
+        Create a new record of the reference table using *kwargs*, updated
+        the keyword arguments defining this `Group`.
+        
+        
     .. method:: delete([records=None,] **keywords)
         
         Delete delete all instances in *records* which match *keywords*.

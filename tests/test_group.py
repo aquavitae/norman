@@ -99,6 +99,13 @@ class TestAPI:
             self.g.delete(self.r[1])
         assert set(T) == set(self.r)
 
+    def test_add(self):
+        r = self.g.add(oid= -1)
+        assert isinstance(r, T)
+        assert r.oid == -1
+        assert r.name == 'a'
+        assert r in T
+
 
 def test_in_class():
     'Test usage in an owning class'

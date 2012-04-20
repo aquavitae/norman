@@ -64,6 +64,9 @@ class Group:
     def get(self, **kwargs):
         return self._table.get(**self._getkw(kwargs))
 
+    def add(self, **kwargs):
+        return self._table(**self._getkw(kwargs))
+
     def delete(self, *args, **kwargs):
         kwargs = self._getkw(kwargs)
         for record in args:
