@@ -32,7 +32,7 @@ class Database:
     >>> db = Database()
     >>> class MyTable(Table, database=db):
     ...     name = Field()
-    >>> MyTable in db.tables()
+    >>> MyTable in db
     True
     
     The database can be written to a sqlite database as file storage.  So
@@ -90,7 +90,7 @@ class Database:
         '''
         conn = sqlite3.connect(filename)
         conn.execute('BEGIN;')
-        for table in self.tables():
+        for table in self:
             tname = table.__name__
             fstr = ['"{}"'.format(f) for f in table.fields()]
             fstr = '"_oid_", ' + ', '.join(fstr)
@@ -137,7 +137,7 @@ class Database:
         conn.row_factory = sqlite3.Row
         # Extract the sql to a temporary dict structure, keyed by oid
         flat = {}
-        for table in self.tables():
+        for table in self:
             tname = table.__name__
             query = 'SELECT * FROM "{}";'.format(tname)
             try:

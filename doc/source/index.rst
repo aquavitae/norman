@@ -73,7 +73,7 @@ Database
     >>> db = Database()
     >>> class MyTable(Table, database=db):
     ...     name = Field()
-    >>> MyTable in db.tables()
+    >>> MyTable in db
     True
 
     `Database` instances act as containers of `Table` objects, and support
