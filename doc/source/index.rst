@@ -326,7 +326,10 @@ Fields
     implement the necessary constraints and indexes.
 
 
-.. class Group(table[, matcher=None], **kwargs)
+Groups
+------
+
+.. class:: Group(table[, matcher=None], **kwargs)
 
     This is a collection class which represents a collection of records.
     
