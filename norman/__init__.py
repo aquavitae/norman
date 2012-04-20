@@ -37,9 +37,10 @@ The main class is `Table` which defines the structure of a specific
 type of record
 '''
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 __author__ = 'David Townshend'
 
 from ._table import Table
 from ._field import Field, NotSet
+from ._group import Group
 from ._database import Database

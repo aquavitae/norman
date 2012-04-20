@@ -45,9 +45,6 @@ class TestDatabase:
         with assert_raises(TypeError):
             self.db['key'] = 'value'
 
-    def test_tables(self):
-        assert set(self.db.tables()) == {self.T}
-
     def test_tablenames(self):
         assert set(self.db.tablenames()) == {'T'}
 

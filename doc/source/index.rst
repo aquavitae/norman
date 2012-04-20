@@ -23,8 +23,9 @@ related tables by foreign keys.  Here, however, keys do not exist, and
 records are linked directly to each other as attributes.
 
 The main containing class is `Database`, and an instance of this should be
-created before creating any tables.  Tables are subclassed from the `Table`
-class and fields added to it by creating `Field` class attributes.
+created before creating any tables it contains.  Tables are subclassed
+from the `Table` class and fields added to it by creating `Field` class
+attributes.
 
 
 Example
@@ -73,7 +74,7 @@ Database
     >>> db = Database()
     >>> class MyTable(Table, database=db):
     ...     name = Field()
-    >>> MyTable in db.tables()
+    >>> MyTable in db
     True
 
     `Database` instances act as containers of `Table` objects, and support
@@ -175,7 +176,7 @@ Tables
 
 
     .. method:: delete([records=None,] **keywords)
-        
+
         Delete delete all instances in *records* which match *keywords*.
         If *records* is omitted then the entire table is searched.  For 
         example:
@@ -228,17 +229,58 @@ Tables
  
     .. method:: validate
     
-        Raise an exception of the record contains invalid data.
+        Raise an exception if the record contains invalid data.
         
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
+        Internal validate (e.g. uniqueness checks) occurs before this
+        method is called, and a failure will result in a `ValueError` being
+        raised.  For convience, any `AssertionError` which is raised here
+        is considered to indicate invalid data, and is re-raised as a 
+        `ValueError`.  This allows all validation errors (both from this 
+        function and from internal checks) to be captured in a single
+        `except` statment.
+          
         Values may also be changed in the method.  The default implementation
         does nothing.
 
 
+    .. method:: validate_delete
+    
+        Raise an exception if the record cannot be deleted.
+        
+        This is called just before a record is deleted and is usually 
+        re-implemented to check for other referring instances.  For example,
+        the following structure only allows deletions of *Name* instances
+        not in a *Grouper*.
+        
+        >>> class Name(Table):                
+        ...     name = Field()
+        ...     group = Field(default=None)
+        ...  
+        ...     def validate_delete(self):
+        ...         assert self.group is None, "Can't delete '{}'".format(self.group)
+        ...      
+        >>> class Grouper(Table):
+        ...     id = Field()
+        ...     names = Group(Name, lambda s: {'group': s})
+        ...      
+        >>> group = Grouper(id=1)
+        >>> n1 = Name(name='grouped', group=group)
+        >>> n2 = Name(name='not grouped', group=None)
+        >>> Name.delete(name='not grouped')
+        >>> Name.delete(name='grouped')
+        Traceback (most recent call last):
+            ...
+        ValueError: Can't delete 'grouped'
+        >>> {name.name for name in Name.get()}
+        {'grouped'}
+        
+        Exceptions are handled in the same was as for `validate`.
+        
+                
 Fields
 ------
-
 
 .. data:: NotSet
 
@@ -284,38 +326,125 @@ Fields
     implement the necessary constraints and indexes.
 
 
+.. class Group(table[, matcher=None], **kwargs)
+
+    This is a collection class which represents a collection of records.
+    
+    :param table:   The table which contains records returned by this `Group`.
+    :param matcher: A callable which returns a dict. This can be used
+                    instead of *kwargs* if it needs to be created dynamically. 
+    :param kwargs:  Keyword arguments used to filter records.
+    
+    If *matcher* is specified, it is called with a single argument 
+    to update *kwargs*.  The argument passed to it is the instance of the 
+    owning table, so this can only be used where `Group` is in a class.
+    
+    This is typically used as a field type in a `Table`, but may be used 
+    anywhere where a dynamic subset of a `Table` is needed.
+    
+    The easiest way to demonstrating usage is through an example:
+    
+    .. doctest::
+    
+        class Child(Table):
+            name = Field()
+            parent = Field()
+            
+            def __repr__(self):
+                return "Child('{}')".format(self.name)
+                
+        class Parent(Table):
+            children = Group(Child, lambda self: parent=self)
+
+    This represents a collection of *Child* objects contained in a *Parent*.
+    *Parent.children* is a set-like container, closely representing a `Table`
+    and supports ``__len__``, ``__contains__`` and ``__iter__``.
+    
+    >>> parent = Parent()
+    >>> Child(name='a', parent=parent)
+    >>> Child(name='b', parent=parent)
+    >>> len(parent.children)
+    2
+    >>> parent.children.get(name='a')
+    {Child('a')}
+    >>> parent.children.iter(name='b')
+    <Iterator>
+    >>> parent.children.add(name='c')
+    Child('c')
+
+    .. property:: table
+    
+        Read-only property containing the `Table` object referred to by 
+        this collection.
+        
+    
+    .. method:: iter(**kwargs)
+    
+        A generator which iterates over records in the `Group` with 
+        field values matching *kwargs*.  
+        
+
+    .. method:: contains(**kwargs)
+        
+        Return `True` if the `Group` contains any records with field values
+        matching *kwargs*.
+
+
+    .. method:: get(**kwargs)
+        
+        Return a set of all records with field values matching *kwargs*.
+
+
+    .. method:: delete([records=None,] **keywords)
+        
+        Delete delete all instances in *records* which match *keywords*.
+        This only deletes instances in the `Group`, but it completely deletes 
+        them.   If *records* is omitted then the entire `Group` is searched. 
+        
+        .. seealso:: Table.delete
+        
+
 .. module:: norman.tools
 
 Tools
 -----
 
+.. testsetup:: tools
+
+    from norman.tools import *
+    
+    
 Some useful tools for use with Norman are provided in `norman.tools`.
 
 .. function:: float2(s[, default=0.0])
     
     Convert *s* to a float, returning *default* if it cannot be converted.
     
-    >>> float2('33.4', 42.5)
-    33.4
-    >>> float2('cannot convert this', 42.5)
-    42.5
-    >>> float2(None, 0)
-    0
-    >>> print(float2('default does not have to be a float', None))
-    None
+    .. doctest:: tools
+    
+        >>> float2('33.4', 42.5)
+        33.4
+        >>> float2('cannot convert this', 42.5)
+        42.5
+        >>> float2(None, 0)
+        0
+        >>> print(float2('default does not have to be a float', None))
+        None
 
 
 .. function:: int2(s[, default=0])
     
     Convert *s* to an int, returning *default* if it cannot be converted.
     
-    >>> int2('33', 42)
-    33
-    >>> int2('cannot convert this', 42)
-    42
-    >>> print(int2('default does not have to be an int', None))
-    None
-   
+    .. doctest:: tools
+        
+        >>> int2('33', 42)
+        33
+        >>> int2('cannot convert this', 42)
+        42
+        >>> print(int2('default does not have to be an int', None))
+        None
+       
     
 .. testcleanup::
     
