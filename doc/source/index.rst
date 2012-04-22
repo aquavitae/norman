@@ -68,7 +68,7 @@ Database
 
     The main database class containing a list of tables.
 
-    Tables are added to the database when they are created by giving
+    Tables may be added to the database when they are created by giving
     the class a *database* keyword argument.  For example
 
     >>> db = Database()
@@ -77,6 +77,9 @@ Database
     >>> MyTable in db
     True
 
+    The `add` method can also be used as a class decorator to add the `Table`
+    to a database.
+    
     `Database` instances act as containers of `Table` objects, and support
     ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
     returns a table given its name (i.e. its class name), ``__contains__``
@@ -103,6 +106,18 @@ Database
     integers > 0.  *None* is stored as *NULL*, and *NotSet* as 0.
     
 
+    .. method:: add(table)
+    
+        Add a `Table` class to the database.  This is the same as including
+        the *database* argument in the class definition.  The table is 
+        returned so this can be used as a class decorator 
+        
+        >>> db = Database()
+        >>> @db.add
+        ... class MyTable(Table):
+        ...     name = Field()
+        
+        
     .. method:: tablenames:
     
         Return an list of the names of all tables managed by the database.

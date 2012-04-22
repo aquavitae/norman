@@ -50,3 +50,10 @@ class TestDatabase:
 
     def test_iter(self):
         assert set(iter(self.db)) == {self.T}
+
+    def test_add(self):
+        class Tb(Table):
+            pass
+        r = self.db.add(Tb)
+        assert r is Tb
+        assert Tb in self.db

@@ -71,6 +71,21 @@ class Database:
                 return t
         raise KeyError(name)
 
+    def add(self, table):
+        ''' Add a `Table` class to the database.
+        
+        This is the same as including the *database* argument in the
+        class definition.  The table is returned so this can be used
+        as a class decorator.
+        
+        >>> db = Database()
+        >>> @db.add
+        ... class MyTable(Table):
+        ...     name = Field()
+        '''
+        self._tables.add(table)
+        return table
+
     def tablenames(self):
         return [t.__name__ for t in self._tables]
 
