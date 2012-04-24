@@ -18,6 +18,7 @@ from __future__ import with_statement
 from nose.tools import assert_raises
 from norman import Field, NotSet
 
+
 class MockTable(object):
     _updateinstance = lambda: None
     validate = lambda: None

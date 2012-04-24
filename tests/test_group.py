@@ -17,9 +17,9 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-from mock import sentinel
 from nose.tools import assert_raises
 from norman import Field, Group, Table
+
 
 class T(Table):
     oid = Field(unique=True)

@@ -31,11 +31,13 @@ if sys.version < '3':
 ###############################################################################
 # Some test data
 
+
 def convidx(table, index):
     'Utility to convert an index (i.e. defaultdict with a weakset) to a dict'
     r = [(value, set(table._instances[k] for k in keys)) \
                 for value, keys in table._indexes[index].items()]
     return dict(a for a in r if a[1])
+
 
 def test_conv_index():
     class K(object): pass

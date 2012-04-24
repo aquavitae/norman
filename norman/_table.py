@@ -19,12 +19,13 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import collections
+from collections import defaultdict
 import copy
 import functools
 import weakref
 
 from ._field import Field, NotSet
+
 
 class _I:
     ''' An empty, hashable and weak referenceable object.'''
@@ -33,10 +34,10 @@ class _I:
 
 class TableMeta(type):
     ''' Metaclass for all tables.
-    
+
     The methods provided by this metaclass are essentially those which apply
     to the table (as opposed to those which apply records).
-    
+
     Tables support a limited sequence-like interface, but support rapid
     lookup through indexes.  Internally, each record is stored in a dict
     with random numerical keys.  Indexes simply map record attributes to keys.
@@ -55,11 +56,11 @@ class TableMeta(type):
                 value.name = name
                 cls._fields[name] = value
                 if value.index:
-                    cls._indexes[name] = collections.defaultdict(weakref.WeakSet)
+                    cls._indexes[name] = defaultdict(weakref.WeakSet)
         return cls
 
     def __init__(cls, name, bases, cdict):
-         super(TableMeta, cls).__init__(name, bases, cdict)
+        super(TableMeta, cls).__init__(name, bases, cdict)
 
     def __len__(cls):
         return len(cls._instances)

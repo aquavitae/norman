@@ -19,6 +19,7 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+
 class Group(object):
 
     def __init__(self, table, matcher=None, **kwargs):

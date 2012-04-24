@@ -21,6 +21,7 @@ import norman
 
 version = norman.__version__
 author = norman.__author__
+description = 'Lightweight, in-memory database framework implemented in python'
 
 classifiers = [
     'Development Status :: 4 - Beta',
@@ -39,13 +40,14 @@ classifiers = [
     'Topic :: Software Development :: Libraries :: Python Modules'
 ]
 
+
 def run_setup(*argv):
     if len(argv) > 0:
         sys.argv = [sys.argv[0]] + list(argv)
 
     setup(name='norman',
           version=version,
-          description='Lightweight, in-memory database framework implemented in python',
+          description=description,
           author=author,
           author_email='aquavitae69@gmail.com',
           url='http://bitbucket.org/aquavitae/norman',

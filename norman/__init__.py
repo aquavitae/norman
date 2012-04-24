@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-''' A new database framework.  
+''' A new database framework.
 
 This framework provides a bases for creating database-like structures.
 It doesn't, however, link into any database API (e.g. sqlite) and
@@ -31,7 +31,7 @@ in the way relationships are managed.  In a SQL database, each record
 has one or more primary keys, which are typically referred to in other,
 related tables by foreign keys.  Here, however, keys do not exist, and
 records are linked directly to each other as attributes.
-  
+
 The main class is `Table` which defines the structure of a specific
 type of record
 '''

@@ -32,35 +32,35 @@ if sys.version < '3':
 
 class Database(object):
     ''' The main database class containing a list of tables.
-    
+
     Tables are added to the database when they are created by giving
     the class a *database* keyword argument.  For example
-    
+
     >>> db = Database()
     >>> class MyTable(Table, database=db):
     ...     name = Field()
     >>> MyTable in db
     True
-    
+
     The database can be written to a sqlite database as file storage.  So
     if a `Database` instance represents a document state, it can be saved
     using the following code:
-    
+
     >>> db.tosqlite('file.sqlite')
-    
+
     And reloaded thus:
-    
+
     >>> db.fromsqlite('file.sqlite')
-    
+
     :note:
         The sqlite database created does not contain any constraints
-        at all (not even type constraints).  This is because the sqlite 
+        at all (not even type constraints).  This is because the sqlite
         database is meant to be used purely for file storage.
-        
+
     In the sqlite database, all values are saved as strings (determined
     from ``str(value)``.  Keys (foreign and primary) are globally unique
     integers > 0.  *None* is stored as *NULL*, and *NotSet* as 0.
-    
+
     '''
 
     def __init__(self):
@@ -80,11 +80,11 @@ class Database(object):
 
     def add(self, table):
         ''' Add a `Table` class to the database.
-        
+
         This is the same as including the *database* argument in the
         class definition.  The table is returned so this can be used
         as a class decorator.
-        
+
         >>> db = Database()
         >>> @db.add
         ... class MyTable(Table):
@@ -103,7 +103,7 @@ class Database(object):
 
     def tosqlite(self, filename):
         ''' Dump the database to a sqlite database.
-        
+
         Each table is dumped to a sqlite table, without any constraints.
         All values in the table are converted to strings and foreign objects
         are stored as an integer id (referring to another record). Each
@@ -141,17 +141,17 @@ class Database(object):
 
     def fromsqlite(self, filename):
         ''' The database supplied is read as follows:
-        
+
         1.  Tables are searched for by name, if they are missing then
             they are ignored.
-            
+
         2.  If a table is found, but does not have an "oid" field, it is
             ignored
-        
+
         3.  Values in "oid" should be unique within the database, e.g.
             a record in "units" cannot have the same "oid" as a record
             in "cycles".
-            
+
         4.  Records which cannot be added, for any reason, are ignored
             and a message logged.
         '''
@@ -176,7 +176,6 @@ class Database(object):
         # Create correct types in flat
         for oid in flat.keys():
             self._makerecord(flat, oid)
-
 
     def _makerecord(self, flat, oid):
         ''' Create a new record for oid and return it. '''

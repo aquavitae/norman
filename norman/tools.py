@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 
 def float2(s, default=0.0):
     ''' Convert *s* to a float, returning *default* if it cannot be converted.
-    
+
     >>> float2('33.4', 42.5)
     33.4
     >>> float2('cannot convert this', 42.5)
@@ -37,9 +37,10 @@ def float2(s, default=0.0):
     except (ValueError, TypeError):
         return default
 
+
 def int2(s, default=0):
     ''' Convert *s* to an int, returning *default* if it cannot be converted.
-    
+
     >>> int2('33', 42)
     33
     >>> int2('cannot convert this', 42)

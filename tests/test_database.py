@@ -20,6 +20,7 @@ from __future__ import unicode_literals
 from nose.tools import assert_raises
 from norman import Database, Table
 
+
 class TestDatabase(object):
 
     def setup(self):
