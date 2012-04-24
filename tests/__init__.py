@@ -15,7 +15,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-''' Some system test for the database. '''
+""" Some system test for the database. """
 from __future__ import with_statement
 from __future__ import unicode_literals
 
@@ -111,7 +111,7 @@ class TestCase1(object):
         import logging
         import sqlite3
         logging.disable(logging.CRITICAL)
-        sql = '''
+        sql = """
             CREATE TABLE "other" ("field");
             CREATE TABLE "provinces" ("oid", "name", "number");
             CREATE TABLE "units" ("field");
@@ -120,7 +120,7 @@ class TestCase1(object):
             INSERT INTO "provinces" VALUES (1, 'Eastern Cape', 42);
             INSERT INTO "cycles" VALUES (2, 'bad value');
             INSERT INTO "cycles" VALUES (3, '2009/10');
-        '''
+        """
         conn = sqlite3.connect('test')
         conn.executescript(sql)
         conn.close()

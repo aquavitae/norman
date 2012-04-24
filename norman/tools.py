@@ -21,7 +21,8 @@ from __future__ import unicode_literals
 
 
 def float2(s, default=0.0):
-    ''' Convert *s* to a float, returning *default* if it cannot be converted.
+    """
+    Convert *s* to a float, returning *default* if it cannot be converted.
 
     >>> float2('33.4', 42.5)
     33.4
@@ -31,7 +32,7 @@ def float2(s, default=0.0):
     0
     >>> print(float2('default does not have to be a float', None))
     None
-    '''
+    """
     try:
         return float(s)
     except (ValueError, TypeError):
@@ -39,7 +40,8 @@ def float2(s, default=0.0):
 
 
 def int2(s, default=0):
-    ''' Convert *s* to an int, returning *default* if it cannot be converted.
+    """
+    Convert *s* to an int, returning *default* if it cannot be converted.
 
     >>> int2('33', 42)
     33
@@ -47,7 +49,7 @@ def int2(s, default=0):
     42
     >>> print(int2('default does not have to be an int', None))
     None
-    '''
+    """
     try:
         return int(s)
     except (ValueError, TypeError):

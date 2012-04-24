@@ -28,20 +28,23 @@ from ._field import Field, NotSet
 
 
 class _I:
-    ''' An empty, hashable and weak referenceable object.'''
+    """An empty, hashable and weak referenceable object."""
     pass
 
 
 class TableMeta(type):
-    ''' Metaclass for all tables.
+
+    """
+    Base metaclass for all tables.
 
     The methods provided by this metaclass are essentially those which apply
     to the table (as opposed to those which apply records).
 
-    Tables support a limited sequence-like interface, but support rapid
-    lookup through indexes.  Internally, each record is stored in a dict
-    with random numerical keys.  Indexes simply map record attributes to keys.
-    '''
+    Tables support a limited sequence-like interface, with rapid lookup 
+    through indexed fields.  The sequence operations supported are ``__len__``,
+    ``__contains__`` and ``__iter__``, and all act on instances of the table,
+    i.e. records.
+    """
 
     def __new__(mcs, name, bases, cdict):
         cls = type.__new__(mcs, name, bases, cdict)
@@ -72,7 +75,7 @@ class TableMeta(type):
         return iter(cls._instances.values())
 
     def iter(cls, **kwargs):
-        ''' A generator which iterates over records matching kwargs.'''
+        """Iterate over records with field values matching *kwargs*."""
         keys = set(kwargs.keys()) & set(cls._indexes.keys())
         if keys:
             f = lambda a, b: a & b
@@ -85,7 +88,7 @@ class TableMeta(type):
                 yield m
 
     def contains(cls, **kwargs):
-        ''' Return `True` if the table contains any records matching *kwargs*.'''
+        """Return `True` if the table contains any records matching *kwargs*."""
         it = cls.iter(**kwargs)
         try:
             next(it)
@@ -94,14 +97,15 @@ class TableMeta(type):
         return True
 
     def get(cls, **kwargs):
-        ''' Return a set of all records matching *kwargs*.'''
+        """Return a set of all records matching *kwargs*."""
         return set(cls.iter(**kwargs))
 
     def delete(cls, records=None, **keywords):
-        ''' Delete records from the table.
+        """
+        Delete delete all instances in *records* which match *keywords*.
         
-        This will delete all instances in *records* which match *keywords*.
-        E.g.
+        If *records* is omitted then the entire table is searched.  For 
+        example:
         
         >>> class T(Table):
         ...     id = Field()
@@ -128,13 +132,14 @@ class TableMeta(type):
         [3, 5, 6, 7, 8]
         
         If no keywords are given, then all records in in *records* are deleted.
+        
         >>> T.delete(records[2:4])
         >>> [t.id for t in T.get()]
         [3, 5, 8]
         
         If neither records nor keywords are deleted, then the entire 
         table is cleared.
-        '''
+        """
         if records is None:
             records = cls.iter()
         if isinstance(records, Table):
@@ -151,20 +156,22 @@ class TableMeta(type):
             else:
                 del cls._instances[r._key]
 
-
     def fields(cls):
-        ''' Return an iterator over field names in the table. '''
+        """Return an iterator over field names in the table."""
         return cls._fields.keys()
 
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
 
 class Table(_TableBase):
-    ''' Each instance of a Table subclass represents a record in that Table.
+
+    """
+    Each instance of a Table subclass represents a record in that Table.
     
     This class should be inherited from to define the fields in the table.
     It may also optionally provide a `validate` method.
-    '''
+    """
+
     def __init__(self, **kwargs):
         key = _I()
         self._key = key
@@ -223,16 +230,18 @@ class Table(_TableBase):
         index[newvalue].add(self._key)
 
     def validate(self):
-        ''' Raise an exception of the record contains invalid data.
+        """
+        Raise an exception of the record contains invalid data.
         
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
         Values may also be changed in the method.
-        '''
+        """
         return
 
     def validate_delete(self):
-        ''' Raise an exception if the record cannot be deleted.
+        """
+        Raise an exception if the record cannot be deleted.
         
         This is called just before a record is deleted and is usually 
         re-implemented to check for other referring instances.  For example,
@@ -262,5 +271,5 @@ class Table(_TableBase):
         AssertionError: Can't delete "grouped"
         >>> {name.name for name in Name.get()}
         {'grouped'}
-        '''
+        """
         pass

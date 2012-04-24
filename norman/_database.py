@@ -31,9 +31,11 @@ if sys.version < '3':
 
 
 class Database(object):
-    ''' The main database class containing a list of tables.
 
-    Tables are added to the database when they are created by giving
+    """
+    The main database class containing a list of tables.
+
+    Tables may be added to the database when they are created by giving
     the class a *database* keyword argument.  For example
 
     >>> db = Database()
@@ -41,6 +43,15 @@ class Database(object):
     ...     name = Field()
     >>> MyTable in db
     True
+
+    The `add` method can also be used as a class decorator to add the `Table`
+    to a database.
+
+    `Database` instances act as containers of `Table` objects, and support
+    ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
+    returns a table given its name (i.e. its class name), ``__contains__``
+    returns whether a `Table` object is managed by the database and
+    ``__iter__`` returns a iterator over the tables.
 
     The database can be written to a sqlite database as file storage.  So
     if a `Database` instance represents a document state, it can be saved
@@ -60,8 +71,7 @@ class Database(object):
     In the sqlite database, all values are saved as strings (determined
     from ``str(value)``.  Keys (foreign and primary) are globally unique
     integers > 0.  *None* is stored as *NULL*, and *NotSet* as 0.
-
-    '''
+    """
 
     def __init__(self):
         self._tables = set()
@@ -79,7 +89,8 @@ class Database(object):
         raise KeyError(name)
 
     def add(self, table):
-        ''' Add a `Table` class to the database.
+        """
+        Add a `Table` class to the database.
 
         This is the same as including the *database* argument in the
         class definition.  The table is returned so this can be used
@@ -89,27 +100,29 @@ class Database(object):
         >>> @db.add
         ... class MyTable(Table):
         ...     name = Field()
-        '''
+        """
         self._tables.add(table)
         return table
 
     def tablenames(self):
+        """Return an list of the names of all tables managed by the database."""
         return [t.__name__ for t in self._tables]
 
     def reset(self):
-        ''' Delete all records from all tables. '''
+        """Delete all records from all tables."""
         for table in self._tables:
             table.delete()
 
     def tosqlite(self, filename):
-        ''' Dump the database to a sqlite database.
+        """
+        Dump the database to a sqlite database.
 
         Each table is dumped to a sqlite table, without any constraints.
         All values in the table are converted to strings and foreign objects
         are stored as an integer id (referring to another record). Each
         record has an additional field, '_oid_', which contains a unique
         integer.
-        '''
+        """
         conn = sqlite3.connect(filename)
         conn.execute('BEGIN;')
         for table in self:
@@ -140,7 +153,8 @@ class Database(object):
         conn.close()
 
     def fromsqlite(self, filename):
-        ''' The database supplied is read as follows:
+        """
+        The database supplied is read as follows:
 
         1.  Tables are searched for by name, if they are missing then
             they are ignored.
@@ -154,7 +168,7 @@ class Database(object):
 
         4.  Records which cannot be added, for any reason, are ignored
             and a message logged.
-        '''
+        """
         conn = sqlite3.connect(filename)
         conn.row_factory = sqlite3.Row
         # Extract the sql to a temporary dict structure, keyed by oid
@@ -178,7 +192,7 @@ class Database(object):
             self._makerecord(flat, oid)
 
     def _makerecord(self, flat, oid):
-        ''' Create a new record for oid and return it. '''
+        """Create a new record for oid and return it."""
         table, row = flat[oid]
         if isinstance(row, table):
             return row

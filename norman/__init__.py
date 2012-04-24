@@ -16,7 +16,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-''' A new database framework.
+"""
+A new database framework.
 
 This framework provides a bases for creating database-like structures.
 It doesn't, however, link into any database API (e.g. sqlite) and
@@ -34,7 +35,7 @@ records are linked directly to each other as attributes.
 
 The main class is `Table` which defines the structure of a specific
 type of record
-'''
+"""
 
 __version__ = '0.5.2'
 __author__ = 'David Townshend'
