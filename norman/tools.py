@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2011 David Townshend
@@ -16,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
+
+from __future__ import with_statement
+from __future__ import unicode_literals
+
 
 def float2(s, default=0.0):
     ''' Convert *s* to a float, returning *default* if it cannot be converted.

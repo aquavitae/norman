@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Copyright (c) 2011 David Townshend
 #
@@ -17,6 +16,8 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 ''' Some system test for the database. '''
+from __future__ import with_statement
+from __future__ import unicode_literals
 
 import pickle
 import os
@@ -25,7 +26,8 @@ from norman import Database, Table, Field, tools
 
 db = Database()
 
-class Person(Table, database=db):
+@db.add
+class Person(Table):
     custno = Field(unique=True)
     name = Field(index=True)
     age = Field(default=20)
@@ -36,7 +38,8 @@ class Person(Table, database=db):
             self.age = tools.int2(self.age, 0)
         assert isinstance(self.address, Address)
 
-class Address(Table, database=db):
+@db.add
+class Address(Table):
     street = Field(unique=True)
     town = Field(unique=True)
 
@@ -47,7 +50,8 @@ class Address(Table, database=db):
     def validate(self):
         assert isinstance(self.town, Town)
 
-class Town(Table, database=db):
+@db.add
+class Town(Table):
     name = Field(unique=True)
 
 def test_indexes():
@@ -60,7 +64,7 @@ def test_indexes():
     assert Address.town.index
     assert Town.name.index
 
-class TestCase1:
+class TestCase1(object):
 
     def setup(self):
         self.t1 = Town(name='down')
@@ -80,7 +84,7 @@ class TestCase1:
 
     def test_links(self):
         assert self.a1.town is self.t1
-        assert set(self.a1.people) == {self.p1, self.p2}
+        assert set(self.a1.people) == set([self.p1, self.p2])
 
     def test_pickle(self):
         b = pickle.dumps(db)
@@ -89,12 +93,12 @@ class TestCase1:
         self.check_integrity(db2)
 
     def check_integrity(self, db):
-        assert set(db.tablenames()) == {'Town', 'Address', 'Person'}
+        assert set(db.tablenames()) == set(['Town', 'Address', 'Person'])
         streets = set(a.street for a in db['Address'])
-        assert streets == {'easy', 'some'}, streets
+        assert streets == set(['easy', 'some']), streets
         address = next(db['Address'].iter(street='easy'))
-        assert set(p.name for p in address.people) == {'matt', 'bob'}
-        assert set(p.age for p in address.people) == {43, 3}
+        assert set(p.name for p in address.people) == set(['matt', 'bob'])
+        assert set(p.age for p in address.people) == set([43, 3])
 
     def test_tofromsql(self):
         db.tosqlite('test')

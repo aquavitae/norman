@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2011 David Townshend
@@ -16,6 +15,9 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
+
+from __future__ import with_statement
+from __future__ import unicode_literals
 
 import collections
 import copy
@@ -40,13 +42,11 @@ class TableMeta(type):
     with random numerical keys.  Indexes simply map record attributes to keys.
     '''
 
-    def __new__(mcls, name, bases, cdict, database=None):
-        cls = type.__new__(mcls, name, bases, cdict)
+    def __new__(mcs, name, bases, cdict):
+        cls = type.__new__(mcs, name, bases, cdict)
         cls._instances = {}
         cls._indexes = {}
         cls._fields = {}
-        if database is not None:
-            database._tables.add(cls)
         fulldict = copy.copy(cdict)
         for base in bases:
             fulldict.update(base.__dict__)
@@ -58,8 +58,8 @@ class TableMeta(type):
                     cls._indexes[name] = collections.defaultdict(weakref.WeakSet)
         return cls
 
-    def __init__(cls, name, bases, cdict, database=None):
-        super().__init__(name, bases, cdict)
+    def __init__(cls, name, bases, cdict):
+         super(TableMeta, cls).__init__(name, bases, cdict)
 
     def __len__(cls):
         return len(cls._instances)
@@ -72,7 +72,7 @@ class TableMeta(type):
 
     def iter(cls, **kwargs):
         ''' A generator which iterates over records matching kwargs.'''
-        keys = kwargs.keys() & cls._indexes.keys()
+        keys = set(kwargs.keys()) & set(cls._indexes.keys())
         if keys:
             f = lambda a, b: a & b
             matches = functools.reduce(f, (cls._indexes[key][kwargs[key]] for key in keys))
@@ -156,7 +156,9 @@ class TableMeta(type):
         return cls._fields.keys()
 
 
-class Table(metaclass=TableMeta):
+_TableBase = TableMeta(str('_TableBase'), (object,), {})
+
+class Table(_TableBase):
     ''' Each instance of a Table subclass represents a record in that Table.
     
     This class should be inherited from to define the fields in the table.
@@ -166,7 +168,7 @@ class Table(metaclass=TableMeta):
         key = _I()
         self._key = key
         data = dict.fromkeys(self.__class__.fields(), NotSet)
-        badkw = kwargs.keys() - data.keys()
+        badkw = set(kwargs.keys()) - set(data.keys())
         if badkw:
             raise AttributeError(badkw)
         data.update(kwargs)
@@ -209,7 +211,7 @@ class Table(metaclass=TableMeta):
             if field.index:
                 self._updateindex(attr, oldvalue, value)
         else:
-            super().__setattr__(attr, value)
+            super(Table, self).__setattr__(attr, value)
 
     def _updateindex(self, name, oldvalue, newvalue):
         index = self._indexes[name]

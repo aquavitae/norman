@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2011 David Townshend
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -16,12 +14,19 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
+from __future__ import unicode_literals
+
 import collections
 import weakref
 import timeit
 
 from nose.tools import assert_raises
 from norman import Table, Field, NotSet, _table
+
+import sys
+if sys.version < '3':
+    range = xrange
 
 ###############################################################################
 # Some test data
@@ -33,21 +38,21 @@ def convidx(table, index):
     return dict(a for a in r if a[1])
 
 def test_conv_index():
-    class K: pass
+    class K(object): pass
     k1 = K()
     k2 = K()
-    class T:
+    class T(object):
         _instances = {k1: 'i1', k2: 'i2'}
         _indexes = {'f1': collections.defaultdict(weakref.WeakSet),
                     'f2': collections.defaultdict(weakref.WeakSet)}
     T._indexes['f1']['a'].add(k1)
     T._indexes['f1']['a'].add(k2)
     T._indexes['f1']['b'].add(k1)
-    T._indexes['f2']['a']
-    assert convidx(T, 'f1') == {'a': {'i1', 'i2'}, 'b': {'i1'}}
+    T._indexes['f2']['a'] #note: is this actually required?
+    assert convidx(T, 'f1') == {'a': set(['i1', 'i2']), 'b': set(['i1'])}
     assert convidx(T, 'f2') == {}
 
-class Test_I:
+class Test_I(object):
 
     def test_hash(self):
         'Test that _I is hashable.'
@@ -66,7 +71,7 @@ class Test_I:
         assert ref() is None
 
 
-class TestTable:
+class TestTable(object):
 
     def setup(self):
         class T(Table):
@@ -81,8 +86,8 @@ class TestTable:
         assert t.oid is NotSet
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {NotSet: {t}}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: {t}}
+        assert convidx(self.T, 'oid') == {NotSet: set([t])}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: set([t])}
         assert 'age' not in t._indexes
 
     def test_init_single(self):
@@ -91,8 +96,8 @@ class TestTable:
         assert t.oid == 1, t.oid
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {1: {t}}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: {t}}
+        assert convidx(self.T, 'oid') == {1: set([t])}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: set([t])}
         assert 'age' not in t._indexes
 
     def test_init_many(self):
@@ -101,8 +106,8 @@ class TestTable:
         assert t.oid == 1
         assert t.name is 'Mike'
         assert t.age is 23
-        assert convidx(self.T, 'oid') == {1: {t}}
-        assert convidx(self.T, 'name') == {'Mike': {t}}
+        assert convidx(self.T, 'oid') == {1: set([t])}
+        assert convidx(self.T, 'name') == {'Mike': set([t])}
         assert 'age' not in t._indexes
 
     def test_init_bad_kwargs(self):
@@ -153,7 +158,7 @@ class TestTable:
         t1 = self.T(oid=1)
         t2 = self.T(oid=2)
         result = set(i for i in self.T)
-        assert result == {t1, t2}
+        assert result == set([t1, t2])
 
     def test_iter_method(self):
         'Test that iter returns the matching records.'
@@ -161,7 +166,7 @@ class TestTable:
         p2 = self.T(oid=2)
         p3 = self.T(oid=3)
         p = set(self.T.iter(oid=1))
-        assert p == {p1}, p
+        assert p == set([p1]), p
 
     def test_iter_other_attr(self):
         'Test that iter finds matches for non-indexed fields.'
@@ -169,20 +174,20 @@ class TestTable:
         p2 = self.T(oid=2, name='Mike', age=22)
         p3 = self.T(oid=3, name='Mike', age=23)
         p = set(self.T.iter(age=23))
-        assert p == {p1, p3}, p
+        assert p == set([p1, p3]), p
 
     def test_get(self):
         p1 = self.T(oid=1)
         p2 = self.T(oid=2)
         p3 = self.T(oid=3)
         p = self.T.get(oid=1)
-        assert p == {p1}
+        assert p == set([p1])
 
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
         t = self.T(oid=1)
         i = convidx(self.T, 'oid')
-        assert i == {1: {t}}, i
+        assert i == {1: set([t])}, i
 
     def test_index_speed(self):
         'Getting indexed fields should be ten times faster'
@@ -270,7 +275,7 @@ class TestTable:
         assert t.name == 'ABC', t.name
 
 
-class TestUnique:
+class TestUnique(object):
 
     def setup(self):
         class T(Table):
@@ -312,7 +317,7 @@ class TestUnique:
             T(a=1, b=2)
 
 
-class TestValidateDelete:
+class TestValidateDelete(object):
 
     def setup(self):
         class T(Table):
@@ -323,13 +328,13 @@ class TestValidateDelete:
 
     def test_valid(self):
         t = self.T(value=5)
-        assert self.T.get() == {t}
+        assert self.T.get() == set([t])
         self.T.delete(value=5)
         assert self.T.get() == set()
 
     def test_invalid(self):
         t = self.T(value=0)
-        assert self.T.get() == {t}
+        assert self.T.get() == set([t])
         with assert_raises(ValueError):
             self.T.delete(value=0)
-        assert self.T.get() == {t}
+        assert self.T.get() == set([t])

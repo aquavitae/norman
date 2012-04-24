@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2011 David Townshend
@@ -17,13 +16,21 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
+from __future__ import unicode_literals
+
 import logging
 import sqlite3
 
 from ._table import Table
 from ._field import NotSet
 
-class Database:
+import sys
+if sys.version < '3':
+    unicode = str
+
+
+class Database(object):
     ''' The main database class containing a list of tables.
     
     Tables are added to the database when they are created by giving
@@ -60,7 +67,7 @@ class Database:
         self._tables = set()
 
     def __contains__(self, t):
-        return t in self._tables or t in {t.__name__ for t in self._tables}
+        return t in self._tables or t in set(t.__name__ for t in self._tables)
 
     def __iter__(self):
         return iter(self._tables)
@@ -124,7 +131,7 @@ class Database:
                     elif value is NotSet:
                         value = 0
                     elif value is not None:
-                        value = str(value)
+                        value = unicode(value)
                     values.append(value)
                 qmarks = ', '.join('?' * len(values))
                 query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
@@ -176,7 +183,7 @@ class Database:
         table, row = flat[oid]
         if isinstance(row, table):
             return row
-        keys = set(table.fields()) & row.keys()
+        keys = set(table.fields()) & set(row.keys())
         args = {}
         for key in keys:
             if isinstance(row[key], int):

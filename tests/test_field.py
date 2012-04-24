@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2011 David Townshend
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -16,10 +14,11 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
 from nose.tools import assert_raises
 from norman import Field, NotSet
 
-class MockTable:
+class MockTable(object):
     _updateinstance = lambda: None
     validate = lambda: None
 
@@ -34,7 +33,7 @@ def test_NotSet_compare():
     assert not NotSet
 
 
-class TestSingleField:
+class TestSingleField(object):
 
     def setup(self):
         class Table(MockTable):

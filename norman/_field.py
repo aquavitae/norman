@@ -17,16 +17,19 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
+from __future__ import unicode_literals
 
-class NotSet:
-    def __bool__(self):
+class NotSet(object):
+    def __nonzero__(self):
         return False
+    __bool__ = __nonzero__
 
 
 # Senitinal indicating that the field value has not yet been set.
 NotSet = NotSet()
 
-class Field:
+class Field(object):
     ''' A `Field` is used in tables to define attributes of data.
     
     When a table is created, fields can be identified by using a `Field` 
@@ -63,12 +66,11 @@ class Field:
     implement the necessary constraints and indexes.
     '''
 
-    def __init__(self, *, unique=False, index=False, default=NotSet,
-                 readonly=False):
-        self.unique = unique
-        self.index = index or unique
-        self.default = default
-        self.readonly = readonly
+    def __init__(self, **kwargs):
+        self.unique = kwargs.get('unique', False)
+        self.index = kwargs.get('index', False) or self.unique
+        self.default = kwargs.get('default', NotSet)
+        self.readonly = kwargs.get('readonly', False)
         self._data = {}
 
     def __get__(self, instance, owner):
