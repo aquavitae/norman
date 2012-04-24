@@ -231,11 +231,20 @@ class Table(_TableBase):
 
     def validate(self):
         """
-        Raise an exception of the record contains invalid data.
-        
+        Raise an exception if the record contains invalid data.
+
         This is usually re-implemented in subclasses, and checks that all
         data in the record is valid.  If not, and exception should be raised.
-        Values may also be changed in the method.
+        Internal validate (e.g. uniqueness checks) occurs before this
+        method is called, and a failure will result in a `ValueError` being
+        raised.  For convenience, any `AssertionError` which is raised here
+        is considered to indicate invalid data, and is re-raised as a
+        `ValueError`.  This allows all validation errors (both from this
+        function and from internal checks) to be captured in a single
+        *except* statement.
+
+        Values may also be changed in the method.  The default implementation
+        does nothing.
         """
         return
 

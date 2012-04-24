@@ -68,23 +68,21 @@ Database
 
     The main database class containing a list of tables.
 
-    Tables may be added to the database when they are created by giving
-    the class a *database* keyword argument.  For example
-
-    >>> db = Database()
-    >>> class MyTable(Table, database=db):
-    ...     name = Field()
-    >>> MyTable in db
-    True
-
-    The `add` method can also be used as a class decorator to add the `Table`
-    to a database.
-
     `Database` instances act as containers of `Table` objects, and support
     ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
     returns a table given its name (i.e. its class name), ``__contains__``
     returns whether a `Table` object is managed by the database and
     ``__iter__`` returns a iterator over the tables.
+
+    Tables may be added to the database when they are created by using
+    `Database.add` as a class decorator.  For example:
+
+    >>> db = Database()
+    >>> @db.add
+    ... class MyTable(Table):
+    ...     name = Field()
+    >>> MyTable in db
+    True
 
     The database can be written to a sqlite database as file storage.  So
     if a `Database` instance represents a document state, it can be saved
@@ -103,7 +101,7 @@ Database
 
     In the sqlite database, all values are saved as strings (determined
     from ``str(value)``.  Keys (foreign and primary) are globally unique
-    integers > 0.  *None* is stored as *NULL*, and *NotSet* as 0.
+    integers > 0.  `None` is stored as *NULL*, and `NotSet` as 0.
 
 
     .. method:: add(table)
@@ -112,7 +110,7 @@ Database
 
         This is the same as including the *database* argument in the
         class definition.  The table is returned so this can be used as
-        a class decorator
+        a class decorator.
 
         >>> db = Database()
         >>> @db.add
@@ -241,8 +239,8 @@ Tables
 
     Each instance of a Table subclass represents a record in that Table.
 
-    This class should be inherited from to define the fields in the table.
-    It may also optionally provide a `validate` method.
+    This class should be subclassed to define the fields in the table.
+    It may also optionally provide `validate` and `validate_delete` methods.
 
 
     .. method:: validate
@@ -253,11 +251,11 @@ Tables
         data in the record is valid.  If not, and exception should be raised.
         Internal validate (e.g. uniqueness checks) occurs before this
         method is called, and a failure will result in a `ValueError` being
-        raised.  For convience, any `AssertionError` which is raised here
+        raised.  For convenience, any `AssertionError` which is raised here
         is considered to indicate invalid data, and is re-raised as a
         `ValueError`.  This allows all validation errors (both from this
         function and from internal checks) to be captured in a single
-        `except` statment.
+        *except* statement.
 
         Values may also be changed in the method.  The default implementation
         does nothing.

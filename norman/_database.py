@@ -35,23 +35,21 @@ class Database(object):
     """
     The main database class containing a list of tables.
 
-    Tables may be added to the database when they are created by giving
-    the class a *database* keyword argument.  For example
-
-    >>> db = Database()
-    >>> class MyTable(Table, database=db):
-    ...     name = Field()
-    >>> MyTable in db
-    True
-
-    The `add` method can also be used as a class decorator to add the `Table`
-    to a database.
-
     `Database` instances act as containers of `Table` objects, and support
     ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
     returns a table given its name (i.e. its class name), ``__contains__``
     returns whether a `Table` object is managed by the database and
     ``__iter__`` returns a iterator over the tables.
+
+    Tables may be added to the database when they are created by using
+    `Database.add` as a class decorator.  For example:
+
+    >>> db = Database()
+    >>> @db.add
+    ... class MyTable(Table):
+    ...     name = Field()
+    >>> MyTable in db
+    True
 
     The database can be written to a sqlite database as file storage.  So
     if a `Database` instance represents a document state, it can be saved
@@ -70,7 +68,7 @@ class Database(object):
 
     In the sqlite database, all values are saved as strings (determined
     from ``str(value)``.  Keys (foreign and primary) are globally unique
-    integers > 0.  *None* is stored as *NULL*, and *NotSet* as 0.
+    integers > 0.  `None` is stored as *NULL*, and `NotSet` as 0.
     """
 
     def __init__(self):
