@@ -22,6 +22,8 @@ from __future__ import unicode_literals
 from collections import defaultdict
 import copy
 import functools
+import sys
+import uuid
 import weakref
 
 from ._field import Field, NotSet
@@ -231,6 +233,34 @@ class Table(_TableBase):
                 self._updateindex(attr, oldvalue, value)
         else:
             super(Table, self).__setattr__(attr, value)
+
+    @property
+    def _uid(self):
+        """
+        This contains a unique integer in the session.
+
+        It's primary use is as an indentity key during serialisation.  It
+        may be manually set to any integer except 0, overriding the default
+        value which is calculated using `uuid.uuid4` upon its first call.
+        It is not necessarily required that it be universally unique.
+        """
+        try:
+            return self.__uid
+        except AttributeError:
+            self.__uid = uuid.uuid4().int
+            return self.__uid
+
+    @_uid.setter
+    def _uid(self, value):
+        if sys.version < '3':
+            types = (int, long)
+        else:
+            types = int
+        if not isinstance(value, types):
+            raise TypeError(value)
+        if value == 0:
+            raise ValueError('_uid cannot be 0')
+        self.__uid = value
 
     def _validate(self):
         """

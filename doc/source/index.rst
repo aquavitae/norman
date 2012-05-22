@@ -242,6 +242,19 @@ Tables
     This class should be subclassed to define the fields in the table.
     It may also optionally provide `validate` and `validate_delete` methods.
 
+    Field names should not start with ``_``, as these names are reserved
+    for internal use.
+
+
+    .. attribute:: _uid
+
+        This contains a unique integer in the session.
+
+        It's primary use is as an indentity key during serialisation.  It
+        may be manually set to any integer except 0, overriding the default
+        value which is calculated using `uuid.uuid4` upon its first call.
+        It is not necessarily required that it be universally unique.
+
 
     .. method:: validate
 

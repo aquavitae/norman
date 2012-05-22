@@ -293,6 +293,28 @@ class TestTable(object):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
 
+    def test_uid(self):
+        t = self.T()
+        if sys.version < '3':
+            assert isinstance(t._uid, (int, long))
+        else:
+            assert isinstance(t._uid, int)
+        uuid = 1234567890123456789012345678901234567890
+        t._uid = uuid
+        assert t._uid == uuid
+        t._uid = 1
+        assert t._uid == 1
+
+    def test_uid_bad_type(self):
+        t = self.T()
+        with assert_raises(TypeError):
+            t._uid = '1'
+
+    def test_uid_bad_value(self):
+        t = self.T()
+        with assert_raises(ValueError):
+            t._uid = 0
+
 
 class TestUnique(object):
 
