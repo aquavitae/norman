@@ -294,6 +294,8 @@ class Table(_TableBase):
         >>> {name.name for name in Name.get()}
         {'grouped'}
 
+        Exceptions are handled in the same was as for `validate`.
+
         This method can also be used to propogate deletions and can safely
         modify this or other tables.
         """
