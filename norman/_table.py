@@ -28,7 +28,9 @@ from ._field import Field, NotSet
 
 
 class _I:
-    """An empty, hashable and weak referenceable object."""
+    """
+    An empty, hashable and weak referenceable object.
+    """
     pass
 
 
@@ -40,7 +42,7 @@ class TableMeta(type):
     The methods provided by this metaclass are essentially those which apply
     to the table (as opposed to those which apply records).
 
-    Tables support a limited sequence-like interface, with rapid lookup 
+    Tables support a limited sequence-like interface, with rapid lookup
     through indexed fields.  The sequence operations supported are ``__len__``,
     ``__contains__`` and ``__iter__``, and all act on instances of the table,
     i.e. records.
@@ -75,7 +77,9 @@ class TableMeta(type):
         return iter(cls._instances.values())
 
     def iter(cls, **kwargs):
-        """Iterate over records with field values matching *kwargs*."""
+        """
+        Iterate over records with field values matching *kwargs*.
+        """
         keys = set(kwargs.keys()) & set(cls._indexes.keys())
         if keys:
             f = lambda a, b: a & b
@@ -88,7 +92,9 @@ class TableMeta(type):
                 yield m
 
     def contains(cls, **kwargs):
-        """Return `True` if the table contains any records matching *kwargs*."""
+        """
+        Return `True` if the table contains any records matching *kwargs*.
+        """
         it = cls.iter(**kwargs)
         try:
             next(it)
@@ -97,16 +103,18 @@ class TableMeta(type):
         return True
 
     def get(cls, **kwargs):
-        """Return a set of all records matching *kwargs*."""
+        """
+        Return a set of all records matching *kwargs*.
+        """
         return set(cls.iter(**kwargs))
 
     def delete(cls, records=None, **keywords):
         """
         Delete delete all instances in *records* which match *keywords*.
-        
-        If *records* is omitted then the entire table is searched.  For 
+
+        If *records* is omitted then the entire table is searched.  For
         example:
-        
+
         >>> class T(Table):
         ...     id = Field()
         ...     value = Field()
@@ -124,20 +132,20 @@ class TableMeta(type):
         >>> T.delete(records[:4], value='b')
         >>> [t.id for t in T.get()]
         [1, 3, 5, 6, 7, 8, 9]
-        
+
         If no records are specified, then all are used.
-        
+
         >>> T.delete(value='a')
         >>> [t.id for t in T.get()]
         [3, 5, 6, 7, 8]
-        
+
         If no keywords are given, then all records in in *records* are deleted.
-        
+
         >>> T.delete(records[2:4])
         >>> [t.id for t in T.get()]
         [3, 5, 8]
-        
-        If neither records nor keywords are deleted, then the entire 
+
+        If neither records nor keywords are deleted, then the entire
         table is cleared.
         """
         if records is None:
@@ -161,7 +169,9 @@ class TableMeta(type):
 
 
     def fields(cls):
-        """Return an iterator over field names in the table."""
+        """
+        Return an iterator over field names in the table
+        """
         return cls._fields.keys()
 
 
@@ -171,7 +181,7 @@ class Table(_TableBase):
 
     """
     Each instance of a Table subclass represents a record in that Table.
-    
+
     This class should be inherited from to define the fields in the table.
     It may also optionally provide a `validate` method.
     """
@@ -264,25 +274,25 @@ class Table(_TableBase):
     def validate_delete(self):
         """
         Raise an exception if the record cannot be deleted.
-        
-        This is called just before a record is deleted and is usually 
+
+        This is called just before a record is deleted and is usually
         re-implemented to check for other referring instances.  For example,
         the following structure only allows deletions of *Name* instances
         not in a *Group*.
-        
-        >>> class Name(Table):                
+
+        >>> class Name(Table):
         ...  name = Field()
         ...  group = Field(default=None)
-        ...  
+        ...
         ...  def validate_delete(self):
         ...      assert self.group is None, "Can't delete '{}'".format(self.name)
-        ...      
+        ...
         >>> class Group(Table)
         ...  id = Field()
         ...  @property
         ...  def names(self):
         ...      return Name.get(group=self)
-        ...      
+        ...
         >>> group = Group(id=1)
         >>> n1 = Name(name='grouped', group=group)
         >>> n2 = Name(name='not grouped')

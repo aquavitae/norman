@@ -104,11 +104,15 @@ class Database(object):
         return table
 
     def tablenames(self):
-        """Return an list of the names of all tables managed by the database."""
+        """
+        Return an list of the names of all tables managed by the database.
+        """
         return [t.__name__ for t in self._tables]
 
     def reset(self):
-        """Delete all records from all tables."""
+        """
+        Delete all records from all tables.
+        """
         for table in self._tables:
             table.delete()
 
@@ -190,7 +194,9 @@ class Database(object):
                 self._makerecord(flat, oid)
 
     def _makerecord(self, flat, oid):
-        """Create a new record for oid and return it."""
+        """
+        Create a new record for oid and return it.
+        """
         table, row = flat[oid]
         if isinstance(row, table):
             return row
