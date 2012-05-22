@@ -117,6 +117,14 @@ class TestTable(object):
         with assert_raises(AttributeError):
             self.T(bad='field')
 
+    def test_init_invalid(self):
+        class T(Table):
+            v = Field()
+            def validate(self):
+                assert False
+        with assert_raises(ValueError):
+            T(v=1)
+
     def test_name(self):
         'Test that Table.name == "Table"'
         assert self.T.__name__ == 'T'

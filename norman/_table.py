@@ -187,7 +187,7 @@ class Table(_TableBase):
                 setattr(self, k, v)
         finally:
             self.validate = validate
-        self.validate()
+        self._validate()
         self._instances[key] = self
 
     def __setattr__(self, attr, value):
@@ -209,17 +209,26 @@ class Table(_TableBase):
                         raise ValueError("Not unique: {}={}".format(field.name,
                                                                 repr(value)))
                 try:
-                    self.validate()
-                except Exception as err:
+                    self._validate()
+                except:
                     field.__set__(self, oldvalue)
-                    if isinstance(err, AssertionError):
-                        raise ValueError(*err.args)
-                    else:
-                        raise
+                    raise
             if field.index:
                 self._updateindex(attr, oldvalue, value)
         else:
             super(Table, self).__setattr__(attr, value)
+
+    def _validate(self):
+        """
+        Convert AssertionError to ValueError
+        """
+        try:
+            self.validate()
+        except Exception as err:
+            if isinstance(err, AssertionError):
+                raise ValueError(*err.args)
+            else:
+                raise
 
     def _updateindex(self, name, oldvalue, newvalue):
         index = self._indexes[name]
