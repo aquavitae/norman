@@ -348,3 +348,15 @@ class TestValidateDelete(object):
         with assert_raises(ValueError):
             self.T.delete(value=0)
         assert self.T.get() == set([t])
+
+    def test_propogate(self):
+        class T(Table):
+            value = Field()
+            def validate_delete(self):
+                if self.value != 3:
+                    T.delete(value=3)
+        t1 = T(value=1)
+        t2 = T(value=2)
+        t3 = T(value=3)
+        T.delete(value=1)
+        assert T.get() == set([t2])

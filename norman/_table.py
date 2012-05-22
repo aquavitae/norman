@@ -145,16 +145,20 @@ class TableMeta(type):
         if isinstance(records, Table):
             records = {records}
         kwmatch = cls.iter(**keywords)
-        rec = set(records) & set(kwmatch)
-        for r in rec:
-            try:
-                r.validate_delete()
-            except AssertionError as err:
-                raise ValueError(*err.args)
-            except:
-                raise
-            else:
-                del cls._instances[r._key]
+        keys = [r._key for r in set(records) & set(kwmatch)]
+        for key in keys:
+            # Check if its been deleted by validate_delete
+            r = cls._instances.get(key, None)
+            if r:
+                try:
+                    r.validate_delete()
+                except AssertionError as err:
+                    raise ValueError(*err.args)
+                except:
+                    raise
+                else:
+                    del cls._instances[r._key]
+
 
     def fields(cls):
         """Return an iterator over field names in the table."""
@@ -289,5 +293,8 @@ class Table(_TableBase):
         AssertionError: Can't delete "grouped"
         >>> {name.name for name in Name.get()}
         {'grouped'}
+
+        This method can also be used to propogate deletions and can safely
+        modify this or other tables.
         """
         pass
