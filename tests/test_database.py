@@ -17,6 +17,9 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import os
+import tempfile
+
 from nose.tools import assert_raises
 from norman import Database, Table
 
@@ -61,3 +64,14 @@ class TestDatabase(object):
         r = self.db.add(Tb)
         assert r is Tb
         assert Tb in self.db
+
+    def test_tosqlite_exception(self):
+        'Make sure sqlite3 closes on an exception.'
+        fd, temp = tempfile.mkstemp()
+        os.close(fd)
+        with assert_raises(TypeError):
+            Database.tosqlite(None, temp)
+        try:
+            os.unlink(temp)
+        except OSError:
+            assert False

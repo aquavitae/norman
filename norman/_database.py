@@ -19,6 +19,7 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import contextlib
 import logging
 import sqlite3
 
@@ -121,34 +122,33 @@ class Database(object):
         record has an additional field, '_oid_', which contains a unique
         integer.
         """
-        conn = sqlite3.connect(filename)
-        conn.execute('BEGIN;')
-        for table in self:
-            tname = table.__name__
-            fstr = ['"{}"'.format(f) for f in table.fields()]
-            fstr = '"_oid_", ' + ', '.join(fstr)
-            try:
-                conn.execute('DROP TABLE "{}"'.format(tname))
-            except sqlite3.OperationalError:
-                pass
-            query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
-            conn.execute(query)
-            for record in table:
-                values = [id(record)]
-                for fname in table.fields():
-                    value = getattr(record, fname)
-                    if isinstance(value, Table):
-                        value = id(value)
-                    elif value is NotSet:
-                        value = 0
-                    elif value is not None:
-                        value = unicode(value)
-                    values.append(value)
-                qmarks = ', '.join('?' * len(values))
-                query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
-                conn.execute(query, values)
-        conn.commit()
-        conn.close()
+        with contextlib.closing(sqlite3.connect(filename)) as conn:
+            conn.execute('BEGIN;')
+            for table in self:
+                tname = table.__name__
+                fstr = ['"{}"'.format(f) for f in table.fields()]
+                fstr = '"_oid_", ' + ', '.join(fstr)
+                try:
+                    conn.execute('DROP TABLE "{}"'.format(tname))
+                except sqlite3.OperationalError:
+                    pass
+                query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
+                conn.execute(query)
+                for record in table:
+                    values = [id(record)]
+                    for fname in table.fields():
+                        value = getattr(record, fname)
+                        if isinstance(value, Table):
+                            value = id(value)
+                        elif value is NotSet:
+                            value = 0
+                        elif value is not None:
+                            value = unicode(value)
+                        values.append(value)
+                    qmarks = ', '.join('?' * len(values))
+                    query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
+                    conn.execute(query, values)
+            conn.commit()
 
     def fromsqlite(self, filename):
         """
@@ -167,27 +167,27 @@ class Database(object):
         4.  Records which cannot be added, for any reason, are ignored
             and a message logged.
         """
-        conn = sqlite3.connect(filename)
-        conn.row_factory = sqlite3.Row
-        # Extract the sql to a temporary dict structure, keyed by oid
-        flat = {}
-        for table in self:
-            tname = table.__name__
-            query = 'SELECT * FROM "{}";'.format(tname)
-            try:
-                cursor = conn.execute(query)
-            except sqlite3.OperationalError:
-                logging.warning("Table '{}' not found".format(tname))
-            else:
-                for row in cursor:
-                    row = dict(row)
-                    if '_oid_' in row:
-                        oid = row.pop('_oid_')
-                        flat[oid] = (table, row)
+        with contextlib.closing(sqlite3.connect(filename)) as conn:
+            conn.row_factory = sqlite3.Row
+            # Extract the sql to a temporary dict structure, keyed by oid
+            flat = {}
+            for table in self:
+                tname = table.__name__
+                query = 'SELECT * FROM "{}";'.format(tname)
+                try:
+                    cursor = conn.execute(query)
+                except sqlite3.OperationalError:
+                    logging.warning("Table '{}' not found".format(tname))
+                else:
+                    for row in cursor:
+                        row = dict(row)
+                        if '_oid_' in row:
+                            oid = row.pop('_oid_')
+                            flat[oid] = (table, row)
 
-        # Create correct types in flat
-        for oid in flat.keys():
-            self._makerecord(flat, oid)
+            # Create correct types in flat
+            for oid in flat.keys():
+                self._makerecord(flat, oid)
 
     def _makerecord(self, flat, oid):
         """Create a new record for oid and return it."""
