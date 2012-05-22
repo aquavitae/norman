@@ -19,6 +19,50 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import datetime
+import re
+
+
+def dtfromiso(iso):
+    """
+    Return a `datetime` object from a string representation in ISO format.
+
+    The database serialisation procedures store `datetime` objects as strings,
+    in ISO format.  This provides an easy way to reverse this.
+    `~datetime.datetime`, `~datetime.date` and `~datetime.time` objects are
+    all supported.
+
+    Note that this assumes naive datetimes.
+
+    .. doctest:: tools
+
+        >>> import datetime
+        >>> dt = datetime.date(2001, 12, 23)
+        >>> isodt = str(dt)
+        >>> dtfromiso(isodt)
+        datetime.date(2001, 12, 23)
+    """
+    date = None
+    time = None
+    exp = ('((?P<Y>\d\d\d\d)-(?P<m>\d\d)-(?P<d>\d\d))? ?' +
+           '((?P<H>\d\d):(?P<M>\d\d):(?P<s>\d\d)(\.(?P<f>\d{1,6}))?)?')
+    m = re.match(exp, iso).groupdict()
+    for k in m:
+        m[k] = int2(m[k], None)
+    m['f'] = int2(m['f'], 0)
+    if m['Y'] is not None:
+        date = datetime.date(m['Y'], m['m'], m['d'])
+    if m['H'] is not None:
+        time = datetime.time(m['H'], m['M'], m['s'], m['f'])
+    if date is None and time is None:
+        raise ValueError("Invalid datetime: '{}'".format(iso))
+    elif date is None:
+        return time
+    elif time is None:
+        return date
+    else:
+        return datetime.datetime.combine(date, time)
+
 
 def float2(s, default=0.0):
     """

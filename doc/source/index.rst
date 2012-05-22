@@ -301,7 +301,7 @@ Fields
 .. data:: NotSet
 
     A sentinel object indicating that the field value has not yet been set.
-    
+
     This evaluates to `False` in conditional statements.
 
 
@@ -443,6 +443,27 @@ Tools
 
 
 Some useful tools for use with Norman are provided in `norman.tools`.
+
+
+.. function:: dtfromiso(iso)
+
+    Return a `datetime` object from a string representation in ISO format.
+
+    The database serialisation procedures store `datetime` objects as strings,
+    in ISO format.  This provides an easy way to reverse this.
+    `~datetime.datetime`, `~datetime.date` and `~datetime.time` objects are
+    all supported.
+
+    Note that this assumes naive datetimes.
+
+    .. doctest:: tools
+
+        >>> import datetime
+        >>> dt = datetime.date(2001, 12, 23)
+        >>> isodt = str(dt)
+        >>> dtfromiso(isodt)
+        datetime.date(2001, 12, 23)
+
 
 .. function:: float2(s[, default=0.0])
 
