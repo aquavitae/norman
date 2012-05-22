@@ -77,11 +77,15 @@ class Group(object):
 
     @property
     def table(self):
-        """Read-only property containing the `Table` object referred to."""
+        """
+        Read-only property containing the `Table` object referred to.
+        """
         return self._table
 
     def _getkw(self, kwargs=None):
-        'Return the final kwargs to use'
+        """
+        Return the final kwargs to use.
+        """
         if kwargs is None:
             kwargs = {}
         kwargs.update(self._kw)
@@ -103,12 +107,16 @@ class Group(object):
         return len(self._table.get(**self._getkw()))
 
     def contains(self, **kwargs):
-        """Return `True` if the `Group` contains records matching *kwargs*."""
+        """
+        Return `True` if the `Group` contains records matching *kwargs*.
+        """
 
         return self._table.contains(**self._getkw(kwargs))
 
     def iter(self, **kwargs):
-        """Iterate over records in the `Group` matching *kwargs*."""
+        """
+        Iterate over records in the `Group` matching *kwargs*.
+        """
         return self._table.iter(**self._getkw(kwargs))
 
     def get(self, **kwargs):
@@ -120,7 +128,7 @@ class Group(object):
         Create a new record of the reference `table`.
 
         *kwargs* is updated with the keyword arguments defining this `Group`
-        and the resulting dict used as the initialisation parameters of 
+        and the resulting dict used as the initialisation parameters of
         `table`.
         """
         return self._table(**self._getkw(kwargs))

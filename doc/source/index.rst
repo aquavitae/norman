@@ -296,7 +296,7 @@ Tables
 
         This method can also be used to propogate deletions and can safely
         modify this or other tables.
-        
+
 
 Fields
 ------

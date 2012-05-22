@@ -42,13 +42,13 @@ class Field(object):
     """
     A `Field` is used in tables to define attributes of data.
 
-    When a table is created, fields can be identified by using a `Field` 
+    When a table is created, fields can be identified by using a `Field`
     object:
 
     >>> class MyTable(Table):
     ...     name = Field()
 
-    `Field` objects support *get* and *set* operations, similar to 
+    `Field` objects support *get* and *set* operations, similar to
     *properties*, but also provide additional options.  They are intended
     for use with `Table` subclasses.
 
@@ -59,10 +59,10 @@ class Field(object):
     ========== ============ ===================================================
     unique     False        True if records should be unique on this field.
                             In database terms, this is the same as setting
-                            a primary key.  If more than one field have this 
+                            a primary key.  If more than one field have this
                             set then records are expected to be unique on all
                             of them.  Unique fields are always indexed.
-    index      False        True if the field should be indexed.  Indexed 
+    index      False        True if the field should be indexed.  Indexed
                             fields are much faster to look up.  Setting
                             ``unique = True`` implies ``index = True``
     default    None         If missing, `NotSet` is used.
@@ -90,7 +90,9 @@ class Field(object):
             return self._data.get(instance, self.default)
 
     def __set__(self, instance, value):
-        """Set a value for an instance."""
+        """
+        Set a value for an instance.
+        """
         if (self.readonly and
             self.__get__(instance, instance.__class__) is not NotSet):
             raise TypeError('Field is read only')
