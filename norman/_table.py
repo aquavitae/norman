@@ -189,7 +189,7 @@ class Table(_TableBase):
     def __init__(self, **kwargs):
         key = _I()
         self._key = key
-        data = dict.fromkeys(self.__class__.fields(), NotSet)
+        data = dict([(f, getattr(self, f)) for f in self.__class__.fields()])
         badkw = set(kwargs.keys()) - set(data.keys())
         if badkw:
             raise AttributeError(badkw)

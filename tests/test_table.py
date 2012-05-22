@@ -125,6 +125,15 @@ class TestTable(object):
         with assert_raises(ValueError):
             T(v=1)
 
+    def test_init_defaults(self):
+        'Test that defaults are set for default fields'
+        class T(Table):
+            a = Field(default=1)
+            b = Field()
+        t = T()
+        assert t.a == 1
+        assert t.b is NotSet
+
     def test_name(self):
         'Test that Table.name == "Table"'
         assert self.T.__name__ == 'T'
