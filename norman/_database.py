@@ -26,7 +26,7 @@ from ._table import Table
 from ._field import NotSet
 
 import sys
-if sys.version < '3':
+if sys.version >= '3':
     unicode = str
 
 
