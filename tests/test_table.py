@@ -18,6 +18,7 @@ from __future__ import with_statement
 from __future__ import unicode_literals
 
 import collections
+import re
 import weakref
 import timeit
 
@@ -293,27 +294,37 @@ class TestTable(object):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
 
-    def test_uid(self):
-        t = self.T()
-        if sys.version < '3':
-            assert isinstance(t._uid, (int, long))
-        else:
-            assert isinstance(t._uid, int)
-        uuid = 1234567890123456789012345678901234567890
-        t._uid = uuid
-        assert t._uid == uuid
-        t._uid = 1
-        assert t._uid == 1
+
+class TestUid(object):
+
+    def setup(self):
+        class T(Table): pass
+        self.t = T()
+
+    def test_default(self):
+        r = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        assert re.match(r, self.t._uid)
+
+    def test_values(self):
+        values = ['16fd2706-8baf-433b-82eb-8c7fada847da', 10, id([1])]
+        for v in values:
+            yield self.check_value, v
+
+    def check_value(self, value):
+        self.t._uid = value
+        assert self.t._uid == value
 
     def test_uid_bad_type(self):
-        t = self.T()
         with assert_raises(TypeError):
-            t._uid = '1'
+            self.t._uid = [1, 2, 3]
 
-    def test_uid_bad_value(self):
-        t = self.T()
+    def test_uid_bad_int(self):
         with assert_raises(ValueError):
-            t._uid = 0
+            self.t._uid = 0
+
+    def test_uid_bad_uuid(self):
+        with assert_raises(ValueError):
+            self.t._uid = '123fe'
 
 
 class TestUnique(object):

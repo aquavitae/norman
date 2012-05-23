@@ -248,11 +248,11 @@ Tables
 
     .. attribute:: _uid
 
-        This contains a unique integer in the session.
+        This contains an id which is unique in the session.
 
-        It's primary use is as an indentity key during serialisation.  It
-        may be manually set to any integer except 0, overriding the default
-        value which is calculated using `uuid.uuid4` upon its first call.
+        It's primary use is as an identity key during serialisation.  Valid
+        values are any integer except 0, or a UUID.  The default
+        value is calculated using `uuid.uuid4` upon its first call.
         It is not necessarily required that it be universally unique.
 
 

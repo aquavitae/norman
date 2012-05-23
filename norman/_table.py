@@ -22,12 +22,15 @@ from __future__ import unicode_literals
 from collections import defaultdict
 import copy
 import functools
+import re
 import sys
 import uuid
 import weakref
 
 from ._field import Field, NotSet
 
+_re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+_re_uuid = re.compile(_re_uuid)
 
 class _I:
     """
@@ -237,29 +240,29 @@ class Table(_TableBase):
     @property
     def _uid(self):
         """
-        This contains a unique integer in the session.
+        This contains an id which is unique in the session.
 
-        It's primary use is as an indentity key during serialisation.  It
-        may be manually set to any integer except 0, overriding the default
-        value which is calculated using `uuid.uuid4` upon its first call.
+        It's primary use is as an identity key during serialisation.  Valid
+        values are any integer except 0, or a UUID.  The default
+        value is calculated using `uuid.uuid4` upon its first call.
         It is not necessarily required that it be universally unique.
         """
         try:
             return self.__uid
         except AttributeError:
-            self.__uid = uuid.uuid4().int
+            self._uid = str(uuid.uuid4())
             return self.__uid
 
     @_uid.setter
     def _uid(self, value):
-        if sys.version < '3':
-            types = (int, long)
+        if isinstance(value, int):
+            if value == 0:
+                raise ValueError('_uid cannot be 0')
+        elif isinstance(value, str):
+            if not _re_uuid.match(value):
+                raise ValueError('_uid must be a valid UUID')
         else:
-            types = int
-        if not isinstance(value, types):
             raise TypeError(value)
-        if value == 0:
-            raise ValueError('_uid cannot be 0')
         self.__uid = value
 
     def _validate(self):
