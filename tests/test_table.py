@@ -350,6 +350,8 @@ class TestUnique(object):
         t2 = self.T(oid=2)
         with assert_raises(ValueError):
             t2.oid = 1
+        assert t1.oid == 1
+        assert t2.oid == 2
 
     def test_unique_delete_set(self):
         'Deleting a record allows the value to be reused.'

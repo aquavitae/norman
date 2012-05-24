@@ -225,6 +225,7 @@ class Table(_TableBase):
                                    if getattr(table, f).unique)
                     existing = set(self.__class__.iter(**uniques)) - {self}
                     if existing:
+                        field.__set__(self, oldvalue)
                         raise ValueError("Not unique: {}={}".format(field.name,
                                                                 repr(value)))
                 try:
