@@ -29,8 +29,13 @@ import weakref
 
 from ._field import Field, NotSet
 
+if sys.version >= '3':
+    unicode = str
+    long = int
+
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 _re_uuid = re.compile(_re_uuid)
+
 
 class _I:
     """
@@ -251,15 +256,15 @@ class Table(_TableBase):
         try:
             return self.__uid
         except AttributeError:
-            self._uid = str(uuid.uuid4())
+            self._uid = unicode(uuid.uuid4())
             return self.__uid
 
     @_uid.setter
     def _uid(self, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, long)):
             if value == 0:
                 raise ValueError('_uid cannot be 0')
-        elif isinstance(value, str):
+        elif isinstance(value, unicode):
             if not _re_uuid.match(value):
                 raise ValueError('_uid must be a valid UUID')
         else:
