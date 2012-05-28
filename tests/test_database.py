@@ -64,14 +64,3 @@ class TestDatabase(object):
         r = self.db.add(Tb)
         assert r is Tb
         assert Tb in self.db
-
-    def test_tosqlite_exception(self):
-        'Make sure sqlite3 closes on an exception.'
-        fd, temp = tempfile.mkstemp()
-        os.close(fd)
-        with assert_raises(TypeError):
-            Database.tosqlite(None, temp)
-        try:
-            os.unlink(temp)
-        except OSError:
-            assert False

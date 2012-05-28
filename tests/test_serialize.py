@@ -15,14 +15,14 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-""" Some system test for the database. """
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import pickle
 import os
+from nose.tools import assert_raises
+from mock import patch
 
-from norman import Database, Table, Field, tools
+from norman import Database, Table, Field, tools, serialize
 
 db = Database()
 
@@ -58,18 +58,7 @@ class Town(Table):
     name = Field(unique=True)
 
 
-def test_indexes():
-    'All these indexes should be True'
-    assert Person.custno.index
-    assert Person.name.index
-    assert not Person.age.index
-    assert Person.address.index
-    assert Address.street.index
-    assert Address.town.index
-    assert Town.name.index
-
-
-class TestCase1(object):
+class TestCase(object):
 
     def setup(self):
         self.t1 = Town(name='down')
@@ -87,16 +76,6 @@ class TestCase1(object):
         except OSError:
             pass
 
-    def test_links(self):
-        assert self.a1.town is self.t1
-        assert set(self.a1.people) == set([self.p1, self.p2])
-
-    def test_pickle(self):
-        b = pickle.dumps(db)
-        db2 = pickle.loads(b)
-        self.check_integrity(db)
-        self.check_integrity(db2)
-
     def check_integrity(self, db):
         assert set(db.tablenames()) == set(['Town', 'Address', 'Person'])
         streets = set(a.street for a in db['Address'])
@@ -104,3 +83,42 @@ class TestCase1(object):
         address = next(db['Address'].iter(street='easy'))
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])
+
+
+class TestSqlite3(TestCase):
+
+    def test_tofromsql(self):
+        serialize.Sqlite3().dump(db, 'test')
+        db.reset()
+        serialize.Sqlite3().load(db, 'test')
+        self.check_integrity(db)
+
+    def test_bad_sql(self):
+        'Should be tolerant of incorrect tables and fields.'
+        import logging
+        import sqlite3
+        logging.disable(logging.CRITICAL)
+        sql = """
+            CREATE TABLE "other" ("field");
+            CREATE TABLE "provinces" ("oid", "name", "number");
+            CREATE TABLE "units" ("field");
+            CREATE TABLE "cycles" ("oid", "name");
+            INSERT INTO "units" VALUES ('a value');
+            INSERT INTO "provinces" VALUES (1, 'Eastern Cape', 42);
+            INSERT INTO "cycles" VALUES (2, 'bad value');
+            INSERT INTO "cycles" VALUES (3, '2009/10');
+        """
+        conn = sqlite3.connect('test')
+        conn.executescript(sql)
+        conn.close()
+        serialize.Sqlite3().load(db, 'test')
+
+    def test_tosqlite_exception(self):
+        'Make sure sqlite3 closes on an exception.'
+        with patch.object(Person, 'fields', side_effect=TypeError):
+            with assert_raises(TypeError):
+                serialize.Sqlite3().dump(db, 'file')
+        try:
+            os.unlink('file')
+        except OSError:
+            assert False
