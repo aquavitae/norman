@@ -139,6 +139,11 @@ class TestTable(object):
         'Test that Table.name == "Table"'
         assert self.T.__name__ == 'T'
 
+    def test_repr(self):
+        'Test repr(table)'
+        t = self.T(oid=4, name='tee', age=23)
+        assert repr(t) == "T(age=23, name='tee', oid=4)", repr(t)
+
     def test_indexes(self):
         'Test that indexes are created.'
         assert self.T.name.index

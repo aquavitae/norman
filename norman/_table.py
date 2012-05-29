@@ -23,6 +23,7 @@ from collections import defaultdict
 import copy
 import functools
 import re
+import reprlib
 import sys
 import uuid
 import weakref
@@ -177,7 +178,6 @@ class TableMeta(type):
                 else:
                     del cls._instances[r._key]
 
-
     def fields(cls):
         """
         Return an iterator over field names in the table
@@ -186,6 +186,7 @@ class TableMeta(type):
 
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
+
 
 class Table(_TableBase):
 
@@ -242,6 +243,12 @@ class Table(_TableBase):
                 self._updateindex(attr, oldvalue, value)
         else:
             super(Table, self).__setattr__(attr, value)
+
+    @reprlib.recursive_repr()
+    def __repr__(self):
+        fields = sorted(self.__class__.fields())
+        fields = [(f + '=%s') % repr(getattr(self, f)) for f in fields]
+        return self.__class__.__name__ + '(' + ', '.join(fields) + ')'
 
     @property
     def _uid(self):
