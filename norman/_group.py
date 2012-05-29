@@ -120,7 +120,9 @@ class Group(object):
         return self._table.iter(**self._getkw(kwargs))
 
     def get(self, **kwargs):
-        """Return a set of all records in the `Group` matching *kwargs*."""
+        """
+        Return a set of all records in the `Group` matching *kwargs*.
+        """
         return self._table.get(**self._getkw(kwargs))
 
     def add(self, **kwargs):
@@ -133,7 +135,7 @@ class Group(object):
         """
         return self._table(**self._getkw(kwargs))
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *records, **kwargs):
         """
         Delete delete all instances in *records* which match *keywords*.
 
@@ -143,8 +145,8 @@ class Group(object):
         .. seealso:: Table.delete
         """
         kwargs = self._getkw(kwargs)
-        for record in args:
+        for record in records:
             for k, v in kwargs.items():
                 if getattr(record, k) != v:
                     raise ValueError("record not in group")
-        return self._table.delete(*args, **kwargs)
+        return self._table.delete(*records, **kwargs)
