@@ -23,16 +23,13 @@ from collections import defaultdict
 import copy
 import functools
 import re
-import reprlib
-import sys
 import uuid
 import weakref
 
 from ._field import Field, NotSet
 
-if sys.version >= '3':
-    unicode = str
-    long = int
+from ._compat import unicode, long, recursive_repr
+
 
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 _re_uuid = re.compile(_re_uuid)
@@ -245,7 +242,7 @@ class Table(_TableBase):
         else:
             super(Table, self).__setattr__(attr, value)
 
-    @reprlib.recursive_repr()
+    @recursive_repr()
     def __repr__(self):
         fields = sorted(self.__class__.fields())
         fields = [(f + '=%s') % repr(getattr(self, f)) for f in fields]
