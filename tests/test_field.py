@@ -16,7 +16,7 @@
 
 from __future__ import with_statement
 from nose.tools import assert_raises
-from norman import Field, NotSet, Table
+from norman import Database, Field, NotSet, Table, Join
 
 
 class MockTable(object):
@@ -120,3 +120,41 @@ class TestComparisons(object):
     def test_ne(self):
         got = self.T.a != 2
         assert got == set(self.records[:2]) | set(self.records[3:])
+
+
+class TestJoin(object):
+
+    def test_field(self):
+        class Child(Table):
+            parent = Field()
+
+        class Parent(Table):
+            children = Join(Child.parent)
+
+        p1 = Parent()
+        p2 = Parent()
+        c1 = Child(parent=p1)
+        c2 = Child(parent=p1)
+        c3 = Child(parent=p2)
+        c4 = Child(parent=p2)
+        assert set(p1.children) == set([c1, c2])
+        assert set(p2.children) == set([c3, c4])
+
+    def test_name(self):
+        db = Database()
+        @db.add
+        class Parent(Table):
+            children = Join(db, 'Child.parent')
+
+        @db.add
+        class Child(Table):
+            parent = Field()
+
+        p1 = Parent()
+        p2 = Parent()
+        c1 = Child(parent=p1)
+        c2 = Child(parent=p1)
+        c3 = Child(parent=p2)
+        c4 = Child(parent=p2)
+        assert set(p1.children) == set([c1, c2])
+        assert set(p2.children) == set([c3, c4])

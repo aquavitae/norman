@@ -346,6 +346,50 @@ Fields
         {'MyTable(oid=0, value=1)', 'MyTable(oid=2, value=1)'}
 
 
+.. class:: Join(*args)
+
+    A special field representing a one-to-many join to another table.
+
+    This is best explained through an example::
+
+        >>> class Child(Table):
+        ...     parent = Field()
+        ...
+        >>> class Parent(Table):
+        ...     children = Join(Child.parent)
+        ...
+        >>> p = Parent()
+        >>> c1 = Child(parent=p)
+        >>> c2 = Child(parent=p)
+        >>> p.children
+        {c1, c2}
+
+    The initialisation parameters specify the field in the foreign table which
+    contains a reference to the owning table, and may be specified in one of
+    two ways.  If the foreign table is already defined (as in the above
+    example), then only one argument is required.  If it has not been
+    defined, or is self-referential, the first agument may be the database
+    instance and the second the canonical field name, including the table
+    name.  So an alternate definition of the above *Parent* class would be::
+
+        >>> db = Database()
+        >>> @db.add
+        ... class Parent(Table):
+        ...     children = Join(db, 'Child.parent')
+        ...
+        >>> @db.add
+        ... class Child(Table):
+        ...     parent = Field()
+        ...
+        >>> p = Parent()
+        >>> c1 = Child(parent=p)
+        >>> c2 = Child(parent=p)
+        >>> p.children
+        {c1, c2}
+
+    As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+
+
 Groups
 ------
 

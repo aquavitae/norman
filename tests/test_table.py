@@ -23,7 +23,7 @@ import weakref
 import timeit
 
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, _table
+from norman import Table, Field, NotSet, Join, _table
 
 import sys
 if sys.version < '3':
@@ -77,21 +77,38 @@ class Test_I(object):
 class TestFields(object):
 
     def setup(self):
+        class S(Table):
+            t = Field()
+
         class T(Table):
             me = Field()
+            other = Join(S.t)
+
         self.T = T
 
-    def test_name(self):
+    def test_field_name(self):
         'Test that fields have a read-only name'
         assert self.T.me.name == 'me'
         with assert_raises(AttributeError):
             self.T.me.name = 'notme'
 
-    def test_owner(self):
+    def test_field_owner(self):
         'Test that fields have a read-only owner'
         assert self.T.me.owner is self.T
         with assert_raises(AttributeError):
             self.T.me.owner = 'notme'
+
+    def test_join_name(self):
+        'Test that joins have a read-only name'
+        assert self.T.other.name == 'other'
+        with assert_raises(AttributeError):
+            self.T.other.name = 'notme'
+
+    def test_join_owner(self):
+        'Test that joins have a read-only owner'
+        assert self.T.other.owner is self.T
+        with assert_raises(AttributeError):
+            self.T.other.owner = 'notme'
 
 
 class TestTable(object):

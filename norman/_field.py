@@ -145,3 +145,73 @@ class Field(object):
 
     def __le__(self, value):
         return self._op(operator.le, value)
+
+
+class Join(object):
+
+    """
+    A special field representing a one-to-many join to another table.
+
+    This is best explained through an example::
+
+        >>> class Child(Table):
+        ...     parent = Field()
+        ...
+        >>> class Parent(Table):
+        ...     children = Join(Child.parent)
+        ...
+        >>> p = Parent()
+        >>> c1 = Child(parent=p)
+        >>> c2 = Child(parent=p)
+        >>> p.children
+        {c1, c2}
+
+    The initialisation parameters specify the field in the foreign table which
+    contains a reference to the owning table, and may be specified in one of
+    two ways.  If the foreign table is already defined (as in the above
+    example), then only one argument is required.  If it has not been
+    defined, or is self-referential, the first agument may be the database
+    instance and the second the canonical field name, including the table
+    name.  So an alternate definition of the above *Parent* class would be::
+
+        >>> db = Database()
+        >>> @db.add
+        ... class Parent(Table):
+        ...     children = Join(db, 'Child.parent')
+        ...
+        >>> @db.add
+        ... class Child(Table):
+        ...     parent = Field()
+        ...
+        >>> p = Parent()
+        >>> c1 = Child(parent=p)
+        >>> c2 = Child(parent=p)
+        >>> p.children
+        {c1, c2}
+
+    As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+    """
+
+    def __init__(self, *args):
+        self._args = args
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        else:
+            if len(self._args) == 1:
+                field = self._args[0]
+                table = field.owner
+                field = field.name
+            else:
+                table, field = self._args[1].split('.')
+                table = self._args[0][table]
+            return table.get(**{field: instance})
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def owner(self):
+        return self._owner

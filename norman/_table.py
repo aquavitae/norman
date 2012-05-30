@@ -26,7 +26,7 @@ import re
 import uuid
 import weakref
 
-from ._field import Field, NotSet
+from ._field import Field, Join
 
 from ._compat import unicode, long, recursive_repr
 
@@ -65,9 +65,10 @@ class TableMeta(type):
         for base in bases:
             fulldict.update(base.__dict__)
         for name, value in fulldict.items():
-            if isinstance(value, Field):
+            if isinstance(value, (Field, Join)):
                 value._name = name
                 value._owner = cls
+            if isinstance(value, Field):
                 cls._fields[name] = value
                 if value.index:
                     cls._indexes[name] = defaultdict(weakref.WeakSet)
