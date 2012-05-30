@@ -329,6 +329,10 @@ Fields
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
 
+    Fields have read-only properties, *name* and *owner* which are
+    set to the assigned name and the owning table respectively when
+    the table class is created.
+
 
 Groups
 ------

@@ -69,7 +69,8 @@ class TableMeta(type):
             fulldict.update(base.__dict__)
         for name, value in fulldict.items():
             if isinstance(value, Field):
-                value.name = name
+                value._name = name
+                value._owner = cls
                 cls._fields[name] = value
                 if value.index:
                     cls._indexes[name] = defaultdict(weakref.WeakSet)

@@ -74,6 +74,26 @@ class Test_I(object):
         assert ref() is None
 
 
+class TestFields(object):
+
+    def setup(self):
+        class T(Table):
+            me = Field()
+        self.T = T
+
+    def test_name(self):
+        'Test that fields have a read-only name'
+        assert self.T.me.name == 'me'
+        with assert_raises(AttributeError):
+            self.T.me.name = 'notme'
+
+    def test_owner(self):
+        'Test that fields have a read-only owner'
+        assert self.T.me.owner is self.T
+        with assert_raises(AttributeError):
+            self.T.me.owner = 'notme'
+
+
 class TestTable(object):
 
     def setup(self):

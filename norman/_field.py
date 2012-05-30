@@ -74,6 +74,10 @@ class Field(object):
     Note that *unique* and *index* are table-level controls, and are not used
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
+
+    Fields have read-only properties, *name* and *owner* which are
+    set to the assigned name and the owning table respectively when
+    the table class is created.
     """
 
     def __init__(self, **kwargs):
@@ -82,6 +86,14 @@ class Field(object):
         self.default = kwargs.get('default', NotSet)
         self.readonly = kwargs.get('readonly', False)
         self._data = {}
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def owner(self):
+        return self._owner
 
     def __get__(self, instance, owner):
         if instance is None:
