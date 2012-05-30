@@ -333,6 +333,18 @@ Fields
     set to the assigned name and the owning table respectively when
     the table class is created.
 
+    Fields can be used with comparison operators to return a set of
+    matching records.  For example::
+
+        >>> class MyTable(Table):
+        ...     oid = Field(unique=True)
+        ...     value = Field()
+        >>> t0 = MyTable(oid=0, value=1)
+        >>> t1 = MyTable(oid=1, value=2)
+        >>> t2 = MyTable(oid=2, value=1)
+        >>> Table.value == 1
+        {'MyTable(oid=0, value=1)', 'MyTable(oid=2, value=1)'}
+
 
 Groups
 ------
@@ -431,7 +443,7 @@ interface for serialising and de-serializing databases to other formats
 through the `serialize` module.  Currently, only sqlite is supported, but
 other formats will be added in the future.
 
-.. class serialize.Sqlite3   
+.. class serialize.Sqlite3
 
     .. method:: dump(db, filename)
 

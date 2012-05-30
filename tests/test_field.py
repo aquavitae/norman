@@ -16,7 +16,7 @@
 
 from __future__ import with_statement
 from nose.tools import assert_raises
-from norman import Field, NotSet
+from norman import Field, NotSet, Table
 
 
 class MockTable(object):
@@ -88,3 +88,35 @@ class TestSingleField(object):
         assert t.a == 5
         t.a = 4
         assert t.a == 4
+
+class TestComparisons(object):
+
+    def setup(self):
+        class T(Table):
+            a = Field()
+        self.records = [T(a=n) for n in range(5)]
+        self.T = T
+
+    def test_eq(self):
+        got = self.T.a == 2
+        assert got == set(self.records[2:3])
+
+    def test_gt(self):
+        got = self.T.a > 2
+        assert got == set(self.records[3:])
+
+    def test_lt(self):
+        got = self.T.a < 2
+        assert got == set(self.records[:2])
+
+    def test_ge(self):
+        got = self.T.a >= 2
+        assert got == set(self.records[2:])
+
+    def test_le(self):
+        got = self.T.a <= 2
+        assert got == set(self.records[:3])
+
+    def test_ne(self):
+        got = self.T.a != 2
+        assert got == set(self.records[:2]) | set(self.records[3:])

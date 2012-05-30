@@ -20,6 +20,8 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import operator
+
 
 class NotSet(object):
     def __nonzero__(self):
@@ -78,6 +80,18 @@ class Field(object):
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
     the table class is created.
+
+    Fields can be used with comparison operators to return a set of
+    matching records.  For example::
+
+        >>> class MyTable(Table):
+        ...     oid = Field(unique=True)
+        ...     value = Field()
+        >>> t0 = MyTable(oid=0, value=1)
+        >>> t1 = MyTable(oid=1, value=2)
+        >>> t2 = MyTable(oid=2, value=1)
+        >>> Table.value == 1
+        {'MyTable(oid=0, value=1)', 'MyTable(oid=2, value=1)'}
     """
 
     def __init__(self, **kwargs):
@@ -109,3 +123,25 @@ class Field(object):
             self.__get__(instance, instance.__class__) is not NotSet):
             raise TypeError('Field is read only')
         self._data[instance] = value
+
+    def __eq__(self, value):
+        return self.owner.get(**{self.name: value})
+
+    def __ne__(self, value):
+        return set(self.owner) - set(self.__eq__(value))
+
+    def _op(self, op, value):
+        return set(r for r in self.owner \
+            if op(self._data.get(r, self.default), value))
+
+    def __gt__(self, value):
+        return self._op(operator.gt, value)
+
+    def __lt__(self, value):
+        return self._op(operator.lt, value)
+
+    def __ge__(self, value):
+        return self._op(operator.ge, value)
+
+    def __le__(self, value):
+        return self._op(operator.le, value)
