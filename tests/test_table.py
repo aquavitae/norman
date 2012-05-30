@@ -162,7 +162,12 @@ class TestTable(object):
     def test_repr(self):
         'Test repr(table)'
         t = self.T(oid=4, name='tee', age=23)
-        assert repr(t) == "T(age=23, name='tee', oid=4)", repr(t)
+        t.age = t   # Test self-reference
+        if sys.version >= '3':
+            expect = "T(age=..., name='tee', oid=4)"
+        else:
+            expect = "T(age=..., name=u'tee', oid=4)"
+        assert repr(t) == expect, repr(t)
 
     def test_indexes(self):
         'Test that indexes are created.'

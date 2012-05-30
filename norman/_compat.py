@@ -41,11 +41,7 @@ else:
     long = long
 
     # Copied directly from Python 3.2 reprlib
-    try:
-        from _thread import get_ident
-    except ImportError:
-        from _dummy_thread import get_ident
-
+    from thread import get_ident
     def recursive_repr(fillvalue='...'):
         'Decorator to make a repr function return fillvalue for a recursive call'
 
