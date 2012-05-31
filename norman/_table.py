@@ -27,7 +27,7 @@ import uuid
 import weakref
 
 from ._field import Field, Join
-
+from ._result import _Result
 from ._compat import unicode, long, recursive_repr
 
 
@@ -114,9 +114,9 @@ class TableMeta(type):
 
     def get(cls, **kwargs):
         """
-        Return a set of all records matching *kwargs*.
+        Return `_Results` for all records with field values matching *kwargs*.
         """
-        return set(cls.iter(**kwargs))
+        return _Result(cls, set(cls.iter(**kwargs)))
 
     def delete(cls, records=None, **keywords):
         """

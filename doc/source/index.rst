@@ -198,7 +198,7 @@ Tables
 
     .. method:: get(**kwargs)
 
-        Return a set of all records with field values matching *kwargs*.
+        Return `_Results` for all records with field values matching *kwargs*.
 
 
     .. method:: iter(**kwargs)
@@ -333,8 +333,8 @@ Fields
     set to the assigned name and the owning table respectively when
     the table class is created.
 
-    Fields can be used with comparison operators to return a set of
-    matching records.  For example::
+    Fields can be used with comparison operators to return a `_Result`
+    object containing matching records.  For example::
 
         >>> class MyTable(Table):
         ...     oid = Field(unique=True)
@@ -343,7 +343,7 @@ Fields
         >>> t1 = MyTable(oid=1, value=2)
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
-        {'MyTable(oid=0, value=1)', 'MyTable(oid=2, value=1)'}
+        _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
 
 
 .. class:: Join(*args)
@@ -390,8 +390,74 @@ Fields
     As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
 
 
+Queries
+-------
+
+.. class:: _Result
+
+    A set-like object which represents the results of a query.
+
+    This object should never be instantiated directly, instead it should
+    be created as the result of a query on a `Table` or `Field`.
+
+    This object allows most operations permitted on sets, such as unions
+    and intersections.  Comparison operators (such as ``<``) are not
+    supported, except for equality tests.  If these are needed, then it is
+    best to convert the `_Result` to a set.
+
+    The following operations are supported:
+
+    =================== =======================================================
+    Operation           Description
+    =================== =======================================================
+    ``r in a``          Return `True` if record ``r`` is in the results ``a``.
+    ``len(a)``          Return the length of results ``a``.
+    ``iter(a)``         Return an iterator over records in ``a``.
+    ``a == b``          Return `True` if ``a`` and ``b`` are both `_Result`
+                        instances and contain the same items in the same
+                        order
+    ``a != b``          Return `True` if ``not a == b``
+    ``a & b``           Return a new `_Result` object containing records in
+                        both ``a`` and ``b``.
+    ``a | b``           Return a new `_Result` object containing records in
+                        either ``a`` or ``b``.
+    ``a ^ b``           Return a new `_Result` object containing records in
+                        either ``a`` or ``b``, but not both.
+    ``a - b``           Return a new `_Result` object containing records in
+                        ``a`` which are not in ``b``.
+    ``a.field(name)``   Return an iterator over values in field *name* in
+                        each record.
+    ``a.one()``         Return a single record.
+    ``a.sort(field)``   Return a new `_Result` object containing records
+                        sorted by *field*
+    =================== =======================================================
+
+
+    .. method:: field(name)
+
+        Return a list of field values.
+
+
+    .. method:: one()
+
+        Return a single record matching *kwargs*.
+
+        If the results have been sorted, then the first record is returned,
+        otherwise a random record returned.
+
+
+    .. method:: sort(field[, reverse=False])
+
+        Return a `_Result` object where each record is sorted by *field*.
+
+
 Groups
 ------
+
+.. deprecated:: 0.6
+
+    Use `Join` instead.
+
 
 .. class:: Group(table[, matcher=None], **kwargs)
 
@@ -433,7 +499,7 @@ Groups
         >>> len(parent.children)
         2
         >>> parent.children.get(name='a')
-        {Child('a')}
+        _Result(Child('a'))
         >>> parent.children.iter(name='b')
         <generator object iter at ...>
         >>> parent.children.add(name='c')

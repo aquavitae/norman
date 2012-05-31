@@ -21,7 +21,7 @@ from __future__ import with_statement
 from __future__ import unicode_literals
 
 import operator
-
+from ._result import _Result
 
 class NotSet(object):
     def __nonzero__(self):
@@ -81,8 +81,8 @@ class Field(object):
     set to the assigned name and the owning table respectively when
     the table class is created.
 
-    Fields can be used with comparison operators to return a set of
-    matching records.  For example::
+    Fields can be used with comparison operators to return a `_Results`
+    object containing matching records.  For example::
 
         >>> class MyTable(Table):
         ...     oid = Field(unique=True)
@@ -91,7 +91,7 @@ class Field(object):
         >>> t1 = MyTable(oid=1, value=2)
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
-        {'MyTable(oid=0, value=1)', 'MyTable(oid=2, value=1)'}
+        _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
     """
 
     def __init__(self, **kwargs):
@@ -128,11 +128,11 @@ class Field(object):
         return self.owner.get(**{self.name: value})
 
     def __ne__(self, value):
-        return set(self.owner) - set(self.__eq__(value))
+        return _Result(self.owner, set(self.owner) - set(self.__eq__(value)))
 
     def _op(self, op, value):
-        return set(r for r in self.owner \
-            if op(self._data.get(r, self.default), value))
+        return _Result(self.owner, set(r for r in self.owner \
+                       if op(self._data.get(r, self.default), value)))
 
     def __gt__(self, value):
         return self._op(operator.gt, value)

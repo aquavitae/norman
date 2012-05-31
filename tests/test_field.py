@@ -98,27 +98,27 @@ class TestComparisons(object):
         self.T = T
 
     def test_eq(self):
-        got = self.T.a == 2
+        got = set(self.T.a == 2)
         assert got == set(self.records[2:3])
 
     def test_gt(self):
-        got = self.T.a > 2
+        got = set(self.T.a > 2)
         assert got == set(self.records[3:])
 
     def test_lt(self):
-        got = self.T.a < 2
+        got = set(self.T.a < 2)
         assert got == set(self.records[:2])
 
     def test_ge(self):
-        got = self.T.a >= 2
+        got = set(self.T.a >= 2)
         assert got == set(self.records[2:])
 
     def test_le(self):
-        got = self.T.a <= 2
+        got = set(self.T.a <= 2)
         assert got == set(self.records[:3])
 
     def test_ne(self):
-        got = self.T.a != 2
+        got = set(self.T.a != 2)
         assert got == set(self.records[:2]) | set(self.records[3:])
 
 

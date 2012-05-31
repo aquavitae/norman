@@ -59,7 +59,7 @@ class Group(object):
     >>> len(parent.children)
     2
     >>> parent.children.get(name='a')
-    {Child('a')}
+    _Result(Child('a'))
     >>> parent.children.iter(name='b')
     <generator object iter at ...>
     >>> parent.children.add(name='c')

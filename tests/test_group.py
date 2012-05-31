@@ -72,10 +72,10 @@ class TestAPI(object):
         assert not self.g.contains(oid=1)
 
     def test_get_noargs(self):
-        assert self.g.get() == set([self.r[0], self.r[2], self.r[4]])
+        assert set(self.g.get()) == set([self.r[0], self.r[2], self.r[4]])
 
     def test_get_args(self):
-        assert self.g.get(oid=0) == set([self.r[0]])
+        assert set(self.g.get(oid=0)) == set([self.r[0]])
 
     def test_iter_noargs(self):
         assert set(self.g.iter()) == set([self.r[0], self.r[2], self.r[4]])
