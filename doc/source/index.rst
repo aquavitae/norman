@@ -647,6 +647,20 @@ Some useful tools for use with Norman are provided in `norman.tools`.
         None
 
 
+.. function:: reduce2(func, seq, default)
+    
+    Similar to `functools.reduce`, but return *default* if *seq* is empty.
+
+    The third argument to `functools.reduce` is an *initializer*, which
+    essentially acts as the first item in *seq*.  In this function,
+    *default* is returned if *seq* is empty, otherwise it is ignored.
+
+        >>> reduce2(lambda a, b: a + b, [1, 2, 3], 4)
+        6
+        >>> reduce2(lambda a, b: a + b, [], 'default')
+        'default'
+    
+    
 .. testcleanup::
 
     import os

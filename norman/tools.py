@@ -98,3 +98,29 @@ def int2(s, default=0):
         return int(s)
     except (ValueError, TypeError):
         return default
+
+
+def reduce2(func, seq, default):
+    """
+    Similar to `functools.reduce`, but return *default* if *seq* is empty.
+
+    The third argument to `functools.reduce` is an *initializer*, which
+    essentially acts as the first item in *seq*.  In this function,
+    *default* is returned if *seq* is empty, otherwise it is ignored.
+
+        >>> reduce2(lambda a, b: a + b, [1, 2, 3], 4)
+        6
+        >>> reduce2(lambda a, b: a + b, [], 'default')
+        'default'
+    """
+    it = iter(seq)
+    try:
+        value = next(it)
+    except StopIteration:
+        return default
+    while True:
+        try:
+            v = next(it)
+        except StopIteration:
+            return value
+        value = func(value, v)
