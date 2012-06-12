@@ -22,7 +22,7 @@ import os
 from nose.tools import assert_raises
 from mock import patch
 
-from norman import Database, Table, Field, tools, serialize
+from norman import Database, Table, Field, tools, serialise
 
 db = Database()
 
@@ -88,9 +88,9 @@ class TestCase(object):
 class TestSqlite3(TestCase):
 
     def test_tofromsql(self):
-        serialize.Sqlite3().dump(db, 'test')
+        serialise.Sqlite3().dump(db, 'test')
         db.reset()
-        serialize.Sqlite3().load(db, 'test')
+        serialise.Sqlite3().load(db, 'test')
         self.check_integrity(db)
 
     def test_bad_sql(self):
@@ -111,13 +111,13 @@ class TestSqlite3(TestCase):
         conn = sqlite3.connect('test')
         conn.executescript(sql)
         conn.close()
-        serialize.Sqlite3().load(db, 'test')
+        serialise.Sqlite3().load(db, 'test')
 
     def test_tosqlite_exception(self):
         'Make sure sqlite3 closes on an exception.'
         with patch.object(Person, 'fields', side_effect=TypeError):
             with assert_raises(TypeError):
-                serialize.Sqlite3().dump(db, 'file')
+                serialise.Sqlite3().dump(db, 'file')
         try:
             os.unlink('file')
         except OSError:
