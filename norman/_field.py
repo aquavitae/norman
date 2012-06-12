@@ -20,8 +20,8 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import operator
-from ._result import _Result
+from ._query import Query, ops
+
 
 class NotSet(object):
     def __repr__(self):
@@ -128,26 +128,25 @@ class Field(object):
         self._data[instance] = value
 
     def __eq__(self, value):
-        return self.owner.get(**{self.name: value})
+        return Query(ops.f_eq, self, value)
 
     def __ne__(self, value):
-        return _Result(self.owner, set(self.owner) - set(self.__eq__(value)))
-
-    def _op(self, op, value):
-        return _Result(self.owner, set(r for r in self.owner \
-                       if op(self._data.get(r, self.default), value)))
+        return Query(ops.f_ne, self, value)
 
     def __gt__(self, value):
-        return self._op(operator.gt, value)
+        return Query(ops.f_gt, self, value)
 
     def __lt__(self, value):
-        return self._op(operator.lt, value)
+        return Query(ops.f_lt, self, value)
 
     def __ge__(self, value):
-        return self._op(operator.ge, value)
+        return Query(ops.f_ge, self, value)
 
     def __le__(self, value):
-        return self._op(operator.le, value)
+        return Query(ops.f_le, self, value)
+
+    def __and__(self, values):
+        return Query(ops.f_and, self, values)
 
 
 class Join(object):
@@ -204,12 +203,11 @@ class Join(object):
         else:
             if len(self._args) == 1:
                 field = self._args[0]
-                table = field.owner
-                field = field.name
             else:
                 table, field = self._args[1].split('.')
                 table = self._args[0][table]
-            return table.get(**{field: instance})
+                field = getattr(table, field)
+            return field == instance
 
     @property
     def name(self):

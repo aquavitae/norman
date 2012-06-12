@@ -24,7 +24,7 @@ import timeit
 
 from nose.tools import assert_raises
 from norman import Table, Field, NotSet, Join, _table
-from norman._result import _Result
+from norman._query import Query
 
 import sys
 if sys.version < '3':
@@ -253,7 +253,7 @@ class TestTable(object):
 
     def test_get_type(self):
         p = self.T.get()
-        assert isinstance(p, _Result)
+        assert isinstance(p, set)
 
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
@@ -434,16 +434,16 @@ class TestValidateDelete(object):
 
     def test_valid(self):
         t = self.T(value=5)
-        assert self.T.get() == _Result(self.T, [t])
+        assert set(self.T) == set([t])
         self.T.delete(value=5)
-        assert self.T.get() == _Result(self.T, set())
+        assert set(self.T) == set()
 
     def test_invalid(self):
         t = self.T(value=0)
-        assert self.T.get() == _Result(self.T, set([t]))
+        assert set(self.T) == set([t])
         with assert_raises(ValueError):
             self.T.delete(value=0)
-        assert self.T.get() == _Result(self.T, set([t]))
+        assert set(self.T) == set([t])
 
     def test_propogate(self):
         class T(Table):
@@ -455,4 +455,4 @@ class TestValidateDelete(object):
         t2 = T(value=2)
         t3 = T(value=3)
         T.delete(value=1)
-        assert T.get() == _Result(T, set([t2]))
+        assert set(T) == set([t2])

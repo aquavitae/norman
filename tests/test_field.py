@@ -89,7 +89,8 @@ class TestSingleField(object):
         t.a = 4
         assert t.a == 4
 
-class TestComparisons(object):
+
+class TestOperations(object):
 
     def setup(self):
         class T(Table):
@@ -120,6 +121,10 @@ class TestComparisons(object):
     def test_ne(self):
         got = set(self.T.a != 2)
         assert got == set(self.records[:2]) | set(self.records[3:])
+
+    def test_and(self):
+        got = set(self.T.a & [0, 3])
+        assert got == set([self.records[0], self.records[3]])
 
 
 class TestJoin(object):

@@ -27,8 +27,9 @@ import uuid
 import weakref
 
 from ._field import Field, Join
-from ._result import _Result
+from ._query import Query
 from ._compat import unicode, long, recursive_repr
+from .tools import reduce2
 
 
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -90,16 +91,11 @@ class TableMeta(type):
         """
         Iterate over records with field values matching *kwargs*.
         """
-        keys = set(kwargs.keys()) & set(cls._indexes.keys())
-        if keys:
-            f = lambda a, b: a & b
-            matches = functools.reduce(f, (cls._indexes[key][kwargs[key]] for key in keys))
-            matches = [cls._instances[k] for k in matches if k in cls._instances]
-        else:
-            matches = cls._instances.values()
-        for m in matches:
-            if all(getattr(m, k) == v for k, v in kwargs.items()):
-                yield m
+        if not kwargs:
+            return iter(cls)
+        qs = (getattr(cls, k) == v for k, v in kwargs.items())
+        q = reduce2(lambda a, b: a & b, qs, [])
+        return iter(q)
 
     def contains(cls, **kwargs):
         """
@@ -114,9 +110,9 @@ class TableMeta(type):
 
     def get(cls, **kwargs):
         """
-        Return `_Results` for all records with field values matching *kwargs*.
+        Return a set of all records with field values matching *kwargs*.
         """
-        return _Result(cls, set(cls.iter(**kwargs)))
+        return set(cls.iter(**kwargs))
 
     def delete(cls, records=None, **keywords):
         """
@@ -159,11 +155,13 @@ class TableMeta(type):
         table is cleared.
         """
         if records is None:
-            records = cls.iter()
-        if isinstance(records, Table):
-            records = {records}
-        kwmatch = cls.iter(**keywords)
-        keys = [r._key for r in set(records) & set(kwmatch)]
+            records = set(cls)
+        elif isinstance(records, Table):
+            records = set([records])
+        else:
+            records = set(records)
+        kwmatch = set(cls.iter(**keywords))
+        keys = [r._key for r in records & kwmatch]
         for key in keys:
             # Check if its been deleted by validate_delete
             r = cls._instances.get(key, None)

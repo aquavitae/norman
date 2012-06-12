@@ -198,7 +198,7 @@ Tables
 
     .. method:: get(**kwargs)
 
-        Return `_Results` for all records with field values matching *kwargs*.
+        Return a `set` of for all records with field values matching *kwargs*.
 
 
     .. method:: iter(**kwargs)
@@ -333,7 +333,7 @@ Fields
     set to the assigned name and the owning table respectively when
     the table class is created.
 
-    Fields can be used with comparison operators to return a `_Result`
+    Fields can be used with comparison operators to return a `Query`
     object containing matching records.  For example::
 
         >>> class MyTable(Table):
@@ -343,9 +343,14 @@ Fields
         >>> t1 = MyTable(oid=1, value=2)
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
-        _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
+        Query(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
 
-
+    The following comparisons are supported for a `Field` object: ``==``, 
+    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to 
+    test for containment, e.g. `` Table.field & mylist`` returns all records 
+    where the value of ``field`` is in ``mylist``.
+        
+            
 .. class:: Join(*args)
 
     A special field representing a one-to-many join to another table.
@@ -393,7 +398,70 @@ Fields
 Queries
 -------
 
-.. class:: _Result
+Norman features a flexible and extensible query API, the basis of which is
+the `Query` class.  Queries are constructed by manipulating `Field` and other
+`Query` objects; the result of each operation is another `Query`.
+
+
+Tutorial
+^^^^^^^^
+
+The purpose of this short tutorial is to explain the basic concepts behind
+Norman queries.
+
+Queries are constructed as a series of field comparisons, for example::
+
+    q1 = MyTable.age > 4
+    q2 = MyTable.parent.name == 'Bill'
+    
+These can be joined together with set combination operators::
+
+    q3 = MyTable.age > 4 | MyTable.parent.name == 'Bill'
+    
+Containment in an iterable can be checked using the ``&`` operator.  This
+is the same usage as in `set`::
+
+    q4 = MyTable.parent.name & ['Bill', 'Bob', 'Bruce']
+    
+Since queries are themselves iterable, another query can be used as the
+container::
+
+    q5 = MyTable.age & OtherTable.age
+    
+A custom function can be used for filtering records from a `Table` or
+another `Query`::
+
+    isvalid = lambda record: record.parrot.endswith('notlob')
+    q6 = query(isvalid, q5)
+
+If the filter function is omitted, then all records are assumed to pass.
+This is useful for creating a query of a whole table::
+
+    q7 = query(MyTable)
+
+The result of each of these is a `Query` object, which is a set-like
+iterable of records.
+
+An existing query can be refreshed after the base data has changed by
+calling it as a function::
+
+    q7()
+
+
+
+API
+^^^
+
+.. function:: query([func, ]table)
+
+    Return a new `Query` for records in *table* for which *func* is `True`.
+
+    *table* is a `Table` or `Query` object.  If *func* is missing, all
+    records are assumed to pass.  If it is specified, is should accept a
+    record as its argument and return `True` for passing records.
+
+
+.. class:: Query
 
     A set-like object which represents the results of a query.
 
@@ -402,53 +470,29 @@ Queries
 
     This object allows most operations permitted on sets, such as unions
     and intersections.  Comparison operators (such as ``<``) are not
-    supported, except for equality tests.  If these are needed, then it is
-    best to convert the `_Result` to a set.
+    supported, except for equality tests.
 
     The following operations are supported:
 
     =================== =======================================================
     Operation           Description
     =================== =======================================================
-    ``r in a``          Return `True` if record ``r`` is in the results ``a``.
-    ``len(a)``          Return the length of results ``a``.
-    ``iter(a)``         Return an iterator over records in ``a``.
-    ``a == b``          Return `True` if ``a`` and ``b`` are both `_Result`
-                        instances and contain the same items in the same
-                        order
-    ``a != b``          Return `True` if ``not a == b``
-    ``a & b``           Return a new `_Result` object containing records in
-                        both ``a`` and ``b``.
-    ``a | b``           Return a new `_Result` object containing records in
-                        either ``a`` or ``b``.
-    ``a ^ b``           Return a new `_Result` object containing records in
-                        either ``a`` or ``b``, but not both.
-    ``a - b``           Return a new `_Result` object containing records in
-                        ``a`` which are not in ``b``.
-    ``a.field(name)``   Return an iterator over values in field *name* in
-                        each record.
-    ``a.one()``         Return a single record.
-    ``a.sort(field)``   Return a new `_Result` object containing records
-                        sorted by *field*
+    ``r in q``          Return `True` if record ``r`` is in the results of
+                        query ``q``.
+    ``len(q)``          Return the number of results in ``q``.
+    ``iter(q)``         Return an iterator over records in ``q``.
+    ``q1 == q2``        Return `True` if ``q1`` and ``q2`` contain the same
+                        records.
+    ``q1 != q2``        Return `True` if ``not a == b``
+    ``q1 & q2``         Return a new `Query` object containing records in
+                        both ``q1`` and ``q2``.
+    ``q1 | q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``.
+    ``q1 ^ q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``, but not both.
+    ``q1 - q2``         Return a new `Query` object containing records in
+                        ``q1`` which are not in ``q2``.
     =================== =======================================================
-
-
-    .. method:: field(name)
-
-        Return a list of field values.
-
-
-    .. method:: one()
-
-        Return a single record matching *kwargs*.
-
-        If the results have been sorted, then the first record is returned,
-        otherwise a random record returned.
-
-
-    .. method:: sort(field[, reverse=False])
-
-        Return a `_Result` object where each record is sorted by *field*.
 
 
 Groups
