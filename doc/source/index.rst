@@ -49,10 +49,7 @@ Here is a brief, but complete example of a database structure::
     class Address(Table, database=db):
         street = Field(unique=True)
         town = Field(unique=True)
-
-        @property
-        def people(self):
-            return Person.get(address=self)
+        people = Join(Person.address)
 
         def validate(self):
             assert isinstance(self.town, Town)
@@ -84,15 +81,21 @@ Database
     >>> MyTable in db
     True
 
-    The database can be written to a sqlite database as file storage.  So
-    if a `Database` instance represents a document state, it can be saved
-    using the following code:
+    The database can be written to a file through the `serialise` module.
+    Currently only sqlite3 is supported.  If a `Database` instance represents
+    a document state, it can be saved using the following code:
 
-    >>> db.tosqlite('file.sqlite')
+    .. doctest::
+        :options: +SKIP
 
-    And reloaded thus:
+        >>> serialise.Sqlite3().dump('file.sqlite')
 
-    >>> db.fromsqlite('file.sqlite')
+    And reloaded:
+
+    .. doctest::
+        :options: +SKIP
+
+        >>> serialise.Sqlite3().load('file.sqlite')
 
     :note:
         The sqlite database created does not contain any constraints
@@ -345,12 +348,12 @@ Fields
         >>> Table.value == 1
         Query(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
 
-    The following comparisons are supported for a `Field` object: ``==``, 
-    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to 
-    test for containment, e.g. `` Table.field & mylist`` returns all records 
+    The following comparisons are supported for a `Field` object: ``==``,
+    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
+    test for containment, e.g. `` Table.field & mylist`` returns all records
     where the value of ``field`` is in ``mylist``.
-        
-            
+
+
 .. class:: Join(*args)
 
     A special field representing a one-to-many join to another table.
@@ -413,21 +416,21 @@ Queries are constructed as a series of field comparisons, for example::
 
     q1 = MyTable.age > 4
     q2 = MyTable.parent.name == 'Bill'
-    
+
 These can be joined together with set combination operators::
 
     q3 = MyTable.age > 4 | MyTable.parent.name == 'Bill'
-    
+
 Containment in an iterable can be checked using the ``&`` operator.  This
 is the same usage as in `set`::
 
     q4 = MyTable.parent.name & ['Bill', 'Bob', 'Bruce']
-    
+
 Since queries are themselves iterable, another query can be used as the
 container::
 
     q5 = MyTable.age & OtherTable.age
-    
+
 A custom function can be used for filtering records from a `Table` or
 another `Query`::
 
@@ -500,7 +503,7 @@ Groups
 
 .. deprecated:: 0.6
 
-    Use `Join` instead.
+    Use `Join` or `query` instead.
 
 
 .. class:: Group(table[, matcher=None], **kwargs)
@@ -543,9 +546,9 @@ Groups
         >>> len(parent.children)
         2
         >>> parent.children.get(name='a')
-        _Result(Child('a'))
+        {Child('a')}
         >>> parent.children.iter(name='b')
-        <generator object iter at ...>
+        <set_iterator object at ...>
         >>> parent.children.add(name='c')
         Child('c')
 
@@ -589,15 +592,18 @@ Groups
         Iterate over records in the `Group` matching *kwargs*.
 
 
-Serialization
+.. module:: serialise
+
+Serialisation
 -------------
 
 In addition to supporting the `pickle` protocol, `norman` provides a basic
 interface for serialising and de-serializing databases to other formats
-through the `serialize` module.  Currently, only sqlite is supported, but
+through the `serialise` module.  Currently, only sqlite is supported, but
 other formats will be added in the future.
 
-.. class serialize.Sqlite3
+
+.. class serialise.Sqlite3
 
     .. method:: dump(db, filename)
 
@@ -628,7 +634,7 @@ other formats will be added in the future.
             and a message logged.
 
 
-.. module:: norman.tools
+.. module:: tools
 
 Tools
 -----
@@ -638,7 +644,7 @@ Tools
     from norman.tools import *
 
 
-Some useful tools for use with Norman are provided in `norman.tools`.
+Some useful tools for use with Norman are provided in `tools`.
 
 
 .. function:: dtfromiso(iso)
@@ -692,19 +698,21 @@ Some useful tools for use with Norman are provided in `norman.tools`.
 
 
 .. function:: reduce2(func, seq, default)
-    
+
     Similar to `functools.reduce`, but return *default* if *seq* is empty.
 
     The third argument to `functools.reduce` is an *initializer*, which
     essentially acts as the first item in *seq*.  In this function,
     *default* is returned if *seq* is empty, otherwise it is ignored.
 
+    .. doctest:: tools
+    
         >>> reduce2(lambda a, b: a + b, [1, 2, 3], 4)
         6
         >>> reduce2(lambda a, b: a + b, [], 'default')
         'default'
-    
-    
+
+
 .. testcleanup::
 
     import os
