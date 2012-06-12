@@ -266,8 +266,8 @@ class TestTable(object):
         count = 500
         for i in range(count):
             self.T(oid=i, name='Mike', age=int(i % 10))
-        number = 100000
-        fast = timeit.timeit(lambda: self.T.iter(id=300), number=number)
+        number = 100
+        fast = timeit.timeit(lambda: self.T.iter(oid=300), number=number)
         slow = timeit.timeit(lambda: self.T.iter(age=5), number=number)
         assert fast * 10 > slow
 
