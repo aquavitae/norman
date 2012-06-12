@@ -24,6 +24,9 @@ import operator
 from ._result import _Result
 
 class NotSet(object):
+    def __repr__(self):
+        return 'NotSet'
+
     def __nonzero__(self):
         return False
     __bool__ = __nonzero__
