@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2011 David Townshend
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -23,6 +21,7 @@ import norman
 
 version = norman.__version__
 author = norman.__author__
+description = 'Lightweight, in-memory database framework implemented in python'
 
 classifiers = [
     'Development Status :: 4 - Beta',
@@ -30,10 +29,17 @@ classifiers = [
     'License :: OSI Approved :: GNU General Public License (GPL)',
     'Natural Language :: English',
     'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.0',
+    'Programming Language :: Python :: 3.1',
     'Programming Language :: Python :: 3.2',
     'Topic :: Database :: Database Engines/Servers',
     'Topic :: Software Development :: Libraries :: Python Modules'
 ]
+
 
 def run_setup(*argv):
     if len(argv) > 0:
@@ -41,13 +47,14 @@ def run_setup(*argv):
 
     setup(name='norman',
           version=version,
-          description='Lightweight, in-memory database framework implemented in python',
+          description=description,
           author=author,
           author_email='aquavitae69@gmail.com',
           url='http://bitbucket.org/aquavitae/norman',
           download_url='http://bitbucket.org/aquavitae/norman/downloads',
           packages=['norman'],
-          classifiers=classifiers
+          classifiers=classifiers,
+          test_suite='nose.collector'
          )
 
 if __name__ == '__main__':

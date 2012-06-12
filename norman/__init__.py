@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2011 David Townshend
@@ -17,9 +16,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-''' A new database framework.  
-
-This framework provides a bases for creating database-like structures.
+"""
+**Norman** provides a framework for creating database-like structures.
 It doesn't, however, link into any database API (e.g. sqlite) and
 doesn't support SQL syntax.  It is intended to be used as a lightweight,
 in-memory framework allowing complex data structures, but without
@@ -32,15 +30,18 @@ in the way relationships are managed.  In a SQL database, each record
 has one or more primary keys, which are typically referred to in other,
 related tables by foreign keys.  Here, however, keys do not exist, and
 records are linked directly to each other as attributes.
-  
-The main class is `Table` which defines the structure of a specific
-type of record
-'''
+
+The main containing class is `Database`, and an instance of this should be
+created before creating any tables it contains.  Tables are subclassed
+from the `Table` class and fields added to it by creating `Field` class
+attributes.
+"""
 
 __version__ = '0.5.2'
 __author__ = 'David Townshend'
 
 from ._table import Table
-from ._field import Field, NotSet
+from ._field import Field, Join, NotSet
+from ._query import query
 from ._group import Group
 from ._database import Database

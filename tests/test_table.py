@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2011 David Townshend
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -16,15 +14,25 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
+from __future__ import unicode_literals
+
 import collections
+import re
 import weakref
 import timeit
 
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, _table
+from norman import Table, Field, NotSet, Join, _table
+from norman._query import Query
+
+import sys
+if sys.version < '3':
+    range = xrange
 
 ###############################################################################
 # Some test data
+
 
 def convidx(table, index):
     'Utility to convert an index (i.e. defaultdict with a weakset) to a dict'
@@ -32,22 +40,23 @@ def convidx(table, index):
                 for value, keys in table._indexes[index].items()]
     return dict(a for a in r if a[1])
 
+
 def test_conv_index():
-    class K: pass
+    class K(object): pass
     k1 = K()
     k2 = K()
-    class T:
+    class T(object):
         _instances = {k1: 'i1', k2: 'i2'}
         _indexes = {'f1': collections.defaultdict(weakref.WeakSet),
                     'f2': collections.defaultdict(weakref.WeakSet)}
     T._indexes['f1']['a'].add(k1)
     T._indexes['f1']['a'].add(k2)
     T._indexes['f1']['b'].add(k1)
-    T._indexes['f2']['a']
-    assert convidx(T, 'f1') == {'a': {'i1', 'i2'}, 'b': {'i1'}}
+    T._indexes['f2']['a'] #note: is this actually required?
+    assert convidx(T, 'f1') == {'a': set(['i1', 'i2']), 'b': set(['i1'])}
     assert convidx(T, 'f2') == {}
 
-class Test_I:
+class Test_I(object):
 
     def test_hash(self):
         'Test that _I is hashable.'
@@ -66,7 +75,44 @@ class Test_I:
         assert ref() is None
 
 
-class TestTable:
+class TestFields(object):
+
+    def setup(self):
+        class S(Table):
+            t = Field()
+
+        class T(Table):
+            me = Field()
+            other = Join(S.t)
+
+        self.T = T
+
+    def test_field_name(self):
+        'Test that fields have a read-only name'
+        assert self.T.me.name == 'me'
+        with assert_raises(AttributeError):
+            self.T.me.name = 'notme'
+
+    def test_field_owner(self):
+        'Test that fields have a read-only owner'
+        assert self.T.me.owner is self.T
+        with assert_raises(AttributeError):
+            self.T.me.owner = 'notme'
+
+    def test_join_name(self):
+        'Test that joins have a read-only name'
+        assert self.T.other.name == 'other'
+        with assert_raises(AttributeError):
+            self.T.other.name = 'notme'
+
+    def test_join_owner(self):
+        'Test that joins have a read-only owner'
+        assert self.T.other.owner is self.T
+        with assert_raises(AttributeError):
+            self.T.other.owner = 'notme'
+
+
+class TestTable(object):
 
     def setup(self):
         class T(Table):
@@ -81,8 +127,8 @@ class TestTable:
         assert t.oid is NotSet
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {NotSet: {t}}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: {t}}
+        assert convidx(self.T, 'oid') == {NotSet: set([t])}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: set([t])}
         assert 'age' not in t._indexes
 
     def test_init_single(self):
@@ -91,8 +137,8 @@ class TestTable:
         assert t.oid == 1, t.oid
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {1: {t}}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: {t}}
+        assert convidx(self.T, 'oid') == {1: set([t])}, convidx(self.T, 'oid')
+        assert convidx(self.T, 'name') == {NotSet: set([t])}
         assert 'age' not in t._indexes
 
     def test_init_many(self):
@@ -101,8 +147,8 @@ class TestTable:
         assert t.oid == 1
         assert t.name is 'Mike'
         assert t.age is 23
-        assert convidx(self.T, 'oid') == {1: {t}}
-        assert convidx(self.T, 'name') == {'Mike': {t}}
+        assert convidx(self.T, 'oid') == {1: set([t])}
+        assert convidx(self.T, 'name') == {'Mike': set([t])}
         assert 'age' not in t._indexes
 
     def test_init_bad_kwargs(self):
@@ -110,9 +156,36 @@ class TestTable:
         with assert_raises(AttributeError):
             self.T(bad='field')
 
+    def test_init_invalid(self):
+        class T(Table):
+            v = Field()
+            def validate(self):
+                assert False
+        with assert_raises(ValueError):
+            T(v=1)
+
+    def test_init_defaults(self):
+        'Test that defaults are set for default fields'
+        class T(Table):
+            a = Field(default=1)
+            b = Field()
+        t = T()
+        assert t.a == 1
+        assert t.b is NotSet
+
     def test_name(self):
         'Test that Table.name == "Table"'
         assert self.T.__name__ == 'T'
+
+    def test_repr(self):
+        'Test repr(table)'
+        t = self.T(oid=4, name='tee', age=23)
+        t.age = t   # Test self-reference
+        if sys.version >= '3':
+            expect = "T(age=..., name='tee', oid=4)"
+        else:
+            expect = "T(age=..., name=u'tee', oid=4)"
+        assert repr(t) == expect, repr(t)
 
     def test_indexes(self):
         'Test that indexes are created.'
@@ -153,7 +226,7 @@ class TestTable:
         t1 = self.T(oid=1)
         t2 = self.T(oid=2)
         result = set(i for i in self.T)
-        assert result == {t1, t2}
+        assert result == set([t1, t2])
 
     def test_iter_method(self):
         'Test that iter returns the matching records.'
@@ -161,7 +234,7 @@ class TestTable:
         p2 = self.T(oid=2)
         p3 = self.T(oid=3)
         p = set(self.T.iter(oid=1))
-        assert p == {p1}, p
+        assert p == set([p1]), p
 
     def test_iter_other_attr(self):
         'Test that iter finds matches for non-indexed fields.'
@@ -169,28 +242,32 @@ class TestTable:
         p2 = self.T(oid=2, name='Mike', age=22)
         p3 = self.T(oid=3, name='Mike', age=23)
         p = set(self.T.iter(age=23))
-        assert p == {p1, p3}, p
+        assert p == set([p1, p3]), p
 
     def test_get(self):
         p1 = self.T(oid=1)
         p2 = self.T(oid=2)
         p3 = self.T(oid=3)
         p = self.T.get(oid=1)
-        assert p == {p1}
+        assert set(p) == set([p1])
+
+    def test_get_type(self):
+        p = self.T.get()
+        assert isinstance(p, set)
 
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
         t = self.T(oid=1)
         i = convidx(self.T, 'oid')
-        assert i == {1: {t}}, i
+        assert i == {1: set([t])}, i
 
     def test_index_speed(self):
         'Getting indexed fields should be ten times faster'
         count = 500
         for i in range(count):
             self.T(oid=i, name='Mike', age=int(i % 10))
-        number = 100000
-        fast = timeit.timeit(lambda: self.T.iter(id=300), number=number)
+        number = 100
+        fast = timeit.timeit(lambda: self.T.iter(oid=300), number=number)
         slow = timeit.timeit(lambda: self.T.iter(age=5), number=number)
         assert fast * 10 > slow
 
@@ -270,7 +347,39 @@ class TestTable:
         assert t.name == 'ABC', t.name
 
 
-class TestUnique:
+class TestUid(object):
+
+    def setup(self):
+        class T(Table): pass
+        self.t = T()
+
+    def test_default(self):
+        r = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        assert re.match(r, self.t._uid)
+
+    def test_values(self):
+        values = ['16fd2706-8baf-433b-82eb-8c7fada847da', 10, id([1])]
+        for v in values:
+            yield self.check_value, v
+
+    def check_value(self, value):
+        self.t._uid = value
+        assert self.t._uid == value
+
+    def test_uid_bad_type(self):
+        with assert_raises(TypeError):
+            self.t._uid = [1, 2, 3]
+
+    def test_uid_bad_int(self):
+        with assert_raises(ValueError):
+            self.t._uid = 0
+
+    def test_uid_bad_uuid(self):
+        with assert_raises(ValueError):
+            self.t._uid = '123fe'
+
+
+class TestUnique(object):
 
     def setup(self):
         class T(Table):
@@ -293,6 +402,8 @@ class TestUnique:
         t2 = self.T(oid=2)
         with assert_raises(ValueError):
             t2.oid = 1
+        assert t1.oid == 1
+        assert t2.oid == 2
 
     def test_unique_delete_set(self):
         'Deleting a record allows the value to be reused.'
@@ -312,7 +423,7 @@ class TestUnique:
             T(a=1, b=2)
 
 
-class TestValidateDelete:
+class TestValidateDelete(object):
 
     def setup(self):
         class T(Table):
@@ -323,13 +434,25 @@ class TestValidateDelete:
 
     def test_valid(self):
         t = self.T(value=5)
-        assert self.T.get() == {t}
+        assert set(self.T) == set([t])
         self.T.delete(value=5)
-        assert self.T.get() == set()
+        assert set(self.T) == set()
 
     def test_invalid(self):
         t = self.T(value=0)
-        assert self.T.get() == {t}
+        assert set(self.T) == set([t])
         with assert_raises(ValueError):
             self.T.delete(value=0)
-        assert self.T.get() == {t}
+        assert set(self.T) == set([t])
+
+    def test_propogate(self):
+        class T(Table):
+            value = Field()
+            def validate_delete(self):
+                if self.value != 3:
+                    T.delete(value=3)
+        t1 = T(value=1)
+        t2 = T(value=2)
+        t3 = T(value=3)
+        T.delete(value=1)
+        assert set(T) == set([t2])

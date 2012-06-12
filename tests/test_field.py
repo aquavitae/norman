@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (c) 2011 David Townshend
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -16,10 +14,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from __future__ import with_statement
 from nose.tools import assert_raises
-from norman import Field, NotSet
+from norman import Database, Field, NotSet, Table, Join
 
-class MockTable:
+
+class MockTable(object):
     _updateinstance = lambda: None
     validate = lambda: None
 
@@ -34,7 +34,7 @@ def test_NotSet_compare():
     assert not NotSet
 
 
-class TestSingleField:
+class TestSingleField(object):
 
     def setup(self):
         class Table(MockTable):
@@ -88,3 +88,78 @@ class TestSingleField:
         assert t.a == 5
         t.a = 4
         assert t.a == 4
+
+
+class TestOperations(object):
+
+    def setup(self):
+        class T(Table):
+            a = Field()
+        self.records = [T(a=n) for n in range(5)]
+        self.T = T
+
+    def test_eq(self):
+        got = set(self.T.a == 2)
+        assert got == set(self.records[2:3])
+
+    def test_gt(self):
+        got = set(self.T.a > 2)
+        assert got == set(self.records[3:])
+
+    def test_lt(self):
+        got = set(self.T.a < 2)
+        assert got == set(self.records[:2])
+
+    def test_ge(self):
+        got = set(self.T.a >= 2)
+        assert got == set(self.records[2:])
+
+    def test_le(self):
+        got = set(self.T.a <= 2)
+        assert got == set(self.records[:3])
+
+    def test_ne(self):
+        got = set(self.T.a != 2)
+        assert got == set(self.records[:2]) | set(self.records[3:])
+
+    def test_and(self):
+        got = set(self.T.a & [0, 3])
+        assert got == set([self.records[0], self.records[3]])
+
+
+class TestJoin(object):
+
+    def test_field(self):
+        class Child(Table):
+            parent = Field()
+
+        class Parent(Table):
+            children = Join(Child.parent)
+
+        p1 = Parent()
+        p2 = Parent()
+        c1 = Child(parent=p1)
+        c2 = Child(parent=p1)
+        c3 = Child(parent=p2)
+        c4 = Child(parent=p2)
+        assert set(p1.children) == set([c1, c2])
+        assert set(p2.children) == set([c3, c4])
+
+    def test_name(self):
+        db = Database()
+        @db.add
+        class Parent(Table):
+            children = Join(db, 'Child.parent')
+
+        @db.add
+        class Child(Table):
+            parent = Field()
+
+        p1 = Parent()
+        p2 = Parent()
+        c1 = Child(parent=p1)
+        c2 = Child(parent=p1)
+        c3 = Child(parent=p2)
+        c4 = Child(parent=p2)
+        assert set(p1.children) == set([c1, c2])
+        assert set(p2.children) == set([c3, c4])
