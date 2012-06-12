@@ -62,7 +62,7 @@ copyright = '2011, David Townshend'
 # built documents.
 
 # The full version, including alpha/beta/rc tags.
-release = '0.5.2'
+release = '0.6.0'
 # The short X.Y version.
 version = release.rsplit('.', 1)[0]
 
