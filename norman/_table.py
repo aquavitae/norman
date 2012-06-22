@@ -229,8 +229,10 @@ class Table(_TableBase):
                     existing = set(table.iter(**uniques)) - {self}
                     if existing:
                         field.__set__(self, oldvalue)
-                        raise ValueError("Not unique: {}={}".format(field.name,
-                                                                repr(value)))
+                        msg = ('{}={}'.format(k, v) for k, v in uniques.items())
+                        msg = ', '.join(msg)
+                        msg = 'Not unique: {}'.format(msg)
+                        raise ValueError(msg)
                 try:
                     self._validate()
                 except:
