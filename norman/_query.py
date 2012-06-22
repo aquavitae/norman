@@ -23,8 +23,6 @@ import operator
 import functools
 import itertools
 
-from .tools import reduce2
-
 
 class ops:
 
@@ -40,7 +38,10 @@ class ops:
         if field.name in table._indexes:
             index = table._indexes[field.name]
             keysets = (k for v, k in index.items() if op(v, value))
-            keys = reduce2(lambda a, b: a & b, keysets, set())
+            try:
+                keys = functools.reduce(lambda a, b: a & b, keysets)
+            except TypeError:
+                keys = set()
             return set(table._instances[k] for k in keys \
                        if k in table._instances)
         else:
@@ -51,7 +52,15 @@ class ops:
         """
         Return a set of ``Table.field == value``
         """
-        return self._f_ops(operator.eq, field, value)
+        table = field.owner
+        if field.name in table._indexes:
+            index = table._indexes[field.name]
+            keys = index[value]
+            return set(table._instances[k] for k in keys \
+                       if k in table._instances)
+        else:
+            return set(r for r in table._instances.values()
+                       if getattr(r, field.name) == value)
 
     def f_ne(self, field, value):
         """

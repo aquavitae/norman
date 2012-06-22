@@ -94,7 +94,7 @@ class TableMeta(type):
         if not kwargs:
             return iter(cls)
         qs = (getattr(cls, k) == v for k, v in kwargs.items())
-        q = reduce2(lambda a, b: a & b, qs, [])
+        q = functools.reduce(lambda a, b: a & b, qs)
         return iter(q)
 
     def contains(cls, **kwargs):
@@ -226,7 +226,7 @@ class Table(_TableBase):
                     table = self.__class__
                     uniques = dict((f, getattr(self, f)) for f in table.fields()
                                    if getattr(table, f).unique)
-                    existing = set(self.__class__.iter(**uniques)) - {self}
+                    existing = set(table.iter(**uniques)) - {self}
                     if existing:
                         field.__set__(self, oldvalue)
                         raise ValueError("Not unique: {}={}".format(field.name,
