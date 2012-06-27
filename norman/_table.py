@@ -19,12 +19,10 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-from collections import defaultdict
 import copy
 import functools
 import re
 import uuid
-import weakref
 
 from ._field import Field, Join
 from ._query import Query
@@ -60,7 +58,6 @@ class TableMeta(type):
     def __new__(mcs, name, bases, cdict):
         cls = type.__new__(mcs, name, bases, cdict)
         cls._instances = {}
-        cls._indexes = {}
         cls._fields = {}
         fulldict = copy.copy(cdict)
         for base in bases:
@@ -71,8 +68,6 @@ class TableMeta(type):
                 value._owner = cls
             if isinstance(value, Field):
                 cls._fields[name] = value
-                if value.index:
-                    cls._indexes[name] = defaultdict(weakref.WeakSet)
         return cls
 
     def __init__(cls, name, bases, cdict):
@@ -238,8 +233,14 @@ class Table(_TableBase):
                 except:
                     field.__set__(self, oldvalue)
                     raise
+            # Update the index
             if field.index:
-                self._updateindex(attr, oldvalue, value)
+                index = field._index
+                try:
+                    index[oldvalue].remove(self._key)
+                except KeyError:
+                    pass
+                index[value].add(self._key)
         else:
             super(Table, self).__setattr__(attr, value)
 
@@ -288,14 +289,6 @@ class Table(_TableBase):
                 raise ValueError(*err.args)
             else:
                 raise
-
-    def _updateindex(self, name, oldvalue, newvalue):
-        index = self._indexes[name]
-        try:
-            index[oldvalue].remove(self._key)
-        except KeyError:
-            pass
-        index[newvalue].add(self._key)
 
     def validate(self):
         """

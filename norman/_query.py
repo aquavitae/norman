@@ -35,9 +35,8 @@ class ops:
         Generic function for ``Table.field <op> value``
         """
         table = field.owner
-        if field.name in table._indexes:
-            index = table._indexes[field.name]
-            keysets = (k for v, k in index.items() if op(v, value))
+        if field.index:
+            keysets = (k for v, k in field._index.items() if op(v, value))
             try:
                 keys = functools.reduce(lambda a, b: a & b, keysets)
             except TypeError:
@@ -53,9 +52,8 @@ class ops:
         Return a set of ``Table.field == value``
         """
         table = field.owner
-        if field.name in table._indexes:
-            index = table._indexes[field.name]
-            keys = index[value]
+        if field.index:
+            keys = field._index[value]
             return set(table._instances[k] for k in keys \
                        if k in table._instances)
         else:

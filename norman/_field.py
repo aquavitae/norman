@@ -20,6 +20,9 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import weakref
+from collections import defaultdict
+
 from ._query import Query, ops
 
 
@@ -103,6 +106,8 @@ class Field(object):
         self.default = kwargs.get('default', NotSet)
         self.readonly = kwargs.get('readonly', False)
         self._data = {}
+        if self.index:
+            self._index = defaultdict(weakref.WeakSet)
 
     @property
     def name(self):
