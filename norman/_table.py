@@ -56,18 +56,22 @@ class TableMeta(type):
     """
 
     def __new__(mcs, name, bases, cdict):
-        cls = type.__new__(mcs, name, bases, cdict)
+        fulldict = {}
+        for base in bases:
+            for n, value in base.__dict__.items():
+                if isinstance(value, (Field, Join)):
+                    value = copy.copy(value)
+                fulldict[n] = value
+        fulldict.update(cdict)
+        cls = type.__new__(mcs, name, bases, fulldict)
         cls._instances = {}
         cls._fields = {}
-        fulldict = copy.copy(cdict)
-        for base in bases:
-            fulldict.update(base.__dict__)
-        for name, value in fulldict.items():
+        for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
-                value._name = name
+                value._name = n
                 value._owner = cls
             if isinstance(value, Field):
-                cls._fields[name] = value
+                cls._fields[n] = value
         return cls
 
     def __init__(cls, name, bases, cdict):

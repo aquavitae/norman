@@ -340,6 +340,50 @@ class TestTable(object):
         assert t.name == 'ABC', t.name
 
 
+class TestInheritance(object):
+
+    def setup(self):
+        class Other(Table):
+            f = Field()
+
+        class B(Table):
+            a = Field(index=True)
+            j = Join(Other.f)
+
+        class I(B):
+            b = Field()
+
+        self.B = B
+        self.I = I
+        self.Other = Other
+
+    def test_fields(self):
+        assert set(self.B.fields()) == set(['a'])
+        assert set(self.I.fields()) == set(['a', 'b'])
+
+    def test_different_fields(self):
+        assert self.B.a is not self.I.a
+        assert self.B.a._index is not self.I.a._index
+
+    def test_owner(self):
+        assert self.B.a.owner is self.B
+        assert self.I.a.owner is self.I
+
+    def test_data(self):
+        b = self.B(a=1)
+        i = self.I(a=2)
+        assert list(self.B.a._data.values()) == [1]
+        assert list(self.I.a._data.values()) == [2]
+
+    def test_join(self):
+        b = self.B()
+        i = self.I()
+        o1 = self.Other(f=b)
+        o2 = self.Other(f=i)
+        assert set(b.j) == set([o1])
+        assert set(i.j) == set([o2])
+
+
 class TestUid(object):
 
     def setup(self):

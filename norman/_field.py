@@ -117,6 +117,12 @@ class Field(object):
     def owner(self):
         return self._owner
 
+    def __copy__(self):
+        return Field(unique=self.unique,
+                     index=self.index,
+                     default=self.default,
+                     readonly=self.readonly)
+
     def __get__(self, instance, owner):
         if instance is None:
             return self
