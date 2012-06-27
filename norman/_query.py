@@ -40,48 +40,35 @@ def query(arg1, arg2=None):
 class Query(object):
 
     """
-    Represent a query with a set-like interface.
+    A set-like object which represents the results of a query.
 
-    Queries are usually constructed from `Field` and other `Query` objects, but
-    may also be initialised directly.  The first argument to the constructor
-    is a function which acts on each of the following positional arguments
-    and returns an iterable result.
+    This object should never be instantiated directly, instead it should
+    be created as the result of a query on a `Table` or `Field`.
 
-    Comparison and combination operators may be used on queries and most of
-    these return a new `Query` object.  For example, the statement
-    ``(MyTable.value > 2) & (MyTable.name == 'a')`` is constructed as::
-
-        Query(operator.and_,
-              Query(operator.gt, MyTable.value, 2),
-              Query(operator.eq, MyTable.name, 'a'))
-
-    Queries are only evaluated the first time the results are requested or
-    when `execute` is called.
+    This object allows most operations permitted on sets, such as unions
+    and intersections.  Comparison operators (such as ``<``) are not
+    supported, except for equality tests.
 
     The following operations are supported:
 
     =================== =======================================================
     Operation           Description
     =================== =======================================================
-    ``r in a``          Return `True` if record ``r`` is in the results ``a``.
-    ``len(a)``          Return the length of results ``a``.
-    ``iter(a)``         Return an iterator over the results.
-    ``a & b``           Return a new `Query` object containing records in
-                        both ``a`` and ``b``.
-    ``a | b``           Return a new `Query` object containing records in
-                        either ``a`` or ``b``.
-    ``a ^ b``           Return a new `Query` object containing records in
-                        either ``a`` or ``b``, but not both.
-    ``a - b``           Return a new `Query` object containing records in
-                        ``a`` which are not in ``b``.
-    ``~a``              Return a new `Query` object containing records not
-                        in query ``a``.  This can only be used on queries
-                        containing records.
-    ``a <cmp> value``   Where *cmp* is a comparison operator, this returns
-                        a new `Query` object containing only results which
-                        compare `True`.
-    ``a.field``         Return a new `Query` object containing values from
-                        ``field`` for each record in ``a``
+    ``r in q``          Return `True` if record ``r`` is in the results of
+                        query ``q``.
+    ``len(q)``          Return the number of results in ``q``.
+    ``iter(q)``         Return an iterator over records in ``q``.
+    ``q1 == q2``        Return `True` if ``q1`` and ``q2`` contain the same
+                        records.
+    ``q1 != q2``        Return `True` if ``not a == b``
+    ``q1 & q2``         Return a new `Query` object containing records in
+                        both ``q1`` and ``q2``.
+    ``q1 | q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``.
+    ``q1 ^ q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``, but not both.
+    ``q1 - q2``         Return a new `Query` object containing records in
+                        ``q1`` which are not in ``q2``.
     =================== =======================================================
     """
 

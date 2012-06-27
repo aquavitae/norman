@@ -706,7 +706,7 @@ Some useful tools for use with Norman are provided in `tools`.
     *default* is returned if *seq* is empty, otherwise it is ignored.
 
     .. doctest:: tools
-    
+
         >>> reduce2(lambda a, b: a + b, [1, 2, 3], 4)
         6
         >>> reduce2(lambda a, b: a + b, [], 'default')
