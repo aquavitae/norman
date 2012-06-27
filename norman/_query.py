@@ -19,102 +19,6 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import operator
-import functools
-import itertools
-
-
-class ops:
-
-    """
-    Operation functions for queries
-    """
-
-    def _f_ops(self, op, field, value):
-        """
-        Generic function for ``Table.field <op> value``
-        """
-        table = field.owner
-        if field.index:
-            keysets = (k for v, k in field._index.items() if op(v, value))
-            try:
-                keys = functools.reduce(lambda a, b: a & b, keysets)
-            except TypeError:
-                keys = set()
-            return set(table._instances[k] for k in keys \
-                       if k in table._instances)
-        else:
-            return set(r for r in table._instances.values()
-                       if op(getattr(r, field.name), value))
-
-    def f_eq(self, field, value):
-        """
-        Return a set of ``Table.field == value``
-        """
-        table = field.owner
-        if field.index:
-            keys = field._index[value]
-            return set(table._instances[k] for k in keys \
-                       if k in table._instances)
-        else:
-            return set(r for r in table._instances.values()
-                       if getattr(r, field.name) == value)
-
-    def f_ne(self, field, value):
-        """
-        Return a set of ``Table.field != value``
-        """
-        return self._f_ops(operator.ne, field, value)
-
-    def f_gt(self, field, value):
-        """
-        Return a set of ``Table.field > value``
-        """
-        return self._f_ops(operator.gt, field, value)
-
-    def f_lt(self, field, value):
-        """
-        Return a set of ``Table.field < value``
-        """
-        return self._f_ops(operator.lt, field, value)
-
-    def f_ge(self, field, value):
-        """
-        Return a set of ``Table.field >= value``
-        """
-        return self._f_ops(operator.ge, field, value)
-
-    def f_le(self, field, value):
-        """
-        Return a set of ``Table.field <= value``
-        """
-        return self._f_ops(operator.le, field, value)
-
-    def f_and(self, field, values):
-        """
-        Return a set of ``Table.field & values``
-        """
-        in_ = lambda a, b: a in b
-        return self._f_ops(in_, field, set(values))
-
-    def q_ops(self, op, a, b):
-        """
-        Return a set for ``query_a._results <op> query_b._results``.
-        """
-        return op(set(a), set(b))
-
-    def q_slice(self, slice, q):
-        """
-        Return a list of ``query[slice]``.
-        """
-        return list(itertools.islice(q, slice.start, slice.stop, slice.step))\
-
-    def q_attr(self, name, q):
-        return type(q)(getattr(r, name) for r in q)
-
-
-ops = ops()
-
 
 def query(arg1, arg2=None):
     """
@@ -196,9 +100,6 @@ class Query(object):
                 args.append(a)
         self._results = self._op(*args)
 
-    def __and__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.and_), self, other)
-
     def __contains__(self, record):
         return record in set(self)
 
@@ -213,11 +114,15 @@ class Query(object):
     def __len__(self):
         return len(set(self))
 
+    def __and__(self, other):
+        return Query(lambda a, b: set(a) & set(b), self, other)
+
     def __or__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.or_), self, other)
+        return Query(lambda a, b: set(a) | set(b), self, other)
 
     def __sub__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.sub), self, other)
+        return Query(lambda a, b: set(a) - set(b), self, other)
 
     def __xor__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.xor), self, other)
+        return Query(lambda a, b: set(a) ^ set(b), self, other)
+

@@ -20,10 +20,12 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import functools
+import operator
 import weakref
 from collections import defaultdict
 
-from ._query import Query, ops
+from ._query import Query
 
 
 class NotSet(object):
@@ -43,6 +45,40 @@ A sentinel object indicating that the field value has not yet been set.
 
 This evaluates to `False` in conditional statements.
 """
+
+
+def _op(op):
+    """
+    Return a function for ``Table.field <op> value``
+    """
+    def _ops(field, value):
+        table = field.owner
+        if field.index:
+            keysets = (k for v, k in field._index.items() if op(v, value))
+            try:
+                keys = functools.reduce(lambda a, b: a & b, keysets)
+            except TypeError:
+                keys = set()
+            return set(table._instances[k] for k in keys \
+                       if k in table._instances)
+        else:
+            return set(r for r in table._instances.values()
+                       if op(getattr(r, field.name), value))
+    return _ops
+
+
+def _eq(field, value):
+    """
+    Return a set of ``Table.field == value``
+    """
+    table = field.owner
+    if field.index:
+        keys = field._index[value]
+        return set(table._instances[k] for k in keys \
+                   if k in table._instances)
+    else:
+        return set(r for r in table._instances.values()
+                   if getattr(r, field.name) == value)
 
 
 class Field(object):
@@ -139,25 +175,25 @@ class Field(object):
         self._data[instance] = value
 
     def __eq__(self, value):
-        return Query(ops.f_eq, self, value)
+        return Query(_eq, self, value)
 
     def __ne__(self, value):
-        return Query(ops.f_ne, self, value)
+        return Query(_op(operator.ne), self, value)
 
     def __gt__(self, value):
-        return Query(ops.f_gt, self, value)
+        return Query(_op(operator.gt), self, value)
 
     def __lt__(self, value):
-        return Query(ops.f_lt, self, value)
+        return Query(_op(operator.lt), self, value)
 
     def __ge__(self, value):
-        return Query(ops.f_ge, self, value)
+        return Query(_op(operator.ge), self, value)
 
     def __le__(self, value):
-        return Query(ops.f_le, self, value)
+        return Query(_op(operator.le), self, value)
 
     def __and__(self, values):
-        return Query(ops.f_and, self, values)
+        return Query(_op(lambda a, b: a in b), self, values)
 
 
 class Join(object):
