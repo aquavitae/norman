@@ -497,6 +497,21 @@ API
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
 
+    .. method:: delete
+
+        Delete all records matching the query.
+
+        Records are deleted from the table.  If no records match,
+        nothing is deleted.
+
+
+    .. method:: one([default])
+
+        Return a single value from the query results.
+
+        If the query is empty and *default* is specified, then it is returned
+        instead.  Otherwise an exception is raised.
+
 
 Groups
 ------

@@ -20,6 +20,10 @@ from __future__ import with_statement
 from __future__ import unicode_literals
 
 
+class _Sentinal:
+    pass
+
+
 def query(arg1, arg2=None):
     """
     Return a new `Query` for records in *table* for which *func* is `True`.
@@ -113,3 +117,39 @@ class Query(object):
     def __xor__(self, other):
         return Query(lambda a, b: set(a) ^ set(b), self, other)
 
+    def delete(self):
+        """
+        Delete all records matching the query.
+
+        Records are deleted from the table.  If no records match,
+        nothing is deleted.
+        """
+        for r in self:
+            # Check if its been deleted by validate_delete
+            if r.__class__._instances.get(r._key, None):
+                try:
+                    r.validate_delete()
+                except AssertionError as err:
+                    raise ValueError(*err.args)
+                except:
+                    raise
+                else:
+                    del r.__class__._instances[r._key]
+
+    def one(self, default=_Sentinal):
+        """
+        Return a single value from the query results.
+
+        If the query is empty and *default* is specified, then it is returned
+        instead.  Otherwise an exception is raised.
+        """
+        try:
+            return next(iter(self))
+        except StopIteration:
+            pass
+        except:
+            raise
+        if default is _Sentinal:
+            raise IndexError
+        else:
+            return default

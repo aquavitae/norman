@@ -113,3 +113,21 @@ class TestQuery(TestCase):
         q2 = self.A.c == 'b'
         expect = set([self.ar[0]])
         assert set(self.query - q2) == expect
+
+    def test_delete(self):
+        self.query.delete()
+        assert set(self.A._instances.values()) == set(self.ar[2:])
+
+    def test_one_success(self):
+        result = self.query.one()
+        assert result in self.ar[:1]
+
+    def test_one_fails_return(self):
+        q = self.A.a == -100
+        result = q.one(5)
+        assert result == 5
+
+    def test_one_fails_exception(self):
+        q = self.A.a == -100
+        with assert_raises(IndexError):
+            q.one()
