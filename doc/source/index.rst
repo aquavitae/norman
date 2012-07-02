@@ -443,7 +443,10 @@ This is useful for creating a query of a whole table::
     q7 = query(MyTable)
 
 The result of each of these is a `Query` object, which is a set-like
-iterable of records.
+iterable of records, and evaluates `True` if it contains results::
+
+    if q7:
+        print('We have results!')
 
 An existing query can be refreshed after the base data has changed by
 calling it as a function::
@@ -474,6 +477,9 @@ API
     This object allows most operations permitted on sets, such as unions
     and intersections.  Comparison operators (such as ``<``) are not
     supported, except for equality tests.
+
+    Queries are considered `True` if they contain any results, and `False`
+    if they do not.
 
     The following operations are supported:
 
