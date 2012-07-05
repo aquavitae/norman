@@ -1,0 +1,9 @@
+syntax: regexp
+\..*project
+syntax: glob
+__pycache__
+.settings
+*.pyc
+build/
+dist
+MANIFEST
