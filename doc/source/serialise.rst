@@ -281,11 +281,31 @@ Serialiser framework
 Sqlite
 ------
 
+.. class Sqlite
+
+    This is a `Serialiser` which reads and writes to a sqlite database.
+    
+    Each table in `db` is dumped to a sqlite table with the same field names.
+    An additional field, *_uid_* is included which contains the record's
+    *_uid*.  The sqlite database does not have any constraints, not even
+    primary key constraints, as it is intended to be used purely for storage.
+    
+    The following methods are re-implemented from `Serialiser`:
+    
+    *   `finalise_write` commits changes to the database.
+    *   `initialise_write` starts a database transaction and create tables.
+    *   `initialise_read` sets the `sqlite3` row factory.
+    *   `iterfile` yield records from each valid table in the file which 
+        matches a table in `db`.
+    *   `open` returns an open database connection to *filename*.
+    *   `write_record` adds a record to the sqlite database.
+  
+        
 .. class:: Sqlite3
 
     .. deprecated:: 0.6.1
 
-        Use the new `Serialiser` framework instead.
+        Use `Sqlite`, which implements the `Serialiser` framework instead.
 
 
     .. method:: dump(db, filename)

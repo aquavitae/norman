@@ -418,6 +418,81 @@ class Serialiser:
         raise NotImplementedError
 
 
+class Sqlite(Serialiser):
+
+    """
+    This is a `Serialiser` which reads and writes to a sqlite database.
+    
+    Each table in `db` is dumped to a sqlite table with the same field names.
+    An additional field, *_uid_* is included which contains the record's
+    *_uid*.  The sqlite database does not have any constraints, not even
+    primary key constraints, as it is intended to be used purely for storage.
+    """
+
+    def finalise_write(self):
+        """
+        Commit changes to the database.
+        """
+        self.fh.commit()
+
+    def initialise_write(self):
+        """
+        Start a database transaction and create tables.
+
+        The database schema is set here and assigned to a *schema* attribute.
+        """
+        self.fh.execute('BEGIN;')
+        self.schema = {}
+        for table in self.db:
+            tname = table.__name__
+            fields = list(table.fields())
+            self.schema[tname] = fields
+            fstr = '"_uid_", ' + ', '.join('"{}"'.format(f) for f in fields)
+            try:
+                self.fh.execute('DROP TABLE "{}"'.format(tname))
+            except sqlite3.OperationalError:
+                pass
+            query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
+            self.fh.execute(query)
+
+    def initialise_read(self):
+        self.fh.row_factory = sqlite3.Row
+
+    def iterfile(self):
+        """
+        Yield records from each valid table in the file.
+        
+        Only tables which match those in *db* and have a *_uid_* field 
+        are read.
+        """
+        for table in self.db:
+            tname = table.__name__
+            query = 'SELECT * FROM "{}";'.format(tname)
+            try:
+                cursor = self.fh.execute(query)
+            except sqlite3.OperationalError:
+                logging.warning("Table '{}' not found".format(tname))
+            else:
+                for row in cursor:
+                    row = dict(row)
+                    if '_uid_' in row:
+                        uid = row.pop('_uid_')
+                        yield table, uid, row
+
+    def open(self, filename):
+        """
+        Return a connection to the database *filename*
+        """
+        return sqlite3.connect(filename)
+
+    def write_record(self, record):
+        tname, uid, rdict = record
+        values = [uid] + [rdict.get(f, None) for f in self.schema[tname]]
+        qmarks = ', '.join('?' * len(values))
+        query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
+        self.fh.execute(query, values)
+
+
 class Sqlite3:
 
     def load(self, db, filename):
