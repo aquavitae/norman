@@ -53,6 +53,9 @@ class Query(object):
     and intersections.  Comparison operators (such as ``<``) are not
     supported, except for equality tests.
 
+    Queries are considered `True` if they contain any results, and `False`
+    if they do not.
+
     The following operations are supported:
 
     =================== =======================================================
@@ -80,6 +83,13 @@ class Query(object):
         self._op = op
         self._args = args
         self._results = None
+
+    def __bool__(self):
+        try:
+            self.one()
+        except IndexError:
+            return False
+        return True
 
     def __call__(self):
         args = []

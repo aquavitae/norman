@@ -131,3 +131,11 @@ class TestQuery(TestCase):
         q = self.A.a == -100
         with assert_raises(IndexError):
             q.one()
+
+    def test_bool_true(self):
+        q = self.A.a == 1
+        assert bool(q) is True
+
+    def test_bool_false(self):
+        q = self.A.a == -100
+        assert bool(q) is False
