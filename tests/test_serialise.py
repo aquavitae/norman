@@ -22,7 +22,7 @@ import os
 from nose.tools import assert_raises
 from mock import patch
 
-from norman import Database, Table, Field, tools, serialise
+from norman import Database, Table, Field, tools, serialise, NotSet
 
 db = Database()
 
@@ -50,7 +50,7 @@ class Address(Table):
         return Person.get(address=self)
 
     def validate(self):
-        assert isinstance(self.town, Town)
+        assert isinstance(self.town, (type(NotSet), Town)), self.town
 
 
 @db.add
@@ -83,6 +83,81 @@ class TestCase(object):
         address = next(db['Address'].iter(street='easy'))
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])
+
+
+class TestAPI:
+
+    class S(serialise.Serialiser):
+
+        def __init__(self, filedata):
+            self.filedata = filedata
+
+        def isuid(self, field, value):
+            return isinstance(value, int)
+
+        def open(self, filename):
+            return
+
+        def close(self):
+            return
+
+        def iterfile(self):
+            return iter(self.filedata)
+
+    def teardown(self):
+        db.reset()
+
+    def test_simple(self):
+        data = [(Town, 1, {'name': 'A'}),
+                (Town, 2, {'name': 'B'}),
+                (Town, 3, {'name': 'C'})]
+        s = self.S(data)
+        s.load(None)
+        got = set(Town)
+        assert len(got) == 3
+        assert set((g._uid, g.name) for g in got) == \
+               set(((1, 'A'), (2, 'B'), (3, 'C')))
+
+    def test_tree(self):
+        data = [(Town, 1, {'name': 'down'}),
+                (Town, 2, {'name': 'up'}),
+                (Address, 3, {'street': 'easy', 'town': 1}),
+                (Address, 4, {'street':'some', 'town': 2}),
+                (Person, 5, {'custno': '1', 'name': 'matt', 'age': 43, 'address': 3}),
+                (Person, 6, {'custno': '2', 'name': 'bob', 'age': 13, 'address': 3}),
+                (Person, 7, {'custno': '3', 'name': 'peter', 'age': 29, 'address': 4})]
+
+        s = self.S(data)
+        s.load(None)
+        assert len(Town) == 2
+        assert len(Address) == 2
+        assert len(Person) == 3
+        t1 = (Town.name == 'down').one()
+        t2 = (Town.name == 'up').one()
+        a1 = (Address.street == 'easy').one()
+        a2 = (Address.street == 'some').one()
+        p1 = (Person.name == 'matt').one()
+        p2 = (Person.name == 'bob').one()
+        p3 = (Person.name == 'peter').one()
+        assert a1.town is t1
+        assert a2.town is t2
+        assert p1.address is a1
+        assert p2.address is a1
+        assert p3.address is a2
+
+    def test_loop(self):
+        data = [(Town, 1, {'name': '1'}),
+                (Town, 2, {'name': '2'}),
+                (Address, 3, {'street': 4, 'town': 1}),
+                (Address, 4, {'street': 3, 'town': 2})]
+        s = self.S(data)
+        s.load(None)
+        t1 = (Town.name == '1').one()
+        t2 = (Town.name == '2').one()
+        a1 = (Address.town == t1).one()
+        a2 = (Address.town == t2).one()
+        assert a1.street is a2
+        assert a2.street is a1
 
 
 class TestSqlite3(TestCase):
