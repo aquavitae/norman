@@ -12,7 +12,35 @@ In addition to supporting the `pickle` protocol, `norman` provides a
 framework for serialising and de-serializing databases to other formats
 through the `norman.serialise` module.  Serialisation classes inherit
 `Serialiser`, and should reimplement at least `~Serialiser.iterfile`
-and `~Serialiser.write_record`.
+and `~Serialiser.write_record`.  `Serialiser` has the following methods,
+grouped by functionality:
+
+*   General
+
+    *   `~Serialiser.open`
+    *   `~Serialiser.close`
+
+*   Loading (Reading)
+
+    *   `~Serialiser.load` (Class method)
+    *   `~Serialiser.create_records`
+    *   `~Serialiser.finalise_read`
+    *   `~Serialiser.initialise_read`
+    *   `~Serialiser.isuid`
+    *   `~Serialiser.iterfile`
+    *   `~Serialiser.read`
+    *   `~Serialiser.run_read`
+
+*   Dumping (Writing)
+
+    *   `~Serialiser.dump` (Class method)
+    *   `~Serialiser.finalise_write`
+    *   `~Serialiser.initialise_write`
+    *   `~Serialiser.iterdb`
+    *   `~Serialiser.run_write`
+    *   `~Serialiser.simplify`
+    *   `~Serialiser.write`
+    *   `~Serialiser.write_record`
 
 
 .. contents::
@@ -25,20 +53,14 @@ Serialiser framework
 
     An abstract base class providing a framework for serialisers.
 
-    When a new subclass is created, it should be given a `~norman.Database`
-    object containing the data structures to be serialised.  The instance can
-    then be called with a filename to write data to it::
-
-        srl = MySerialiser(mydb)
-        srl(filename)
-
-    After the file has been opened with `open`, the file handle is accessible
-    through `fh`.  This is not necessarily a file object, in the case of
-    databases it may be a database connection.
+    Subclasses are instantiated with a `~norman.Database` object, and
+    serialisation and de-serialisation is done through the `write` and `read`
+    methods.  Class methods `dump` and `load` may also be used.
 
     Subclasses are required to implement `iterfile` and its counterpart,
     `write_record`, but may re-implement any other methods to customise
     behaviour.
+
 
     .. attribute:: db
 
@@ -61,13 +83,38 @@ Serialiser framework
         *load*.  At other times it is `None`.
 
 
+    .. classmethod:: dump(db, filename)
+
+        This is a convenience method for calling `write`.
+
+        This is equivalent to ``Serialise(db).write(filename)`` and is
+        provided for compatibility with the `pickle` API.
+
+
+    .. classmethod:: load(db, filename)
+
+        This is a convenience method for calling `read`.
+
+        This is equivalent to ``Serialise(db).read(filename)`` and is
+        provided for compatibility with the `pickle` API.
+
+
+    .. method:: close
+
+        Close the currently opened file.
+
+        The default behaviour is to call the file object's `!close` method.
+        This method is always called once a file has been opened, even if an
+        exception occurs during writing.
+
+
     .. method:: create_records(records)
 
         Create one or more new records.
 
         This is called for every group of cyclic records.  For example,
         if records *a* references record *b*, which references record *c*, and
-        recoprd *c* references record *a*, then records *a*, *b*, and *c*
+        record *c* references record *a*, then records *a*, *b*, and *c*
         form a cycle.  If record *d* references record *e* but record *e*
         doesn't reference any other record, each of them are considered to
         be isolated.
@@ -87,50 +134,42 @@ Serialiser framework
         The return value is an iterator over ``(uid, record)`` pairs.
 
 
-    .. method:: close
+    .. method:: finalise_read
 
-        Close the currently opened file.
+        Finalise the file after reading data.
 
-        The default behaviour is to call the file object's *close* method.
-        This method is always called once a file has been opened, even if an
-        exception occurs during writing.
-
-
-    .. method:: dump(filename)
-
-        Write the database to *filename*.
-
-        *fieldname* is used only to open the file using `open`, so, depending
-        on the implementation could be anything (e.g. a URL) which `open`
-        recognises.  It could even be omitted entirely if, for example,
-        the serialiser dumps the database as formatted text to stdout.
-
-
-    .. method:: finalise
-
-        Finalise the file after reading or writing data.
-
-        This is called after the `read` and `write` methods but before `close`,
-        and can be re-implemented to for implementation-specific finalisation.
+        This is called after `run_read` but before `close`, and can be
+        re-implemented to for implementation-specific finalisation.
 
         The default implementation does nothing.
 
 
-    .. method:: getuid(record)
-        """
-        Return a globally unique value for the record.
+    .. method:: finalise_write
 
-        By default, this returns ``record._uid``.
+        Finalise the file after writing data.
 
-        .. seealso:: Table._uid
+        This is called after `run_write` but before `close`, and can be
+        re-implemented to for implementation-specific finalisation.
+
+        The default implementation does nothing.
 
 
-    .. method:: initialise
+    .. method:: initialise_read
 
-        Prepare the file for reading or writing data.
+        Prepare the file for reading data.
 
-        This is called before the `read` and `write` methods but after `open`,
-        and can be re-implemented to for implementation-specific setup.
+        This is called before `run_read` but after `open`, and can be
+        re-implemented to for implementation-specific setup.
+
+        The default implementation does nothing.
+
+
+    .. method:: initialise_write
+
+        Prepare the file for writing data.
+
+        This is called before `run_write` but after `open`, and can be
+        re-implemented to for implementation-specific setup.
 
         The default implementation does nothing.
 
@@ -168,10 +207,10 @@ Serialiser framework
         the record and *data* is a dict of field values for the record,
         possibly containing other uids.
 
-        It is usually most implement this method as a generator.
+        This is commonly implemented as a generator.
 
 
-    .. method:: load(filename)
+    .. method:: read(filename)
 
         Load data into `db` from *filename*.
 
@@ -190,16 +229,25 @@ Serialiser framework
         function.
 
 
-    .. method:: read
+    .. method:: run_read
 
         Read data from the currently opened file.
 
-        This is called between `initialise` and `finalise`, and converts each
-        value returned by `iterfile` into a record using `create_records`.  It
-        also attempts to remap nested records by searching for matching uids.
+        This is called between `initialise_read` and `finalise_read`, and
+        converts each value returned by `iterfile` into a record using
+        `create_records`.  It also attempts to re-map nested records by
+        searching for matching uids.
 
         Cycles in the data are detected, and all records involved in
         in a cycle are created in `create_records`.
+
+
+    .. method:: run_write
+
+        Called by `dump` to write data.
+
+        This is called after `initialise_write` and before `finalise_write`,
+        and simply calls `write_record` for each value yielded by `iterdb`.
 
 
     .. method:: simplify(record)
@@ -208,25 +256,26 @@ Serialiser framework
 
         The default implementation converts *record* to a `dict` of
         field values, omitting `~norman.NotSet` values and replacing other
-        records with their uids.
+        records with their *_uid* properties.  The return value of this
+        implementation is a tuple of ``(tablename, record._uid, record_dict)``.
 
-        The return value is a tuple of ``(uid, record_dict)``.
 
+    .. method:: write(filename)
 
-    .. method:: write
+        Write the database to *filename*.
 
-        Called by `dump` to write data.
-
-        This is called after `initialise` and before `finalise`, and
-        simply calls `write_record` for each value yielded by `iterdb`.
+        *fieldname* is used only to open the file using `open`, so, depending
+        on the implementation could be anything (e.g. a URL) which `open`
+        recognises.  It could even be omitted entirely if, for example,
+        the serialiser dumps the database as formatted text to stdout.
 
 
     .. method:: write_record(record)
 
         Write *record* to the current file.
 
-        This is called by `write` for every record yielded by `iterdb`.
-        *uid* and *record* are the values returned by `simplify`.
+        This is called by `run_write` for every record yielded by `iterdb`.
+        *record* is the values returned by `simplify`.
 
 
 Sqlite
@@ -236,7 +285,7 @@ Sqlite
 
     .. deprecated:: 0.6.1
 
-        Use the new serialise framework instead.
+        Use the new `Serialiser` framework instead.
 
 
     .. method:: dump(db, filename)

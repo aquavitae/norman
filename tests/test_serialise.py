@@ -112,7 +112,7 @@ class TestAPI:
                 (Town, 2, {'name': 'B'}),
                 (Town, 3, {'name': 'C'})]
         s = self.S(data)
-        s.load(None)
+        s.read(None)
         got = set(Town)
         assert len(got) == 3
         assert set((g._uid, g.name) for g in got) == \
@@ -128,7 +128,7 @@ class TestAPI:
                 (Person, 7, {'custno': '3', 'name': 'peter', 'age': 29, 'address': 4})]
 
         s = self.S(data)
-        s.load(None)
+        s.read(None)
         assert len(Town) == 2
         assert len(Address) == 2
         assert len(Person) == 3
@@ -151,13 +151,52 @@ class TestAPI:
                 (Address, 3, {'street': 4, 'town': 1}),
                 (Address, 4, {'street': 3, 'town': 2})]
         s = self.S(data)
-        s.load(None)
+        s.read(None)
         t1 = (Town.name == '1').one()
         t2 = (Town.name == '2').one()
         a1 = (Address.town == t1).one()
         a2 = (Address.town == t2).one()
         assert a1.street is a2
         assert a2.street is a1
+
+
+class TestSqlite(TestCase):
+
+    def test_tofromsql(self):
+        serialise.Sqlite.dump(db, 'test')
+        db.reset()
+        serialise.Sqlite.load(db, 'test')
+        self.check_integrity(db)
+
+    def test_bad_sql(self):
+        'Should be tolerant of incorrect tables and fields.'
+        import logging
+        import sqlite3
+        logging.disable(logging.CRITICAL)
+        sql = """
+            CREATE TABLE "other" ("field");
+            CREATE TABLE "provinces" ("_uid_", "name", "number");
+            CREATE TABLE "units" ("field");
+            CREATE TABLE "cycles" ("_uid_", "name");
+            INSERT INTO "units" VALUES ('a value');
+            INSERT INTO "provinces" VALUES (1, 'Eastern Cape', 42);
+            INSERT INTO "cycles" VALUES (2, 'bad value');
+            INSERT INTO "cycles" VALUES (3, '2009/10');
+        """
+        conn = sqlite3.connect('test')
+        conn.executescript(sql)
+        conn.close()
+        serialise.Sqlite.load(db, 'test')
+
+    def test_tosqlite_exception(self):
+        'Make sure sqlite3 closes on an exception.'
+        with patch.object(Person, 'fields', side_effect=TypeError):
+            with assert_raises(TypeError):
+                serialise.Sqlite3().dump(db, 'file')
+        try:
+            os.unlink('file')
+        except OSError:
+            assert False
 
 
 class TestSqlite3(TestCase):

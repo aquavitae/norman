@@ -87,16 +87,9 @@ class Serialiser:
     """
     An abstract base class providing a framework for serialisers.
 
-    When a new subclass is created, it should be given a `~norman.Database`
-    object containing the data structures to be serialised.  The instance can
-    then be called with a filename to write data to it::
-
-        srl = MySerialiser(mydb)
-        srl(filename)
-
-    After the file has been opened with `open`, the file handle is accessible
-    through `fh`.  This is not necessarily a file object, in the case of
-    databases it may be a database connection.
+    Subclasses are instantiated with a `~norman.Database` object, and
+    serialisation and de-serialisation is done through the `write` and `read`
+    methods.  Class methods `dump` and `load` may also be used.
 
     Subclasses are required to implement `iterfile` and its counterpart,
     `write_record`, but may re-implement any other methods to customise
@@ -138,13 +131,43 @@ class Serialiser:
         """
         return self._mode
 
+    @classmethod
+    def dump(cls, db, filename):
+        """
+        This is a convenience method for calling `write`.
+
+        This is equivalent to ``Serialise(db).write(filename)`` and is
+        provided for compatibility with the `pickle` API.
+        """
+        return cls(db).write(filename)
+
+    @classmethod
+    def load(cls, db, filename):
+        """
+        This is a convenience method for calling `read`.
+
+        This is equivalent to ``Serialise(db).read(filename)`` and is
+        provided for compatibility with the `pickle` API.
+        """
+        return cls(db).read(filename)
+
+    def close(self):
+        """
+        Close the currently opened file.
+
+        The default behaviour is to call the file object's `!close` method.
+        This method is always called once a file has been opened, even if an
+        exception occurs during writing.
+        """
+        self.fh.close()
+
     def create_records(self, records):
         """
         Create one or more new records.
 
         This is called for every group of cyclic records.  For example,
         if records *a* references record *b*, which references record *c*, and
-        recoprd *c* references record *a*, then records *a*, *b*, and *c*
+        record *c* references record *a*, then records *a*, *b*, and *c*
         form a cycle.  If record *d* references record *e* but record *e*
         doesn't reference any other record, each of them are considered to
         be isolated.
@@ -175,56 +198,45 @@ class Serialiser:
                 setattr(record, field, created[fuid][0])
             yield uid, record
 
-    def close(self):
+    def finalise_read(self):
         """
-        Close the currently opened file.
+        Finalise the file after reading data.
 
-        The default behaviour is to call the file object's *close* method.
-        This method is always called once a file has been opened, even if an
-        exception occurs during writing.
-        """
-        self.fh.close()
-
-    def dump(self, filename):
-        """
-        Write the database to *filename*.
-
-        *fieldname* is used only to open the file using `open`, so, depending
-        on the implementation could be anything (e.g. a URL) which `open`
-        recognises.  It could even be omitted entirely if, for example,
-        the serialiser dumps the database as formatted text to stdout.
-        """
-        self._mode = 'w'
-        self._fh = self.open(filename)
-        self._run(self.write)
-
-    def finalise(self):
-        """
-        Finalise the file after reading or writing data.
-
-        This is called after the `read` and `write` methods but before `close`,
-        and can be re-implemented to for implementation-specific finalisation.
+        This is called after `run_read` but before `close`, and can be
+        re-implemented to for implementation-specific finalisation.
 
         The default implementation does nothing.
         """
         return
 
-    def getuid(self, record):
+    def finalise_write(self):
         """
-        Return a globally unique value for the record.
+        Finalise the file after writing data.
 
-        By default, this returns ``record._uid``.
+        This is called after `run_write` but before `close`, and can be
+        re-implemented to for implementation-specific finalisation.
 
-        .. seealso:: Table._uid
+        The default implementation does nothing.
         """
-        return record._uid
+        return
 
-    def initialise(self):
+    def initialise_read(self):
         """
-        Prepare the file for reading or writing data.
+        Prepare the file for reading data.
 
-        This is called before the `read` and `write` methods but after `open`,
-        and can be re-implemented to for implementation-specific setup.
+        This is called before `run_read` but after `open`, and can be
+        re-implemented to for implementation-specific setup.
+
+        The default implementation does nothing.
+        """
+        return
+
+    def initialise_write(self):
+        """
+        Prepare the file for writing data.
+
+        This is called before `run_write` but after `open`, and can be
+        re-implemented to for implementation-specific setup.
 
         The default implementation does nothing.
         """
@@ -268,11 +280,11 @@ class Serialiser:
         the record and *data* is a dict of field values for the record,
         possibly containing other uids.
 
-        It is usually most implement this method as a generator.
+        This is commonly implemented as a generator.
         """
         raise NotImplementedError
 
-    def load(self, filename):
+    def read(self, filename):
         """
         Load data into `db` from *filename*.
 
@@ -283,7 +295,12 @@ class Serialiser:
         """
         self._mode = 'r'
         self._fh = self.open(filename)
-        self._run(self.read)
+        try:
+            self.initialise_read()
+            self.run_read()
+            self.finalise_read()
+        finally:
+            self.close()
 
     def open(self, filename):
         """
@@ -295,13 +312,14 @@ class Serialiser:
         """
         return open(filename, self.mode + 'b')
 
-    def read(self):
+    def run_read(self):
         """
         Read data from the currently opened file.
 
-        This is called between `initialise and `finalise`, and converts each
-        value returned by `iterfile` into a record using `create_records`.  It
-        also attempts to remap nested records by searching for matching uids.
+        This is called between `initialise_read` and `finalise_read`, and
+        converts each value returned by `iterfile` into a record using
+        `create_records`.  It also attempts to re-map nested records by
+        searching for matching uids.
 
         Cycles in the data are detected, and all records involved in
         in a cycle are created in `create_records`.
@@ -343,23 +361,24 @@ class Serialiser:
             for u, r in self.create_records(iterrecords):
                 created[u] = r
 
-    def __run(self, f):
-        try:
-            self.initialise()
-            f()
-            self.finalise()
-        finally:
-            self.close()
+    def run_write(self):
+        """
+        Called by `dump` to write data.
+
+        This is called after `initialise_write` and before `finalise_write`,
+        and simply calls `write_record` for each value yielded by `iterdb`.
+        """
+        for record in self.iterdb():
+            self.write_record(self.simplify(record))
 
     def simplify(self, record):
         """
         Convert a record to a simple python structure.
-        
+
         The default implementation converts *record* to a `dict` of
         field values, omitting `~norman.NotSet` values and replacing other
-        records with their uids.
-
-        The return value is a tuple of ``(uid, record_dict)``.
+        records with their *_uid* properties.  The return value of this
+        implementation is a tuple of ``(tablename, record._uid, record_dict)``.
         """
         keys = record.__class__.fields()
         d = dict()
@@ -367,26 +386,34 @@ class Serialiser:
             value = getattr(record, k)
             if value is not NotSet:
                 if isinstance(value, Table):
-                    value = self.getuid(value)
+                    value = value._uid
                 d[k] = value
-        return record._uid, d
+        return (record.__class__.__name__, record._uid, d)
 
-    def write(self):
+    def write(self, filename):
         """
-        Called by `dump` to write data.
+        Write the database to *filename*.
 
-        This is called after `initialise` and before `finalise`, and
-        simply calls `write_record` for each value yielded by `iterdb`.
+        *fieldname* is used only to open the file using `open`, so, depending
+        on the implementation could be anything (e.g. a URL) which `open`
+        recognises.  It could even be omitted entirely if, for example,
+        the serialiser dumps the database as formatted text to stdout.
         """
-        for record in self.db_records():
-            self.write_record(*self.simplify(record))
+        self._mode = 'w'
+        self._fh = self.open(filename)
+        try:
+            self.initialise_write()
+            self.run_write()
+            self.finalise_write()
+        finally:
+            self.close()
 
-    def write_record(self, uid, record):
+    def write_record(self, record):
         """
         Write *record* to the current file.
 
-        This is called by `write` for every record yielded by `iterdb`.
-        *uid* and *record* are the values returned by `simplify`.
+        This is called by `run_write` for every record yielded by `iterdb`.
+        *record* is the values returned by `simplify`.
         """
         raise NotImplementedError
 
