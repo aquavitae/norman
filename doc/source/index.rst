@@ -32,6 +32,7 @@ Contents
     :maxdepth: 2
 
     tutorial
+    changes
     data
     queries
     serialise
