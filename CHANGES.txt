@@ -8,7 +8,7 @@ changelog, see the mercurial log.
 Norman-0.6.1
 ------------
 
-*Release Date: Not released*
+*Release Date: 2012-07-12*
 
 -   New serialiser framework added, based on `serialiser.Serialiser`.
     A sample serialiser, `Sqlite` is included.
