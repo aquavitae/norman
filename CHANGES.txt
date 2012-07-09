@@ -1,0 +1,75 @@
+What's New
+==========
+
+This file lists new features and major changes to `Norman`.  For a detailed
+changelog, see the mercurial log.
+
+
+Norman-0.6.1
+------------
+
+*Release Date: 2012-07-12*
+
+-   New serialiser framework added, based on `serialiser.Serialiser`.
+    A sample serialiser, `Sqlite` is included.
+-   `Sqlite3` has been deprecated.
+-   Documentation overhauled introducing major changes to the documentation
+    layout.
+-   Add boolean comparisons, `Query.delete` and `Query.one` methods to `Query`.
+-   `Table` now supports inheritance by copying its fields.
+-   Several changes to implementations, generally to improve performance and
+    consistency.
+
+
+Norman-0.6.0
+------------
+
+*Release Date: 2012-06-12*
+
+-   Python 2.6 support by Ilya Kutukov
+-   Move serialisation functions to a new serialise module.  This module
+    will be expanded and updated in the near future.
+-   Add sensible `repr` to `Table` and `NotSet` objects
+-   `Query` object added, introducing a new method of querying tables,
+    involving `Field` and `Query` comparison operators.
+-   `Join` class created, which will replace `Group` in 0.7.0.
+-   `Field.name` and `Field.owner`, which previously existed, have now been
+    formalised and documented.
+-   `Field.default` is respected when initialising tables
+-   `Table._uid` property added for Table objects.
+-   Allow `Table.validate_delete` to make changes.
+-   Two new `tools` functions added: `tools.dtfromiso` and `tools.reduce2`.
+-   `Database.add` method added.
+-   Documentation updated to align with docstrings.
+-   Fix a bunch of style and PEP8 related issues
+-   Minor bugfixes
+
+
+Norman-0.5.2
+------------
+
+*Release Date: 2012-04-20*
+
+-   Fixed failing tests
+-   `Group.add` implemented and documented
+-   Missing documentation fixed
+
+
+Norman-0.5.1
+------------
+
+*Release Date: 2012-04-20*
+
+-   Exceptions raised by validation errors are now all ValueError
+-   Group object added to represent sub-collections
+-   Deletion validation added to tables through `Table.validate_delete`
+-   Minor documentation updates
+-   Minor bugfixes
+
+
+Norman-0.5.0
+------------
+
+*Release Date: 2012-04-13*
+
+-   First public release, repository imported from private project.

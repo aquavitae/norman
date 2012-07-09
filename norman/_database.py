@@ -41,15 +41,21 @@ class Database(object):
     >>> MyTable in db
     True
 
-    The database can be written to a sqlite database as file storage.  So
-    if a `Database` instance represents a document state, it can be saved
-    using the following code:
+    The database can be written to a file through the `serialise` module.
+    Currently only sqlite3 is supported.  If a `Database` instance represents
+    a document state, it can be saved using the following code:
 
-    >>> db.tosqlite('file.sqlite')
+    .. doctest::
+        :options: +SKIP
 
-    And reloaded thus:
+        >>> serialise.Sqlite3().dump('file.sqlite')
 
-    >>> db.fromsqlite('file.sqlite')
+    And reloaded:
+
+    .. doctest::
+        :options: +SKIP
+
+        >>> serialise.Sqlite3().load('file.sqlite')
 
     :note:
         The sqlite database created does not contain any constraints

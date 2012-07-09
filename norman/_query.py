@@ -19,94 +19,9 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import operator
-import functools
-import itertools
 
-from .tools import reduce2
-
-
-class ops:
-
-    """
-    Operation functions for queries
-    """
-
-    def _f_ops(self, op, field, value):
-        """
-        Generic function for ``Table.field <op> value``
-        """
-        table = field.owner
-        if field.name in table._indexes:
-            index = table._indexes[field.name]
-            keysets = (k for v, k in index.items() if op(v, value))
-            keys = reduce2(lambda a, b: a & b, keysets, set())
-            return set(table._instances[k] for k in keys \
-                       if k in table._instances)
-        else:
-            return set(r for r in table._instances.values()
-                       if op(getattr(r, field.name), value))
-
-    def f_eq(self, field, value):
-        """
-        Return a set of ``Table.field == value``
-        """
-        return self._f_ops(operator.eq, field, value)
-
-    def f_ne(self, field, value):
-        """
-        Return a set of ``Table.field != value``
-        """
-        return self._f_ops(operator.ne, field, value)
-
-    def f_gt(self, field, value):
-        """
-        Return a set of ``Table.field > value``
-        """
-        return self._f_ops(operator.gt, field, value)
-
-    def f_lt(self, field, value):
-        """
-        Return a set of ``Table.field < value``
-        """
-        return self._f_ops(operator.lt, field, value)
-
-    def f_ge(self, field, value):
-        """
-        Return a set of ``Table.field >= value``
-        """
-        return self._f_ops(operator.ge, field, value)
-
-    def f_le(self, field, value):
-        """
-        Return a set of ``Table.field <= value``
-        """
-        return self._f_ops(operator.le, field, value)
-
-    def f_and(self, field, values):
-        """
-        Return a set of ``Table.field & values``
-        """
-        in_ = lambda a, b: a in b
-        return self._f_ops(in_, field, set(values))
-
-    def q_ops(self, op, a, b):
-        """
-        Return a set for ``query_a._results <op> query_b._results``.
-        """
-        return op(set(a), set(b))
-
-    def q_slice(self, slice, q):
-        """
-        Return a list of ``query[slice]``.
-        """
-        return list(itertools.islice(q, slice.start, slice.stop, slice.step))\
-
-    def q_attr(self, name, q):
-        return type(q)(getattr(r, name) for r in q)
-
-
-ops = ops()
+class _Sentinal:
+    pass
 
 
 def query(arg1, arg2=None):
@@ -129,48 +44,38 @@ def query(arg1, arg2=None):
 class Query(object):
 
     """
-    Represent a query with a set-like interface.
+    A set-like object which represents the results of a query.
 
-    Queries are usually constructed from `Field` and other `Query` objects, but
-    may also be initialised directly.  The first argument to the constructor
-    is a function which acts on each of the following positional arguments
-    and returns an iterable result.
+    This object should never be instantiated directly, instead it should
+    be created as the result of a query on a `Table` or `Field`.
 
-    Comparison and combination operators may be used on queries and most of
-    these return a new `Query` object.  For example, the statement
-    ``(MyTable.value > 2) & (MyTable.name == 'a')`` is constructed as::
+    This object allows most operations permitted on sets, such as unions
+    and intersections.  Comparison operators (such as ``<``) are not
+    supported, except for equality tests.
 
-        Query(operator.and_,
-              Query(operator.gt, MyTable.value, 2),
-              Query(operator.eq, MyTable.name, 'a'))
-
-    Queries are only evaluated the first time the results are requested or
-    when `execute` is called.
+    Queries are considered `True` if they contain any results, and `False`
+    if they do not.
 
     The following operations are supported:
 
     =================== =======================================================
     Operation           Description
     =================== =======================================================
-    ``r in a``          Return `True` if record ``r`` is in the results ``a``.
-    ``len(a)``          Return the length of results ``a``.
-    ``iter(a)``         Return an iterator over the results.
-    ``a & b``           Return a new `Query` object containing records in
-                        both ``a`` and ``b``.
-    ``a | b``           Return a new `Query` object containing records in
-                        either ``a`` or ``b``.
-    ``a ^ b``           Return a new `Query` object containing records in
-                        either ``a`` or ``b``, but not both.
-    ``a - b``           Return a new `Query` object containing records in
-                        ``a`` which are not in ``b``.
-    ``~a``              Return a new `Query` object containing records not
-                        in query ``a``.  This can only be used on queries
-                        containing records.
-    ``a <cmp> value``   Where *cmp* is a comparison operator, this returns
-                        a new `Query` object containing only results which
-                        compare `True`.
-    ``a.field``         Return a new `Query` object containing values from
-                        ``field`` for each record in ``a``
+    ``r in q``          Return `True` if record ``r`` is in the results of
+                        query ``q``.
+    ``len(q)``          Return the number of results in ``q``.
+    ``iter(q)``         Return an iterator over records in ``q``.
+    ``q1 == q2``        Return `True` if ``q1`` and ``q2`` contain the same
+                        records.
+    ``q1 != q2``        Return `True` if ``not a == b``
+    ``q1 & q2``         Return a new `Query` object containing records in
+                        both ``q1`` and ``q2``.
+    ``q1 | q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``.
+    ``q1 ^ q2``         Return a new `Query` object containing records in
+                        either ``q1`` or ``q2``, but not both.
+    ``q1 - q2``         Return a new `Query` object containing records in
+                        ``q1`` which are not in ``q2``.
     =================== =======================================================
     """
 
@@ -178,6 +83,13 @@ class Query(object):
         self._op = op
         self._args = args
         self._results = None
+
+    def __bool__(self):
+        try:
+            self.one()
+        except IndexError:
+            return False
+        return True
 
     def __call__(self):
         args = []
@@ -188,9 +100,6 @@ class Query(object):
             else:
                 args.append(a)
         self._results = self._op(*args)
-
-    def __and__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.and_), self, other)
 
     def __contains__(self, record):
         return record in set(self)
@@ -206,11 +115,51 @@ class Query(object):
     def __len__(self):
         return len(set(self))
 
+    def __and__(self, other):
+        return Query(lambda a, b: set(a) & set(b), self, other)
+
     def __or__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.or_), self, other)
+        return Query(lambda a, b: set(a) | set(b), self, other)
 
     def __sub__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.sub), self, other)
+        return Query(lambda a, b: set(a) - set(b), self, other)
 
     def __xor__(self, other):
-        return Query(functools.partial(ops.q_ops, operator.xor), self, other)
+        return Query(lambda a, b: set(a) ^ set(b), self, other)
+
+    def delete(self):
+        """
+        Delete all records matching the query.
+
+        Records are deleted from the table.  If no records match,
+        nothing is deleted.
+        """
+        for r in self:
+            # Check if its been deleted by validate_delete
+            if r.__class__._instances.get(r._key, None):
+                try:
+                    r.validate_delete()
+                except AssertionError as err:
+                    raise ValueError(*err.args)
+                except:
+                    raise
+                else:
+                    del r.__class__._instances[r._key]
+
+    def one(self, default=_Sentinal):
+        """
+        Return a single value from the query results.
+
+        If the query is empty and *default* is specified, then it is returned
+        instead.  Otherwise an exception is raised.
+        """
+        try:
+            return next(iter(self))
+        except StopIteration:
+            pass
+        except:
+            raise
+        if default is _Sentinal:
+            raise IndexError
+        else:
+            return default

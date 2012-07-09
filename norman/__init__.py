@@ -37,7 +37,7 @@ from the `Table` class and fields added to it by creating `Field` class
 attributes.
 """
 
-__version__ = '0.5.2'
+__version__ = '0.6.1'
 __author__ = 'David Townshend'
 
 from ._table import Table

@@ -19,12 +19,10 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-from collections import defaultdict
 import copy
 import functools
 import re
 import uuid
-import weakref
 
 from ._field import Field, Join
 from ._query import Query
@@ -58,21 +56,22 @@ class TableMeta(type):
     """
 
     def __new__(mcs, name, bases, cdict):
-        cls = type.__new__(mcs, name, bases, cdict)
-        cls._instances = {}
-        cls._indexes = {}
-        cls._fields = {}
-        fulldict = copy.copy(cdict)
+        fulldict = {}
         for base in bases:
-            fulldict.update(base.__dict__)
-        for name, value in fulldict.items():
+            for n, value in base.__dict__.items():
+                if isinstance(value, (Field, Join)):
+                    value = copy.copy(value)
+                fulldict[n] = value
+        fulldict.update(cdict)
+        cls = type.__new__(mcs, name, bases, fulldict)
+        cls._instances = {}
+        cls._fields = {}
+        for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
-                value._name = name
+                value._name = n
                 value._owner = cls
             if isinstance(value, Field):
-                cls._fields[name] = value
-                if value.index:
-                    cls._indexes[name] = defaultdict(weakref.WeakSet)
+                cls._fields[n] = value
         return cls
 
     def __init__(cls, name, bases, cdict):
@@ -94,7 +93,7 @@ class TableMeta(type):
         if not kwargs:
             return iter(cls)
         qs = (getattr(cls, k) == v for k, v in kwargs.items())
-        q = reduce2(lambda a, b: a & b, qs, [])
+        q = functools.reduce(lambda a, b: a & b, qs)
         return iter(q)
 
     def contains(cls, **kwargs):
@@ -226,18 +225,26 @@ class Table(_TableBase):
                     table = self.__class__
                     uniques = dict((f, getattr(self, f)) for f in table.fields()
                                    if getattr(table, f).unique)
-                    existing = set(self.__class__.iter(**uniques)) - {self}
+                    existing = set(table.iter(**uniques)) - {self}
                     if existing:
                         field.__set__(self, oldvalue)
-                        raise ValueError("Not unique: {}={}".format(field.name,
-                                                                repr(value)))
+                        msg = ('{}={}'.format(k, v) for k, v in uniques.items())
+                        msg = ', '.join(msg)
+                        msg = 'Not unique: {}'.format(msg)
+                        raise ValueError(msg)
                 try:
                     self._validate()
                 except:
                     field.__set__(self, oldvalue)
                     raise
+            # Update the index
             if field.index:
-                self._updateindex(attr, oldvalue, value)
+                index = field._index
+                try:
+                    index[oldvalue].remove(self._key)
+                except KeyError:
+                    pass
+                index[value].add(self._key)
         else:
             super(Table, self).__setattr__(attr, value)
 
@@ -286,14 +293,6 @@ class Table(_TableBase):
                 raise ValueError(*err.args)
             else:
                 raise
-
-    def _updateindex(self, name, oldvalue, newvalue):
-        index = self._indexes[name]
-        try:
-            index[oldvalue].remove(self._key)
-        except KeyError:
-            pass
-        index[newvalue].add(self._key)
 
     def validate(self):
         """

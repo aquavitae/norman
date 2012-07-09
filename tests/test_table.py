@@ -37,7 +37,7 @@ if sys.version < '3':
 def convidx(table, index):
     'Utility to convert an index (i.e. defaultdict with a weakset) to a dict'
     r = [(value, set(table._instances[k] for k in keys)) \
-                for value, keys in table._indexes[index].items()]
+                for value, keys in table._fields[index]._index.items()]
     return dict(a for a in r if a[1])
 
 
@@ -45,14 +45,17 @@ def test_conv_index():
     class K(object): pass
     k1 = K()
     k2 = K()
+    f1 = K()
+    f2 = K()
+    f1._index = collections.defaultdict(weakref.WeakSet)
+    f2._index = collections.defaultdict(weakref.WeakSet)
     class T(object):
         _instances = {k1: 'i1', k2: 'i2'}
-        _indexes = {'f1': collections.defaultdict(weakref.WeakSet),
-                    'f2': collections.defaultdict(weakref.WeakSet)}
-    T._indexes['f1']['a'].add(k1)
-    T._indexes['f1']['a'].add(k2)
-    T._indexes['f1']['b'].add(k1)
-    T._indexes['f2']['a'] #note: is this actually required?
+        _fields = {'f1': f1, 'f2': f2}
+    f1._index['a'].add(k1)
+    f1._index['a'].add(k2)
+    f1._index['b'].add(k1)
+    f2._index['a'] #note: is this actually required?
     assert convidx(T, 'f1') == {'a': set(['i1', 'i2']), 'b': set(['i1'])}
     assert convidx(T, 'f2') == {}
 
@@ -129,7 +132,6 @@ class TestTable(object):
         assert t.age is NotSet
         assert convidx(self.T, 'oid') == {NotSet: set([t])}, convidx(self.T, 'oid')
         assert convidx(self.T, 'name') == {NotSet: set([t])}
-        assert 'age' not in t._indexes
 
     def test_init_single(self):
         'Test initialisation with a single argument.'
@@ -139,7 +141,6 @@ class TestTable(object):
         assert t.age is NotSet
         assert convidx(self.T, 'oid') == {1: set([t])}, convidx(self.T, 'oid')
         assert convidx(self.T, 'name') == {NotSet: set([t])}
-        assert 'age' not in t._indexes
 
     def test_init_many(self):
         'Test initialisation with many arguments.'
@@ -149,7 +150,6 @@ class TestTable(object):
         assert t.age is 23
         assert convidx(self.T, 'oid') == {1: set([t])}
         assert convidx(self.T, 'name') == {'Mike': set([t])}
-        assert 'age' not in t._indexes
 
     def test_init_bad_kwargs(self):
         'Invalid keywords raise AttributeError.'
@@ -191,15 +191,8 @@ class TestTable(object):
         'Test that indexes are created.'
         assert self.T.name.index
         assert self.T.oid.index
-        assert sorted(self.T._indexes.keys()) == ['name', 'oid']
-
-    def test_inherited_indexes(self):
-        'Test that indexes are created in inherited classes.'
-        class T(self.T):
-            pass
-        assert T.name.index
-        assert T.oid.index
-        assert sorted(T._indexes.keys()) == ['name', 'oid']
+        assert hasattr(self.T.name, '_index')
+        assert hasattr(self.T.name, '_index')
 
     def test_len(self):
         'len(Table) returns the number of records.'
@@ -269,7 +262,7 @@ class TestTable(object):
         number = 100
         fast = timeit.timeit(lambda: self.T.iter(oid=300), number=number)
         slow = timeit.timeit(lambda: self.T.iter(age=5), number=number)
-        assert fast * 10 > slow
+        assert fast * 10 < slow, (fast, slow)
 
     def test_delete_instance(self):
         'Test deleting a single instance'
@@ -345,6 +338,50 @@ class TestTable(object):
         with assert_raises(ValueError):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
+
+
+class TestInheritance(object):
+
+    def setup(self):
+        class Other(Table):
+            f = Field()
+
+        class B(Table):
+            a = Field(index=True)
+            j = Join(Other.f)
+
+        class I(B):
+            b = Field()
+
+        self.B = B
+        self.I = I
+        self.Other = Other
+
+    def test_fields(self):
+        assert set(self.B.fields()) == set(['a'])
+        assert set(self.I.fields()) == set(['a', 'b'])
+
+    def test_different_fields(self):
+        assert self.B.a is not self.I.a
+        assert self.B.a._index is not self.I.a._index
+
+    def test_owner(self):
+        assert self.B.a.owner is self.B
+        assert self.I.a.owner is self.I
+
+    def test_data(self):
+        b = self.B(a=1)
+        i = self.I(a=2)
+        assert list(self.B.a._data.values()) == [1]
+        assert list(self.I.a._data.values()) == [2]
+
+    def test_join(self):
+        b = self.B()
+        i = self.I()
+        o1 = self.Other(f=b)
+        o2 = self.Other(f=i)
+        assert set(b.j) == set([o1])
+        assert set(i.j) == set([o2])
 
 
 class TestUid(object):
