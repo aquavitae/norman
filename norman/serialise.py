@@ -255,7 +255,7 @@ class Serialiser:
         By default, this returns `True` for all strings which match a UUID
         regular expression, e.g. ``'a8098c1a-f86e-11da-bd1a-00112444be1e'``.
         """
-        return (isinstance(value, str) and
+        return (isinstance(value, unicode) and
                 len(value) == 36 and _re_uuid.match(value))
 
     def iterdb(self):
@@ -422,7 +422,7 @@ class Sqlite(Serialiser):
 
     """
     This is a `Serialiser` which reads and writes to a sqlite database.
-    
+
     Each table in `db` is dumped to a sqlite table with the same field names.
     An additional field, *_uid_* is included which contains the record's
     *_uid*.  The sqlite database does not have any constraints, not even
@@ -461,8 +461,8 @@ class Sqlite(Serialiser):
     def iterfile(self):
         """
         Yield records from each valid table in the file.
-        
-        Only tables which match those in *db* and have a *_uid_* field 
+
+        Only tables which match those in *db* and have a *_uid_* field
         are read.
         """
         for table in self.db:

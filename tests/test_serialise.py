@@ -23,6 +23,7 @@ from nose.tools import assert_raises
 from mock import patch
 
 from norman import Database, Table, Field, tools, serialise, NotSet
+from norman._compat import unicode
 
 db = Database()
 
@@ -106,6 +107,12 @@ class TestAPI:
 
     def teardown(self):
         db.reset()
+
+    def test_isuid(self):
+        s = serialise.Serialiser(None)
+        f = unicode('field')
+        v = unicode('a8098c1a-f86e-11da-bd1a-00112444be1e')
+        assert s.isuid(f, v)
 
     def test_simple(self):
         data = [(Town, 1, {'name': 'A'}),
