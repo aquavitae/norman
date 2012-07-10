@@ -19,6 +19,7 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import collections
 import copy
 import functools
 import re
@@ -72,6 +73,24 @@ class TableMeta(type):
                 value._owner = cls
             if isinstance(value, Field):
                 cls._fields[n] = value
+
+        cls.hooks = collections.defaultdict(list)
+        """
+        A `dict` containing lists of callables to be run when an event occurs.
+
+        Two events are supported: validation on setting a field value and
+        deletion, identified by keys ``'validate'`` and ``'delete'``
+        respectively.  When a triggering event occurs, each hook in the list
+        is called in order with the affected table instance as a single
+        argument until an exception occurs.  If the exception is
+        an `AssertError` it is converted to a `ValueError`.  If no exception
+        occurs, the event is considered to have passed, otherwise it fails
+        and the table record rolls back to its previous state.
+
+        These hooks are called after `validate` and `validate_delete`, but
+        behave in the same way.
+        """
+
         return cls
 
     def __init__(cls, name, bases, cdict):
@@ -167,6 +186,8 @@ class TableMeta(type):
             if r:
                 try:
                     r.validate_delete()
+                    for v in cls.hooks['delete']:
+                        v(r)
                 except AssertionError as err:
                     raise ValueError(*err.args)
                 except:
@@ -201,13 +222,13 @@ class Table(_TableBase):
         if badkw:
             raise AttributeError(badkw)
         data.update(kwargs)
-        validate = self.validate
-        self.validate = lambda: None
+        validate = self._validate
+        self._validate = lambda: None
         try:
             for k, v in data.items():
                 setattr(self, k, v)
         finally:
-            self.validate = validate
+            self._validate = validate
         self._validate()
         self._instances[key] = self
 
@@ -288,6 +309,8 @@ class Table(_TableBase):
         """
         try:
             self.validate()
+            for v in self.__class__.hooks['validate']:
+                v(self)
         except Exception as err:
             if isinstance(err, AssertionError):
                 raise ValueError(*err.args)

@@ -493,3 +493,47 @@ class TestValidateDelete(object):
         t3 = T(value=3)
         T.delete(value=1)
         assert set(T) == set([t2])
+
+
+class TestHooks:
+
+    def test_validate(self):
+        calls = []
+        class T(Table):
+            value = Field()
+            def validate(self):
+                calls.append('validate')
+
+        def one(inst):
+            assert isinstance(inst, T)
+            calls.append('one')
+
+        def two(inst):
+            assert isinstance(inst, T)
+            calls.append('two')
+
+        T.hooks['validate'] += [one, two]
+
+        t = T(value=4)
+        assert calls == ['validate', 'one', 'two']
+
+    def test_validate_delete(self):
+        calls = []
+        class T(Table):
+            value = Field()
+            def validate_delete(self):
+                calls.append('delete')
+
+        def one(inst):
+            assert isinstance(inst, T)
+            calls.append('one')
+
+        def two(inst):
+            assert isinstance(inst, T)
+            calls.append('two')
+
+        T.hooks['delete'] += [one, two]
+
+        t = T(value=4)
+        T.delete(t)
+        assert calls == ['delete', 'one', 'two'], calls

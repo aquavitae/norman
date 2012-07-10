@@ -8,6 +8,14 @@ This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
+Norman-0.6.2
+------------
+
+*Release Date: Not Released*
+
+-   Hooks added to `Table` to allow more control over validation.
+
+
 Norman-0.6.1
 ------------
 

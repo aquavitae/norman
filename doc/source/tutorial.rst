@@ -53,6 +53,8 @@ field as unique and to add a `!validate` method to the table::
 Now, trying to create an invalid book as in the previous example will raise a
 `ValueError`.
 
+Validation can also be implemented using `Table.hooks`.
+
 
 Joined Tables
 -------------

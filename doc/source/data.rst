@@ -9,7 +9,7 @@ Data Structures
 ===============
 
 .. contents::
-    
+
 
 Database
 --------
@@ -98,6 +98,23 @@ Tables
     through indexed fields.  The sequence operations supported are ``__len__``,
     ``__contains__`` and ``__iter__``, and all act on instances of the table,
     i.e. records.
+
+
+    .. attribute:: hooks
+
+        A `dict` containing lists of callables to be run when an event occurs.
+
+        Two events are supported: validation on setting a field value and
+        deletion, identified by keys ``'validate'`` and ``'delete'``
+        respectively.  When a triggering event occurs, each hook in the list
+        is called in order with the affected table instance as a single
+        argument until an exception occurs.  If the exception is
+        an `AssertError` it is converted to a `ValueError`.  If no exception
+        occurs, the event is considered to have passed, otherwise it fails
+        and the table record rolls back to its previous state.
+
+        These hooks are called after `validate` and `validate_delete`, but
+        behave in the same way.
 
 
     .. method:: contains(**kwargs)
