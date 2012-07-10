@@ -1,21 +1,21 @@
-.. module:: norman
+.. currentmodule:: norman
 
 
 What's New
 ==========
 
-This file lists new features and major changes to `Norman`.  For a detailed
+This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
 Norman-0.6.1
 ------------
 
-*Release Date: Not released*
+*Release Date: 2012-07-12*
 
--   New serialiser framework added, based on `serialiser.Serialiser`.
-    A sample serialiser, `Sqlite` is included.
--   `Sqlite3` has been deprecated.
+-   New serialiser framework added, based on `serialise.Serialiser`.
+    A sample serialiser, `serialise.Sqlite` is included.
+-   `serialise.Sqlite3` has been deprecated.
 -   Documentation overhauled introducing major changes to the documentation
     layout.
 -   Add boolean comparisons, `Query.delete` and `Query.one` methods to `Query`.
@@ -36,9 +36,9 @@ Norman-0.6.0
 -   `Query` object added, introducing a new method of querying tables,
     involving `Field` and `Query` comparison operators.
 -   `Join` class created, which will replace `Group` in 0.7.0.
--   `Field.name` and `Field.owner`, which previously existed, have now been
+-   `!Field.name` and `!Field.owner`, which previously existed, have now been
     formalised and documented.
--   `Field.default` is respected when initialising tables
+-   `!Field.default` is respected when initialising tables
 -   `Table._uid` property added for Table objects.
 -   Allow `Table.validate_delete` to make changes.
 -   Two new `tools` functions added: `tools.dtfromiso` and `tools.reduce2`.
