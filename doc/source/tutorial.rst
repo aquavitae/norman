@@ -183,3 +183,19 @@ examples show how to extract various bit of information from the database.
     initials are in the first half of the alphabet::
 
         books = Books.authors & (Author.initials <= 'L')
+
+
+Serialisation
+-------------
+
+`serialise` provides an extensible framework for serialising databases and
+a sample implementation for serialising to sqlite.  Serialising and
+de-serialising is as simple as::
+
+    MySerialiser.dump(mydb, filename)
+
+and::
+
+    MySerialiser.load(mydb, filename)
+
+For more detail, see the `serialise` module.
