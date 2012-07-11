@@ -139,3 +139,13 @@ class TestQuery(TestCase):
     def test_bool_false(self):
         q = self.A.a == -100
         assert bool(q) is False
+
+    def test_field(self):
+        q1 = self.A.a >= 2
+        q2 = q1.field('b')
+        assert set(q2) == set([self.br[0], self.br[2]])
+
+    def test_field_join(self):
+        q1 = self.B.d == 1
+        q2 = q1.field('a')
+        assert set(q2) == set([self.ar[0]] + self.ar[2:])

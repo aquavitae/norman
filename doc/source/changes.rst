@@ -14,7 +14,7 @@ Norman-0.6.2
 *Release Date: Not Released*
 
 -   Hooks added to `Table` to allow more control over validation.
-
+-   Add `Query.field`, allowing queries to traverse tables.
 
 Norman-0.6.1
 ------------

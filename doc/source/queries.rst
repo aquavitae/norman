@@ -114,6 +114,21 @@ API
         nothing is deleted.
 
 
+    .. method:: field(fieldname)
+
+        Return a new `Query` containing records in a single field.
+
+        The set of records returned by this is similar to::
+
+            set(getattr(r, fieldname) for r in query)
+
+        However, the returned object is another `Query` instead of a set.
+        Only instances of a `Table` subclass are contained in the results,
+        other values are dropped.  This is functionally similar to a SQL
+        query on a foreign key.  If the target field is a `Join`, then all
+        the results of each join are concatenated.
+
+
     .. method:: one([default])
 
         Return a single value from the query results.

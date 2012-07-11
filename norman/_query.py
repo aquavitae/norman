@@ -80,6 +80,9 @@ class Query(object):
     """
 
     def __init__(self, op, *args):
+        # _op is a callable which returns an iterable, which will be assigned
+        # to _results.  _op will be called with each argument in *args,
+        # any Query objects in *args will be replaced with their _results.
         self._op = op
         self._args = args
         self._results = None
@@ -145,6 +148,39 @@ class Query(object):
                     raise
                 else:
                     del r.__class__._instances[r._key]
+
+    def field(self, fieldname):
+        """
+        Return a new `Query` containing records in a single field.
+
+        The set of records returned by this is similar to::
+
+            set(getattr(r, fieldname) for r in query)
+
+        However, the returned object is another `Query` instead of a set.
+        Only instances of a `Table` subclass are contained in the results,
+        other values are dropped.  This is functionally similar to a SQL
+        query on a foreign key.  If the target field is a `Join`, then all
+        the results of each join are concatenated.
+        """
+        from ._table import Table
+        from ._field import Field, Join
+
+        def op(a, f):
+            result = set()
+            for record in a:
+                field = getattr(record.__class__, f)
+                value = getattr(record, f)
+                if isinstance(field, Field):
+                    value = [value]
+                elif not isinstance(field, Join):
+                    raise KeyError("'{}' is not a Field".format(f))
+                for item in value:
+                    if isinstance(item, Table):
+                        result.add(item)
+            return result
+        return Query(op, self, fieldname)
+
 
     def one(self, default=_Sentinal):
         """
