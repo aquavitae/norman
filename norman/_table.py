@@ -210,8 +210,13 @@ class Table(_TableBase):
     """
     Each instance of a Table subclass represents a record in that Table.
 
-    This class should be inherited from to define the fields in the table.
-    It may also optionally provide a `validate` method.
+    This class should be subclassed to define the fields in the table.
+    It may also optionally provide `validate` and `validate_delete` methods.
+
+    `Field` names should not start with ``_``, as these names are reserved
+    for internal use.  Fields may be added to a `Table` after the `Table`
+    is created, provided they do not already belong to another `Table`, and
+    the `Field` name is not already used in the `Table`.
     """
 
     def __init__(self, **kwargs):

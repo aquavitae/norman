@@ -219,7 +219,7 @@ class Join(object):
     contains a reference to the owning table, and may be specified in one of
     two ways.  If the foreign table is already defined (as in the above
     example), then only one argument is required.  If it has not been
-    defined, or is self-referential, the first agument may be the database
+    defined, or is self-referential, the first argument may be the database
     instance and the second the canonical field name, including the table
     name.  So an alternate definition of the above *Parent* class would be::
 
@@ -239,6 +239,9 @@ class Join(object):
         {c1, c2}
 
     As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+
+    The return value from a `Join` is a `Query` object containing all records
+    matching the join criteria.
     """
 
     def __init__(self, *args):

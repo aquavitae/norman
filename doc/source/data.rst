@@ -13,19 +13,14 @@ Data Structures
 
 Database
 --------
+`Database` instances act as containers of `Table` objects, and support
+``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
+returns a table given its name (i.e. its class name), ``__contains__``
+returns whether a `Table` object is managed by the database and
+``__iter__`` returns a iterator over the tables.
 
-.. class:: Database
-
-    The main database class containing a list of tables.
-
-    `Database` instances act as containers of `Table` objects, and support
-    ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
-    returns a table given its name (i.e. its class name), ``__contains__``
-    returns whether a `Table` object is managed by the database and
-    ``__iter__`` returns a iterator over the tables.
-
-    Tables may be added to the database when they are created by using
-    `Database.add` as a class decorator.  For example:
+Tables may be added to the database when they are created by using
+`Database.add` as a class decorator.  For example::
 
     >>> db = Database()
     >>> @db.add
@@ -34,30 +29,26 @@ Database
     >>> MyTable in db
     True
 
-    The database can be written to a file through the `serialise` module.
-    Currently only sqlite3 is supported.  If a `Database` instance represents
-    a document state, it can be saved using the following code:
+The database can be written to a file through the `serialise` module.
+Currently only sqlite3 is supported.  If a `Database` instance represents
+a document state, it can be saved using the following code:
 
-    .. doctest::
-        :options: +SKIP
+.. doctest::
+    :options: +SKIP
 
-        >>> serialise.Sqlite3().dump('file.sqlite')
+    >>> serialise.Sqlite.dump(db, 'file.sqlite')
 
-    And reloaded:
+And reloaded:
 
-    .. doctest::
-        :options: +SKIP
+.. doctest::
+    :options: +SKIP
 
-        >>> serialise.Sqlite3().load('file.sqlite')
+    >>> serialise.Sqlite.load(db, 'file.sqlite')
 
-    :note:
-        The sqlite database created does not contain any constraints
-        at all (not even type constraints).  This is because the sqlite
-        database is meant to be used purely for file storage.
 
-    In the sqlite database, all values are saved as strings (determined
-    from ``str(value)``.  Keys (foreign and primary) are globally unique
-    integers > 0.  `None` is stored as *NULL*, and `NotSet` as 0.
+.. class:: Database
+
+    The main database class containing a list of tables.
 
 
     .. method:: add(table)
@@ -87,12 +78,14 @@ Database
 Tables
 ------
 
+Tables are instances of the `TableMeta` metaclass, and records are instances
+of tables.  Methods which apply to tables, therefore, are defined in
+`TableMeta`.
+
+
 .. class TableMeta
 
     Base metaclass for all tables.
-
-    The methods provided by this metaclass are essentially those which apply
-    to the table (as opposed to those which apply records).
 
     Tables support a limited sequence-like interface, with rapid lookup
     through indexed fields.  The sequence operations supported are ``__len__``,
