@@ -105,6 +105,18 @@ class TableMeta(type):
     def __iter__(cls):
         return iter(cls._instances.values())
 
+    def __setattr__(cls, name, value):
+        if isinstance(value, (Field, Join)):
+            if hasattr(value, '_owner'):
+                raise ValueError('Field already belongs to a table')
+            if hasattr(cls, name):
+                raise AttributeError("Field '{}' already exists".format(name))
+            value._name = name
+            value._owner = cls
+            if isinstance(value, Field):
+                cls._fields[name] = value
+        super(TableMeta, cls).__setattr__(name, value)
+
     def iter(cls, **kwargs):
         """
         Iterate over records with field values matching *kwargs*.

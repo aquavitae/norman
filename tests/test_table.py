@@ -173,6 +173,15 @@ class TestTable(object):
         assert t.a == 1
         assert t.b is NotSet
 
+    def test_setattr(self):
+        'Test that fields can be assigned late'
+        f = Field()
+        self.T.other = f
+        t = self.T(other=4)
+        assert self.T.other is f
+        assert t.other == 4
+        assert f.owner is self.T
+
     def test_name(self):
         'Test that Table.name == "Table"'
         assert self.T.__name__ == 'T'
