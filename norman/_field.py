@@ -175,7 +175,9 @@ class Field(object):
         self._data[instance] = value
 
     def __eq__(self, value):
-        return Query(_eq, self, value)
+        q = Query(_eq, self, value)
+        q._addargs = (self.owner, {self.name:value})
+        return q
 
     def __ne__(self, value):
         return Query(_op(operator.ne), self, value)

@@ -140,6 +140,22 @@ class TestQuery(TestCase):
         q = self.A.a == -100
         assert bool(q) is False
 
+    def test_add_single(self):
+        q = self.A.a == 1
+        a = q.add(c='5')
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.c == '5'
+
+    def test_add_and(self):
+        q = (self.A.a == 1) & (self.A.c == '5')
+        assert len(q) == 0
+        a = q.add()
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.c == '5'
+        assert len(q) == 1
+
     def test_field(self):
         q1 = self.A.a >= 2
         q2 = q1.field('b')

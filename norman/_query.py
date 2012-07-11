@@ -119,7 +119,16 @@ class Query(object):
         return len(set(self))
 
     def __and__(self, other):
-        return Query(lambda a, b: set(a) & set(b), self, other)
+        q = Query(lambda a, b: set(a) & set(b), self, other)
+        if (hasattr(self, '_addargs') and hasattr(other, '_addargs') and
+            self._addargs[0] is other._addargs[0]):
+            table, kw1 = self._addargs
+            kw2 = other._addargs[1]
+            if not set(kw1.keys()) & set(kw2.keys()):
+                kw = dict(kw1)
+                kw.update(kw2)
+                q._addargs = (table, kw)
+        return q
 
     def __or__(self, other):
         return Query(lambda a, b: set(a) | set(b), self, other)
@@ -129,6 +138,22 @@ class Query(object):
 
     def __xor__(self, other):
         return Query(lambda a, b: set(a) ^ set(b), self, other)
+
+    def add(self, **kwargs):
+        """
+        Add a record based on the query criteria.
+
+        This method is only available for queries of the form
+        ``field == value``, or an ``&`` combination of them.  **kwargs** is
+        the same as used for creating a `Table` instance, but is
+        updated to include the query criteria.
+        """
+        if not hasattr(self, '_addargs'):
+            raise NotImplementedError
+        table, kw = self._addargs
+        kwargs.update(kw)
+        self._results = None
+        return table(**kwargs)
 
     def delete(self):
         """

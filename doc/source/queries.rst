@@ -106,6 +106,17 @@ API
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
 
+
+    .. method:: add([**kwargs])
+
+        Add a record based on the query criteria.
+
+        This method is only available for queries of the form
+        ``field == value``, or an ``&`` combination of them.  **kwargs** is
+        the same as used for creating a `Table` instance, but is
+        updated to include the query criteria.
+
+
     .. method:: delete
 
         Delete all records matching the query.
