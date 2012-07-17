@@ -37,3 +37,4 @@ Contents
     queries
     serialise
     tools
+    validate
