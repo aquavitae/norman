@@ -291,11 +291,20 @@ Fields
     readonly   False        Prohibits setting the variable, unless its value
                             is `NotSet`.  This can be used with *default*
                             to simulate a constant.
+    validate   None         If set, should be a list of functions which are
+                            to be used as validators for the field.  Each
+                            function should accept a and return a single value,
+                            and should raise an exception if the value is
+                            invalid.  The return value is the value passed
+                            to the next validator.
     ========== ============ ===================================================
 
     Note that *unique* and *index* are table-level controls, and are not used
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
+
+    Validation is done by running each validator through the table
+    ``'validation'`` hook.  See `validators` for some pre-build validators.
 
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when

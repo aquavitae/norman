@@ -256,6 +256,9 @@ class Table(_TableBase):
             field = None
         if isinstance(field, Field):
             oldvalue = getattr(self, attr)
+            # Get new value by validation
+            for validator in field.validators:
+                value = validator(value)
             # To avoid endless recursion if validate changes a value
             if oldvalue != value:
                 field.__set__(self, value)

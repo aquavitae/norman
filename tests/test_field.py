@@ -163,3 +163,37 @@ class TestJoin(object):
         c4 = Child(parent=p2)
         assert set(p1.children) == set([c1, c2])
         assert set(p2.children) == set([c3, c4])
+
+
+class TestValidator(object):
+
+    def test_convert(self):
+        class T(Table):
+            number = Field(validate=[float])
+
+        t = T(number=3)
+        assert t.number == 3
+        t.number = '4'
+        assert t.number == 4
+
+    def test_except(self):
+        class T(Table):
+            number = Field(validate=[float])
+
+        t = T(number=3)
+        with assert_raises(TypeError):
+            t.number = None
+        assert t.number == 3
+
+    def test_chain(self):
+        class T(Table):
+            a = Field(validate=[float, lambda v: v * 2])
+            b = Field(validate=[lambda v: v * 2, float])
+
+        t = T(a=3, b=3)
+        assert t.a == 6
+        assert t.b == 6
+        t.a = '4'
+        assert t.a == 8
+        t.b = '4'
+        assert t.b == 44
