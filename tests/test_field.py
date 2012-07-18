@@ -197,3 +197,17 @@ class TestValidator(object):
         assert t.a == 8
         t.b = '4'
         assert t.b == 44
+
+    def test_notset(self):
+        class T(Table):
+            a = Field(validate=[float])
+
+        with assert_raises(TypeError):
+            t = T()
+
+    def test_default(self):
+        class T(Table):
+            a = Field(default=None, validate=[float])
+
+        with assert_raises(TypeError):
+            t = T()

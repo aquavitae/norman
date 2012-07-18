@@ -303,9 +303,6 @@ Fields
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
 
-    Validation is done by running each validator through the table
-    ``'validation'`` hook.  See `validators` for some pre-build validators.
-
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
     the table class is created.
@@ -326,6 +323,10 @@ Fields
     ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
     test for containment, e.g. `` Table.field & mylist`` returns all records
     where the value of ``field`` is in ``mylist``.
+
+    .. seealso::
+
+        `validators` for some pre-build validators.
 
 
 .. class:: Join(*args)

@@ -125,9 +125,6 @@ class Field(object):
     by `Field` directly.  It is the responsibility of the table to
     implement the necessary constraints and indexes.
 
-    Validation is done by running each validator through the table
-    ``'validation'`` hook.  See `validators` for some pre-build validators.
-
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
     the table class is created.
@@ -143,6 +140,10 @@ class Field(object):
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
         _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
+
+    .. seealso::
+
+        `validators` for some pre-build validators.
     """
 
     def __init__(self, **kwargs):
