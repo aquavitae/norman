@@ -17,7 +17,34 @@
 from __future__ import with_statement
 from nose.tools import assert_raises
 
-from norman import validate
+from norman import validate, NotSet
+
+
+class Test_ifset(object):
+
+    """
+    Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
+    
+    This is normally used as a wrapper around another validator to permit
+    `NotSet` values to pass.  For example::
+    
+        >>> validator = ifset(istype(float))
+        >>> validator(4.3)
+        4.3
+        >>> validator(NotSet)
+        NotSet
+        >>> validator(None)
+        Traceback (most recent call last):
+            ...
+        TypeError: None
+    """
+
+    def test(self):
+        v = validate.ifset(lambda v:-v)
+        assert v(NotSet) == NotSet
+        assert v(4) == -4
+        with assert_raises(TypeError):
+            v(None)
 
 
 class Test_isfalse(object):

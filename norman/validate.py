@@ -19,10 +19,37 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+from ._field import NotSet
+
 
 class _Sentinel(object):
     pass
 _Sentinel = _Sentinel()
+
+
+def ifset(func):
+    """
+    Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
+    
+    This is normally used as a wrapper around another validator to permit
+    `NotSet` values to pass.  For example::
+    
+        >>> validator = ifset(istype(float))
+        >>> validator(4.3)
+        4.3
+        >>> validator(NotSet)
+        NotSet
+        >>> validator(None)
+        Traceback (most recent call last):
+            ...
+        TypeError: None
+    """
+    def inner(value):
+        if value is NotSet:
+            return value
+        else:
+            return func(value)
+    return inner
 
 
 def isfalse(func, default=_Sentinel):
