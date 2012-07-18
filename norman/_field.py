@@ -247,9 +247,10 @@ class Join(object):
                 For more information on *many-to-many* joins.
     """
 
-    def __init__(self, *args, query=None):
+    def __init__(self, *args, **kwargs):
         self._args = args
-        self._query = query
+        self._query = kwargs.get('query', None)
+        self._jt_name = kwargs.get('jointable', None)
         self._jointable = None
 
     def __get__(self, instance, owner):
@@ -257,6 +258,25 @@ class Join(object):
             return self
         else:
             return self.query(instance)
+
+    @property
+    def target(self):
+        """
+        Return the target of the join, or `None` if the target cannot be found.
+        """
+        if len(self._args) == 0:
+            return None
+        elif len(self._args) == 1:
+            return self._args[0]
+        else:
+            db = self._args[0]
+            table, field = self._args[1].split('.')
+            if table in db:
+                table = db[table]
+                if hasattr(table, field):
+                    field = getattr(table, field)
+                    return field
+        return None
 
     @property
     def jointable(self):
@@ -290,13 +310,9 @@ class Join(object):
         if self._query is not None:
             return self._query
         else:
-            if len(self._args) == 1:
-                field = self._args[0]
-            else:
-                table, field = self._args[1].split('.')
-                table = self._args[0][table]
-                field = getattr(table, field)
-            return lambda v: field == v
+            if self.target is None:
+                raise ValueError('Missing target')
+            return lambda v: self.target == v
 
     @query.setter
     def query(self, value):

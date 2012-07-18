@@ -171,6 +171,51 @@ class TestJoin(object):
         t = T()
         assert t.j == 'Query'
 
+    def test_add(self):
+        class Child(Table):
+            parent = Field()
+            id = Field()
+
+        class Parent(Table):
+            children = Join(Child.parent)
+
+        p1 = Parent()
+        p1.children.add(id=1)
+        assert p1.children.one().id == 1
+
+class TestManyJoin(object):
+
+    def setup(self):
+        self.db = Database()
+        @self.db.add
+        class Left(Table):
+            rights = Join(self.db, 'Right.lefts')
+
+        @self.db.add
+        class Right(Table):
+            lefts = Join(self.db, 'Left.rights', jointable='MyJoinTable')
+
+    def test_create_jointable(self):
+        jt1 = self.db['Left'].rights.jointable
+        jt2 = self.db['Right'].lefts.jointable
+        assert jt1 is jt2
+        assert issubclass(jt1, Table)
+        assert set(jt1.fields()) == set(['Left', 'Right']), set(jt1.fields())
+        assert jt1.__name__ == 'MyJoinTable'
+
+    def test_join(self):
+        l1 = self.db['Left']()
+        l2 = self.db['Left']()
+        r1 = self.db['Right']()
+        r2 = self.db['Right']()
+        assert set(l1.rights) == set()
+        assert set(r1.lefts) == set()
+        l1.rights.add(r1)
+        assert set(l1.rights) == set([r1])
+        assert set(r1.lefts) == set([l1])
+        jt = self.db['Left'].rights.jointable
+        assert len(jt) == 1
+
 
 class TestValidator(object):
 

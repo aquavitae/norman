@@ -86,6 +86,7 @@ class Query(object):
         self._op = op
         self._args = args
         self._results = None
+        self._addargs = tuple()
 
     def __bool__(self):
         try:
@@ -120,7 +121,7 @@ class Query(object):
 
     def __and__(self, other):
         q = Query(lambda a, b: set(a) & set(b), self, other)
-        if (hasattr(self, '_addargs') and hasattr(other, '_addargs') and
+        if (len(self._addargs) == 2 and len(other._addargs) == 2 and
             self._addargs[0] is other._addargs[0]):
             table, kw1 = self._addargs
             kw2 = other._addargs[1]
@@ -139,18 +140,27 @@ class Query(object):
     def __xor__(self, other):
         return Query(lambda a, b: set(a) ^ set(b), self, other)
 
-    def add(self, **kwargs):
+    def add(self, *arg, **kwargs):
         """
         Add a record based on the query criteria.
 
         This method is only available for queries of the form
-        ``field == value``, or an ``&`` combination of them.  **kwargs** is
+        ``field == value``, a ``&`` combination of them, or a `field`
+        query created from a query of this form.  *kwargs* is
         the same as used for creating a `Table` instance, but is
-        updated to include the query criteria.
+        updated to include the query criteria. *arg* is only used for
+        queries created by `field`, and is a record to add to the field.
+        See `field` for more information.
         """
-        if not hasattr(self, '_addargs'):
+        if len(self._addargs) not in (2, 3):
             raise NotImplementedError
-        table, kw = self._addargs
+        if len(self._addargs) == 2:
+            if len(arg) != 0:
+                raise TypeError('Positional arguments not accepted for this query')
+            table, kw = self._addargs
+        else:
+            table, kw, fieldname = self._addargs
+            kwargs[fieldname] = arg[0]
         kwargs.update(kw)
         self._results = None
         return table(**kwargs)
@@ -187,6 +197,15 @@ class Query(object):
         other values are dropped.  This is functionally similar to a SQL
         query on a foreign key.  If the target field is a `Join`, then all
         the results of each join are concatenated.
+
+        If this query supports addition, then the resultant query will too,
+        but with slightly different parameters.  For example::
+
+            (Table1.id == 4).field('tble2').add(table2_instance)
+
+        is the same as::
+
+             (Table1.id == 4).add(table2=table2_instance)
         """
         from ._table import Table
         from ._field import Field, Join
@@ -204,7 +223,11 @@ class Query(object):
                     if isinstance(item, Table):
                         result.add(item)
             return result
-        return Query(op, self, fieldname)
+        q = Query(op, self, fieldname)
+        if len(self._addargs) == 2:
+            table, kw = self._addargs
+            q._addargs = table, kw, fieldname
+        return q
 
 
     def one(self, default=_Sentinal):

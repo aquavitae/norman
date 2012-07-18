@@ -112,9 +112,12 @@ API
         Add a record based on the query criteria.
 
         This method is only available for queries of the form
-        ``field == value``, or an ``&`` combination of them.  **kwargs** is
+        ``field == value``, a ``&`` combination of them, or a `field`
+        query created from a query of this form.  *kwargs* is
         the same as used for creating a `Table` instance, but is
-        updated to include the query criteria.
+        updated to include the query criteria. *arg* is only used for
+        queries created by `field`, and is a record to add to the field.
+        See `field` for more information.
 
 
     .. method:: delete
@@ -138,6 +141,15 @@ API
         other values are dropped.  This is functionally similar to a SQL
         query on a foreign key.  If the target field is a `Join`, then all
         the results of each join are concatenated.
+
+        If this query supports addition, then the resultant query will too,
+        but with slightly different parameters.  For example::
+
+            (Table1.id == 4).field('tble2').add(table2_instance)
+
+        is the same as::
+
+             (Table1.id == 4).add(table2=table2_instance)
 
 
     .. method:: one([default])

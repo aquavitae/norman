@@ -156,6 +156,19 @@ class TestQuery(TestCase):
         assert a.c == '5'
         assert len(q) == 1
 
+    def test_add_field(self):
+        q = (self.A.a == 1).field('b')
+        a = q.add(self.br[2], c='c')
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.b is self.br[2]
+        assert a.c == 'c'
+
+    def test_add_field2_fails(self):
+        q = (self.A.a == 1).field('b').field('e')
+        with assert_raises(NotImplementedError):
+            q.add(self.br[0])
+
     def test_field(self):
         q1 = self.A.a >= 2
         q2 = q1.field('b')
