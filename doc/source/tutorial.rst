@@ -109,6 +109,10 @@ indexed, so `!Book.name` already supports fast lookups::
         author = Field(index=True)
         ...
 
+A `Join` can also point to another `Join`, creating what is termed a
+many-to-many relationship.  These are discussed later, since they rely on
+a `Database` being used.
+
 
 Databases
 ---------
@@ -141,6 +145,51 @@ becomes::
         initials = Field(unique=True, default='')
         nationality = Field()
         books = Join(Book.author)
+
+
+Many-to-many Joins
+------------------
+
+The next step in the library is to allow people to withdraw books from it,
+tracking both the books a person has, and who has copies of a specific book.
+This is known as a many-to-many relationship, as `!Book.people` contains
+many people and `!Person.books` contains many books, and is implemented
+in Norman by creating a pair of joins which target each other.
+
+First we need to create another table for people, adding a join to
+a new field, which we will add to `!Book`.  However, this causes a slight
+problem, since we need to reference `!Book.people` in order to create
+`!Person.books`, and we need to reference `!Person.books` in order to create
+`!Book.people`.  Fortunately, Norman allows an alternative method of defining
+joins when the target `Table` belongs to a database::
+
+    @db.add
+    class Person(Table):
+        name = Field(unique=True)
+        books = Join(db, 'Book.people')
+
+    @db.add
+    class Book(Table):
+        ...
+        people = Join(db, 'Person.books')
+        ...
+
+In the background, a new table called ``'_BookPerson'`` is created and
+added to the database.  This is just a sorted concatenation of the names of the
+two participating tables, prefixed with an underscore.  It is possible to
+manually set the name used by using the *jointable* keyword argument on one
+of the joins::
+
+    @db.add
+    class Person(Table):
+        name = Field(unique=True)
+        books = Join(db, 'Book.people', jointable='JoinTable')
+
+The newly created join table has two unique fields, *Book* and *Person*, i.e.
+the participating table names.  While records can be added to it directly, it
+is advisable to add them to the join instead, so for example::
+
+    mybook.people.add(a_person)
 
 
 Adding records
@@ -185,6 +234,14 @@ examples show how to extract various bit of information from the database.
     initials are in the first half of the alphabet::
 
         books = Books.authors & (Author.initials <= 'L')
+
+4.  A single result can be obntained using `Query.one`::
+
+        mybook = (Book.name == 'Wyrd Sisters').one()
+
+4.  Records can be added based on certain queries::
+
+        (Author.nationality == 'British').add(surname='Adams', intials='D')
 
 
 Serialisation
