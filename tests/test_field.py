@@ -164,6 +164,13 @@ class TestJoin(object):
         assert set(p1.children) == set([c1, c2])
         assert set(p2.children) == set([c3, c4])
 
+    def test_query(self):
+        class T(Table):
+            j = Join(query=lambda v: 'Query')
+
+        t = T()
+        assert t.j == 'Query'
+
 
 class TestValidator(object):
 

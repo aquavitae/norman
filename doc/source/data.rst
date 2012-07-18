@@ -329,45 +329,84 @@ Fields
         `validators` for some pre-build validators.
 
 
-.. class:: Join(*args)
+Joins
+-----
 
-    A special field representing a one-to-many join to another table.
+A join is basically an object which dynamically creates queries for
+a specific record.  This is best explained through an example::
 
-    This is best explained through an example::
+    >>> class Child(Table):
+    ...     parent = Field()
+    ...
+    >>> class Parent(Table):
+    ...     children = Join(Child.parent)
+    ...
+    >>> p = Parent()
+    >>> c1 = Child(parent=p)
+    >>> c2 = Child(parent=p)
+    >>> p.children
+    {c1, c2}
 
-        >>> class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> class Parent(Table):
-        ...     children = Join(Child.parent)
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+Here, `!Parent.children` is a factory which returns a `Query` for all
+`!Child` records where ``child.parent == parent_instance`` for a specific
+`!parent_instance`.  Joins have a `~Join.query` attribute which is a `Query`
+factory, returning a `Query` for a given instance of the owning table.
 
-    The initialisation parameters specify the field in the foreign table which
-    contains a reference to the owning table, and may be specified in one of
-    two ways.  If the foreign table is already defined (as in the above
-    example), then only one argument is required.  If it has not been
-    defined, or is self-referential, the first agument may be the database
-    instance and the second the canonical field name, including the table
-    name.  So an alternate definition of the above *Parent* class would be::
 
-        >>> db = Database()
-        >>> @db.add
-        ... class Parent(Table):
-        ...     children = Join(db, 'Child.parent')
-        ...
-        >>> @db.add
-        ... class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+.. class:: Join(*args, **kwargs)
 
-    As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+    A join, returning a `Query`.
+
+    Joins can be created with the following arguments:
+
+    ``Join(query=queryfactory)``
+        Explicitly set the query factory.  `!queryfactory` is a callable which
+        accepts a single argument and returns a `Query`.
+
+    ``Join(table.field)``
+        This is the most common format, since most joins simply involve looking
+        up a field value in another table.  This is equivalent to specifying
+        the following query factory::
+
+            def queryfactory(value):
+                return table.field == value
+
+    ``Join(db, 'table.field`)``
+        This has the same affect as the previous example, but is used when the
+        foreign field has not yet been created.  In this case, the query
+        factory first locates ``'table.field'`` in the `Database` ``db``.
+
+    ``Join(other.join)``
+        It is possible set the target of a join to another join, creating a
+        *many-to-many* relationship.  When used in this way, a join table is
+        automatically created, and can be accessed from `Join.jointable`.
+        If the optional keyword parameter *jointable* is used, the join table
+        name is set to it.
+
+        .. seealso::
+
+            http://en.wikipedia.org/wiki/Many-to-many_(data_model)
+                For more information on *many-to-many* joins.
+
+
+    .. attribute:: jointable
+
+        The join table in a *many-to-many* join.
+
+        This is `None` if the join is not a *many-to-many* join, and is
+        read only.
+
+
+    .. attribute:: name
+
+        The name of the `Join`. This is read only.
+
+
+    .. attribute:: owner
+
+        The `Table` containing the `Join`.  This is read only.
+
+
+    .. attribute:: query
+
+        A function which accepts an instance of `owner` and returns a `Query`.

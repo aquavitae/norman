@@ -212,57 +212,83 @@ class Field(object):
 class Join(object):
 
     """
-    A special field representing a one-to-many join to another table.
 
-    This is best explained through an example::
+    A join, returning a `Query`.
 
-        >>> class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> class Parent(Table):
-        ...     children = Join(Child.parent)
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+    Joins can be created with the following arguments:
 
-    The initialisation parameters specify the field in the foreign table which
-    contains a reference to the owning table, and may be specified in one of
-    two ways.  If the foreign table is already defined (as in the above
-    example), then only one argument is required.  If it has not been
-    defined, or is self-referential, the first argument may be the database
-    instance and the second the canonical field name, including the table
-    name.  So an alternate definition of the above *Parent* class would be::
+    ``Join(query=queryfactory)``
+        Explicitly set the query factory.  `!queryfactory` is a callable which
+        accepts a single argument and returns a `Query`.
 
-        >>> db = Database()
-        >>> @db.add
-        ... class Parent(Table):
-        ...     children = Join(db, 'Child.parent')
-        ...
-        >>> @db.add
-        ... class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+    ``Join(table.field)``
+        This is the most common format, since most joins simply involve looking
+        up a field value in another table.  This is equivalent to specifying
+        the following query factory::
 
-    As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+            def queryfactory(value):
+                return table.field == value
 
-    The return value from a `Join` is a `Query` object containing all records
-    matching the join criteria.
+    ``Join(db, 'table.field`)``
+        This has the same affect as the previous example, but is used when the
+        foreign field has not yet been created.  In this case, the query
+        factory first locates ``'table.field'`` in the `Database` ``db``.
+
+    ``Join(other.join)``
+        It is possible set the target of a join to another join, creating a
+        *many-to-many* relationship.  When used in this way, a join table is
+        automatically created, and can be accessed from `Join.jointable`.
+        If the optional keyword parameter *jointable* is used, the join table
+        name is set to it.
+
+        .. seealso::
+
+            http://en.wikipedia.org/wiki/Many-to-many_(data_model)
+                For more information on *many-to-many* joins.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args, query=None):
         self._args = args
+        self._query = query
+        self._jointable = None
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
+        else:
+            return self.query(instance)
+
+    @property
+    def jointable(self):
+        """
+        The join table in a *many-to-many* join.
+
+        This is `None` if the join is not a *many-to-many* join, and is
+        read only.
+        """
+        return self._jointable
+
+    @property
+    def name(self):
+        """
+        The name of the `Join`. This is read only.
+        """
+        return self._name
+
+    @property
+    def owner(self):
+        """
+        The `Table` containing the `Join`.  This is read only.
+        """
+        return self._owner
+
+    @property
+    def query(self):
+        """
+        A function which accepts an instance of `owner` and returns a `Query`.
+        """
+        if self._query is not None:
+            return self._query
         else:
             if len(self._args) == 1:
                 field = self._args[0]
@@ -270,12 +296,8 @@ class Join(object):
                 table, field = self._args[1].split('.')
                 table = self._args[0][table]
                 field = getattr(table, field)
-            return field == instance
+            return lambda v: field == v
 
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def owner(self):
-        return self._owner
+    @query.setter
+    def query(self, value):
+        self._query = value
