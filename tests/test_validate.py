@@ -16,6 +16,7 @@
 
 from __future__ import with_statement
 from nose.tools import assert_raises
+import datetime
 
 from norman import validate, NotSet
 
@@ -135,3 +136,128 @@ class Test_settype(object):
     def test_fail(self):
         v = validate.settype(float, 1.1)
         assert v(None) == 1.1
+
+
+class Test_todate(object):
+
+    """
+    Return a validator which converts a string to a `datetime.date`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.date.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *date*
+    component is returned.  If it is a `datetime.date` it is returned
+    unchanged.
+
+    The return value is always a `datetime.date` object.  If the value
+    cannot be converted an exception is raised.
+    """
+
+    def test_date(self):
+        v = validate.todate()
+        d = datetime.date(2013, 12, 23)
+        assert v(d) == d
+
+    def test_datetime(self):
+        v = validate.todate()
+        d = datetime.datetime(2013, 12, 23, 12, 23, 34)
+        assert v(d) == d.date()
+
+    def test_iso(self):
+        v = validate.todate()
+        d = datetime.date(2013, 12, 23)
+        assert v('2013-12-23') == d
+
+    def test_fmt(self):
+        v = validate.todate('%d/%m/%y')
+        d = datetime.date(2013, 12, 23)
+        assert v('23/12/13') == d
+
+
+class Test_todatetime(object):
+
+    """
+    Return a validator which converts a string to a `datetime.datetime`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.datetime.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime` it is
+    returned unchanged.  If it is a `datetime.date` or `datetime.time`,
+    it is converted to a `datetime.datetime`, replacing missing the missing
+    information with ``1900-1-1`` or ``00:00:00``.
+
+    The return value is always a `datetime.datetime` object.  If the value
+    cannot be converted an exception is raised.
+    """
+
+    def test_datetime(self):
+        v = validate.todatetime()
+        d = datetime.datetime(2013, 12, 23, 12, 23, 34)
+        assert v(d) == d
+
+    def test_date(self):
+        v = validate.todatetime()
+        d = datetime.date(2013, 12, 23)
+        assert v(d) == datetime.datetime(2013, 12, 23, 0, 0, 0)
+
+    def test_datetime(self):
+        v = validate.todatetime()
+        d = datetime.time(12, 23, 34)
+        assert v(d) == datetime.datetime(1900, 1, 1, 12, 23, 34)
+
+    def test_iso(self):
+        v = validate.todatetime()
+        d = datetime.datetime(2013, 12, 23, 12, 23, 34, 567000)
+        assert v('2013-12-23 12:23:34.567') == d
+
+    def test_fmt(self):
+        v = validate.todatetime('%H, %M, %S - %d/%m/%y')
+        d = datetime.datetime(2013, 12, 23, 12, 23, 34)
+        assert v('12, 23, 34 - 23/12/13') == d
+
+
+class Test_totime(object):
+
+    """
+    Return a validator which converts a string to a `datetime.time`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.time.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *time*
+    component is returned.  If it is a `datetime.time` it is returned
+    unchanged.
+
+    The return value is always a `datetime.time` object.  If the value
+    cannot be converted an exception is raised.
+    """
+
+    def test_time(self):
+        v = validate.totime()
+        d = datetime.time(12, 23, 34)
+        assert v(d) == d
+
+    def test_datetime(self):
+        v = validate.totime()
+        d = datetime.datetime(2013, 12, 23, 12, 23, 34)
+        assert v(d) == d.time()
+
+    def test_iso(self):
+        v = validate.totime()
+        d = datetime.time(12, 23, 34)
+        assert v('12:23:34') == d
+
+    def test_iso_micro(self):
+        v = validate.totime()
+        d = datetime.time(12, 23, 34, 987000)
+        assert v('12:23:34.987') == d
+
+    def test_fmt(self):
+        v = validate.totime('%M, %S, %H')
+        d = datetime.time(12, 23, 34)
+        assert v('23, 34, 12') == d

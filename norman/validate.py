@@ -19,6 +19,8 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import datetime
+
 from ._field import NotSet
 
 
@@ -30,10 +32,10 @@ _Sentinel = _Sentinel()
 def ifset(func):
     """
     Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
-    
+
     This is normally used as a wrapper around another validator to permit
     `NotSet` values to pass.  For example::
-    
+
         >>> validator = ifset(istype(float))
         >>> validator(4.3)
         4.3
@@ -115,4 +117,91 @@ def settype(t, default):
             return t(value)
         except TypeError:
             return default
+    return inner
+
+
+def todate(fmt=None):
+    """
+    Return a validator which converts a string to a `datetime.date`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.date.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *date*
+    component is returned.  If it is a `datetime.date` it is returned
+    unchanged.
+
+    The return value is always a `datetime.date` object.  If the value
+    cannot be converted an exception is raised.
+    """
+    def inner(value, _fmt=fmt):
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        elif isinstance(value, datetime.date):
+            return value
+        else:
+            if _fmt is None:
+                _fmt = '%Y-%m-%d'
+            return datetime.datetime.strptime(value, _fmt).date()
+    return inner
+
+
+def todatetime(fmt=None):
+    """
+    Return a validator which converts a string to a `datetime.datetime`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.datetime.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime` it is
+    returned unchanged.  If it is a `datetime.date` or `datetime.time`,
+    it is converted to a `datetime.datetime`, replacing missing the missing
+    information with ``1900-1-1`` or ``00:00:00``.
+
+    The return value is always a `datetime.datetime` object.  If the value
+    cannot be converted an exception is raised.
+    """
+    def inner(value, _fmt=fmt):
+        if isinstance(value, datetime.datetime):
+            return value
+        elif isinstance(value, datetime.date):
+            return datetime.datetime.combine(value, datetime.time(0, 0, 0))
+        elif isinstance(value, datetime.time):
+            return datetime.datetime.combine(datetime.date(1900, 1, 1), value)
+        elif _fmt is None:
+            date, time = value.split(' ')
+            date = todate()(date)
+            time = totime()(time)
+            return datetime.datetime.combine(date, time)
+        else:
+            return datetime.datetime.strptime(value, _fmt)
+    return inner
+
+
+def totime(fmt=None):
+    """
+    Return a validator which converts a string to a `datetime.time`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.time.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *time*
+    component is returned.  If it is a `datetime.time` it is returned
+    unchanged.
+
+    The return value is always a `datetime.time` object.  If the value
+    cannot be converted an exception is raised.
+    """
+    def inner(value, _fmt=fmt):
+        if isinstance(value, datetime.datetime):
+            return value.time()
+        elif isinstance(value, datetime.time):
+            return value
+        else:
+            if _fmt is None:
+                _fmt = '%H:%M:%S' + ('.%f' if '.' in value else '')
+            return datetime.datetime.strptime(value, _fmt).time()
     return inner

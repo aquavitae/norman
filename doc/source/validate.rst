@@ -54,3 +54,52 @@ Validators
     :param t:       The required type.
     :param default: If the value cannot be converted, then use this value
                     instead.
+
+
+.. function:: todate([fmt])
+
+    Return a validator which converts a string to a `datetime.date`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.date.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *date*
+    component is returned.  If it is a `datetime.date` it is returned
+    unchanged.
+
+    The return value is always a `datetime.date` object.  If the value
+    cannot be converted an exception is raised.
+
+
+.. function:: todatetime([fmt])
+
+    Return a validator which converts a string to a `datetime.datetime`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.datetime.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime` it is
+    returned unchanged.  If it is a `datetime.date` or `datetime.time`,
+    it is converted to a `datetime.datetime`, replacing missing the missing
+    information with ``1900-1-1`` or ``00:00:00``.
+
+    The return value is always a `datetime.datetime` object.  If the value
+    cannot be converted an exception is raised.
+
+
+.. function:: totime([fmt])
+
+    Return a validator which converts a string to a `datetime.time`.
+
+    If *fmt* is omitted, the ISO representation used by
+    `datetime.time.__str__` is used, otherwise it should be a format
+    string for `datetime.strptime`.
+
+    If the value passed to the validator is a `datetime.datetime`, the *time*
+    component is returned.  If it is a `datetime.time` it is returned
+    unchanged.
+
+    The return value is always a `datetime.time` object.  If the value
+    cannot be converted an exception is raised.
