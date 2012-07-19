@@ -35,41 +35,6 @@ _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 _re_uuid = re.compile(_re_uuid)
 
 
-def _check_join_table(join):
-    """
-    Check whether we can create a join table for *join*, and if so, then do.
-    """
-    target = join.target
-    if not isinstance(target, Join):
-        return
-
-    jts = set([join._jt_name, target._jt_name, None])
-    jts.remove(None)
-    if len(jts) == 0:
-        name = '_' + ''.join(sorted(j.owner.__name__ for j in (join, target)))
-    elif len(jts) == 1:
-        name = jts.pop()
-    elif len(jts) == 2:
-        raise ValueError('Inconsistent join table definition')
-
-    def delete(f, record):
-        (f == record).delete()
-
-    from .validate import istype
-
-    t1, t2 = join.owner, target.owner
-    f1 = Field(validate=[istype(t1)])
-    f2 = Field(validate=[istype(t2)])
-    JT = TableMeta(name, (Table,), {t1.__name__: f1, t2.__name__: f2})
-    t1.hooks['delete'].append(functools.partial(delete, f1))
-    t2.hooks['delete'].append(functools.partial(delete, f2))
-
-    join._jointable = JT
-    target._jointable = JT
-    join.query = lambda r: (f1 == r).field(f2.name)
-    target.query = lambda r: (f2 == r).field(f1.name)
-
-
 class _I:
     """
     An empty, hashable and weak referenceable object.
@@ -108,9 +73,6 @@ class TableMeta(type):
                 value._owner = cls
             if isinstance(value, Field):
                 cls._fields[n] = value
-            if isinstance(value, Join):
-                _check_join_table(value)
-
 
         cls.hooks = collections.defaultdict(list)
         """
@@ -154,9 +116,6 @@ class TableMeta(type):
             if isinstance(value, Field):
                 cls._fields[name] = value
         super(TableMeta, cls).__setattr__(name, value)
-        # Check whether to create a join table
-        if isinstance(value, Join):
-            _check_join_table(value)
 
     def iter(cls, **kwargs):
         """

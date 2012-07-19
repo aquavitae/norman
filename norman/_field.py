@@ -286,6 +286,40 @@ class Join(object):
         This is `None` if the join is not a *many-to-many* join, and is
         read only.
         """
+        if self._jointable is None:
+            # Try creating it
+            target = self.target
+            if not isinstance(target, Join):
+                return None
+
+            jts = set([self._jt_name, target._jt_name, None])
+            jts.remove(None)
+            if len(jts) == 0:
+                name = '_' + ''.join(sorted(j.owner.__name__
+                                            for j in (self, target)))
+            elif len(jts) == 1:
+                name = jts.pop()
+            elif len(jts) == 2:
+                raise ValueError('Inconsistent join table definition')
+
+            def delete(f, record):
+                (f == record).delete()
+
+            from .validate import istype
+            from ._table import TableMeta, Table
+
+            t1, t2 = self.owner, target.owner
+            f1 = Field(validate=[istype(t1)])
+            f2 = Field(validate=[istype(t2)])
+            JT = TableMeta(name, (Table,), {t1.__name__: f1, t2.__name__: f2})
+            t1.hooks['delete'].append(functools.partial(delete, f1))
+            t2.hooks['delete'].append(functools.partial(delete, f2))
+
+            self._jointable = JT
+            target._jointable = JT
+            self.query = lambda r: (f1 == r).field(f2.name)
+            target.query = lambda r: (f2 == r).field(f1.name)
+
         return self._jointable
 
     @property
@@ -310,8 +344,14 @@ class Join(object):
         if self._query is not None:
             return self._query
         else:
-            if self.target is None:
+            target = self.target
+            if target is None:
                 raise ValueError('Missing target')
+            if isinstance(self.target, Join):
+                # Try to create the jointable and override `query`
+                if self.jointable is None:
+                    raise ValueError('Missing join table')
+                return self._query
             return lambda v: self.target == v
 
     @query.setter
