@@ -3,8 +3,8 @@
 .. testsetup:: tools
 
     from norman.tools import *
-    
-    
+
+
 Tools
 =====
 

@@ -284,15 +284,15 @@ Sqlite
 .. class:: Sqlite
 
     This is a `Serialiser` which reads and writes to a sqlite database.
-    
+
     Each table in `~Serialiser.db` is dumped to a sqlite table with the
     same field names.  An additional field, *_uid_* is included which
     contains the record's *_uid*.  The sqlite database does not have any
     constraints, not even primary key constraints, as it is intended to
     be used purely for storage.
-    
+
     The following methods are re-implemented from `Serialiser`:
-    
+
     *   `~Serialiser.finalise_write` commits changes to the database.
     *   `~Serialiser.initialise_write` starts a database transaction and
         create tables.
@@ -301,8 +301,8 @@ Sqlite
         file which matches a table in `~Serialiser.db`.
     *   `~Serialiser.open` returns an open database connection to *filename*.
     *   `~Serialiser.write_record` adds a record to the sqlite database.
-  
-        
+
+
 .. class:: Sqlite3
 
     .. deprecated:: 0.6.1

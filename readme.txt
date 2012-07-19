@@ -1,24 +1,13 @@
-.. module:: norman
-
-.. testsetup::
-
-    from norman import *
-
-
-Norman Documentation
-====================
+Norman
+======
 
 Norman provides a framework for creating complex data structures using
 an database-like approach.  The range of potential application is wide,
 for example in-memory databases, multi-keyed dictionaries or node graphs.
 These applications are illustrated in the following examples.
 
-
-Example Applications
---------------------
-
 Database
-^^^^^^^^
+--------
 
 This is a small database for a personal library::
 
@@ -42,7 +31,7 @@ This is a small database for a personal library::
 
 
 Multi-keyed Dictionary
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
 
 This table can be used as a dictionary with three keys::
 
@@ -63,7 +52,7 @@ And queried by::
 
 
 Node Graph
-^^^^^^^^^^
+----------
 
 This is a graph, where each node can have many parent nodes and many
 children nodes::
@@ -91,18 +80,3 @@ children nodes::
             # Delete all connecting links if a node is deleted
             (Link.parent == self).delete()
             (Link.child == self).delete()
-
-
-Contents
---------
-
-.. toctree::
-    :maxdepth: 2
-
-    tutorial
-    changes
-    data
-    queries
-    serialise
-    tools
-    validate

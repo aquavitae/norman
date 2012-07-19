@@ -131,6 +131,7 @@ becomes::
 
     @db.add
     class Book(Table):
+        refno = Field(unique=True)
         name = Field()
         author = Field(index=True)
 
