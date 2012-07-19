@@ -17,6 +17,7 @@ Norman-0.6.2
 -   `Field` level validation added, including some validator factories.
 -   Add built-in support for many-to-many joins.
 -   Add `validate.todatetime`, `validate.todate` and `validate.totime`.
+-   Deprecated the `tools` module.
 
 
 Norman-0.6.1
