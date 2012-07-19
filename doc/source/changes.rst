@@ -18,6 +18,7 @@ Norman-0.6.2
 -   Add `Query.field`, allowing queries to traverse tables.
 -   Add `Query.add`, allowing records to be created based on query criteria.
 -   `Field` level validation added, including some validator factories.
+-   Add `validate.todatetime`, `validate.todate` and `validate.totime`.
 
 
 Norman-0.6.1
