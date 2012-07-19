@@ -13,6 +13,7 @@ Norman-0.6.2
 
 *Release Date: Not Released*
 
+-   Add built-in support for many-to-many joins.
 -   Hooks added to `Table` to allow more control over validation.
 -   Add `Query.field`, allowing queries to traverse tables.
 -   Add `Query.add`, allowing records to be created based on query criteria.

@@ -121,12 +121,12 @@ class TableMeta(type):
         respectively.  When a triggering event occurs, each hook in the list
         is called in order with the affected table instance as a single
         argument until an exception occurs.  If the exception is
-        an `AssertError` it is converted to a `ValueError`.  If no exception
+        an `AssertionError` it is converted to a `ValueError`.  If no exception
         occurs, the event is considered to have passed, otherwise it fails
         and the table record rolls back to its previous state.
 
-        These hooks are called after `validate` and `validate_delete`, but
-        behave in the same way.
+        These hooks are called before `Table.validate` and
+        `Table.validate_delete`, and behave in the same way.
         """
 
         return cls
@@ -203,24 +203,24 @@ class TableMeta(type):
         ...            T(id=6, value='c'),
         ...            T(id=7, value='c'),
         ...            T(id=8, value='b'),
-        ...            T(id=9, value='a'),
-        >>> [t.id for t in T.get()]
+        ...            T(id=9, value='a')]
+        >>> sorted(t.id for t in T.get())
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
         >>> T.delete(records[:4], value='b')
-        >>> [t.id for t in T.get()]
+        >>> sorted(t.id for t in T.get())
         [1, 3, 5, 6, 7, 8, 9]
 
         If no records are specified, then all are used.
 
         >>> T.delete(value='a')
-        >>> [t.id for t in T.get()]
+        >>> sorted(t.id for t in T.get())
         [3, 5, 6, 7, 8]
 
         If no keywords are given, then all records in in *records* are deleted.
 
-        >>> T.delete(records[2:4])
-        >>> [t.id for t in T.get()]
-        [3, 5, 8]
+        >>> T.delete(records[2:5])
+        >>> sorted(t.id for t in T.get())
+        [6, 7, 8]
 
         If neither records nor keywords are deleted, then the entire
         table is cleared.
