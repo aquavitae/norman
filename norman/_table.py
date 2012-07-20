@@ -25,6 +25,7 @@ import functools
 import re
 import uuid
 
+from ._except import ConsistencyError, ValidationError
 from ._field import Field, Join
 from ._query import Query
 from ._compat import unicode, long, recursive_repr
@@ -108,9 +109,9 @@ class TableMeta(type):
     def __setattr__(cls, name, value):
         if isinstance(value, (Field, Join)):
             if hasattr(value, '_owner'):
-                raise ValueError('Field already belongs to a table')
+                raise ConsistencyError('Field already belongs to a table')
             if hasattr(cls, name):
-                raise AttributeError("Field '{}' already exists".format(name))
+                raise ConsistencyError("Field '{}' already exists".format(name))
             value._name = name
             value._owner = cls
             if isinstance(value, Field):
@@ -201,7 +202,7 @@ class TableMeta(type):
                     for v in cls.hooks['delete']:
                         v(r)
                 except AssertionError as err:
-                    raise ValueError(*err.args)
+                    raise ValidationError(*err.args)
                 except:
                     raise
                 else:
@@ -272,7 +273,7 @@ class Table(_TableBase):
                         msg = ('{}={}'.format(k, v) for k, v in uniques.items())
                         msg = ', '.join(msg)
                         msg = 'Not unique: {}'.format(msg)
-                        raise ValueError(msg)
+                        raise ValidationError(msg)
                 try:
                     self._validate()
                 except:
@@ -333,7 +334,7 @@ class Table(_TableBase):
                 v(self)
         except Exception as err:
             if isinstance(err, AssertionError):
-                raise ValueError(*err.args)
+                raise ValidationError(*err.args)
             else:
                 raise
 
@@ -342,12 +343,12 @@ class Table(_TableBase):
         Raise an exception if the record contains invalid data.
 
         This is usually re-implemented in subclasses, and checks that all
-        data in the record is valid.  If not, and exception should be raised.
+        data in the record is valid.  If not, an exception should be raised.
         Internal validate (e.g. uniqueness checks) occurs before this
-        method is called, and a failure will result in a `ValueError` being
-        raised.  For convenience, any `AssertionError` which is raised here
-        is considered to indicate invalid data, and is re-raised as a
-        `ValueError`.  This allows all validation errors (both from this
+        method is called, and a failure will result in a `ValidationError`
+        being raised.  For convenience, any `AssertionError` which is raised
+        here is considered to indicate invalid data, and is re-raised as a
+        `ValidationError`.  This allows all validation errors (both from this
         function and from internal checks) to be captured in a single
         *except* statement.
 
@@ -361,37 +362,10 @@ class Table(_TableBase):
         Raise an exception if the record cannot be deleted.
 
         This is called just before a record is deleted and is usually
-        re-implemented to check for other referring instances.  For example,
-        the following structure only allows deletions of *Name* instances
-        not in a *Group*.
-
-        >>> class Name(Table):
-        ...  name = Field()
-        ...  group = Field(default=None)
-        ...
-        ...  def validate_delete(self):
-        ...      assert self.group is None, "Can't delete '{}'".format(self.name)
-        ...
-        >>> class Group(Table)
-        ...  id = Field()
-        ...  @property
-        ...  def names(self):
-        ...      return Name.get(group=self)
-        ...
-        >>> group = Group(id=1)
-        >>> n1 = Name(name='grouped', group=group)
-        >>> n2 = Name(name='not grouped')
-        >>> Name.delete(name='not grouped')
-        >>> Name.delete(name='grouped')
-        Traceback (most recent call last):
-            ...
-        AssertionError: Can't delete "grouped"
-        >>> {name.name for name in Name.get()}
-        {'grouped'}
+        re-implemented to check for other referring instances.  This method
+        can also be used to propogate deletions and can safely modify
+        this or other tables.
 
         Exceptions are handled in the same was as for `validate`.
-
-        This method can also be used to propogate deletions and can safely
-        modify this or other tables.
         """
         pass

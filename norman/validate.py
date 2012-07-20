@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import datetime
 
+from ._except import ValidationError
 from ._field import NotSet
 
 
@@ -60,13 +61,13 @@ def isfalse(func, default=_Sentinel):
 
     :param func:     A callable which returns `False` if the value passes.
     :param default:  The value to return if *func* returns `True`.  If this is
-                     omitted, an exception is raised.
+                     omitted, a `ValidationError` is raised.
     """
     def inner(value):
         if not func(value):
             return value
         elif default is _Sentinel:
-            raise ValueError(value)
+            raise ValidationError(value)
         else:
             return default
     return inner
@@ -78,13 +79,13 @@ def istrue(func, default=_Sentinel):
 
     :param func:     A callable which returns `True` if the value passes.
     :param default:  The value to return if *func* returns `False`.  If this is
-                     omitted, an exception is raised.
+                     omitted, a `ValidationError` is raised.
     """
     def inner(value):
         if func(value):
             return value
         elif default is _Sentinel:
-            raise ValueError(value)
+            raise ValidationError(value)
         else:
             return default
     return inner
@@ -92,7 +93,7 @@ def istrue(func, default=_Sentinel):
 
 def istype(*t):
     """
-    Return a `Field` validator which raises an exception on an invalid type.
+    Return a validator which raises a `ValidationError` on an invalid type.
 
     :param t: The expected type, or types.
     """
@@ -100,7 +101,7 @@ def istype(*t):
         if isinstance(value, t):
             return value
         else:
-            raise TypeError(value)
+            raise ValidationError(value)
     return inner
 
 
@@ -133,7 +134,7 @@ def todate(fmt=None):
     unchanged.
 
     The return value is always a `datetime.date` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):
@@ -143,7 +144,10 @@ def todate(fmt=None):
         else:
             if _fmt is None:
                 _fmt = '%Y-%m-%d'
-            return datetime.datetime.strptime(value, _fmt).date()
+            try:
+                return datetime.datetime.strptime(value, _fmt).date()
+            except ValueError as err:
+                raise ValidationError(*err.args)
     return inner
 
 
@@ -161,7 +165,7 @@ def todatetime(fmt=None):
     information with ``1900-1-1`` or ``00:00:00``.
 
     The return value is always a `datetime.datetime` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):
@@ -176,7 +180,10 @@ def todatetime(fmt=None):
             time = totime()(time)
             return datetime.datetime.combine(date, time)
         else:
-            return datetime.datetime.strptime(value, _fmt)
+            try:
+                return datetime.datetime.strptime(value, _fmt)
+            except ValueError as err:
+                raise ValidationError(*err.args)
     return inner
 
 
@@ -193,7 +200,7 @@ def totime(fmt=None):
     unchanged.
 
     The return value is always a `datetime.time` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):
@@ -203,5 +210,8 @@ def totime(fmt=None):
         else:
             if _fmt is None:
                 _fmt = '%H:%M:%S' + ('.%f' if '.' in value else '')
-            return datetime.datetime.strptime(value, _fmt).time()
+            try:
+                return datetime.datetime.strptime(value, _fmt).time()
+            except ValueError as err:
+                raise ValidationError(*err.args)
     return inner

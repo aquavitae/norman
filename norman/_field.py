@@ -25,6 +25,7 @@ import operator
 import weakref
 from collections import defaultdict
 
+from ._except import ConsistencyError, ValidationError
 from ._query import Query
 
 
@@ -182,7 +183,7 @@ class Field(object):
         """
         if (self.readonly and
             self.__get__(instance, instance.__class__) is not NotSet):
-            raise TypeError('Field is read only')
+            raise ValidationError('Field is read only')
         self._data[instance] = value
 
     def __eq__(self, value):
@@ -212,7 +213,6 @@ class Field(object):
 class Join(object):
 
     """
-
     A join, returning a `Query`.
 
     Joins can be created with the following arguments:
@@ -284,7 +284,9 @@ class Join(object):
         The join table in a *many-to-many* join.
 
         This is `None` if the join is not a *many-to-many* join, and is
-        read only.
+        read only.  If a jointable does not yet exist then it is created,
+        but not added to any database.  If the two joins which define it have
+        conflicting information, a `ConsistencyError` is raise.
         """
         if self._jointable is None:
             # Try creating it
@@ -300,7 +302,7 @@ class Join(object):
             elif len(jts) == 1:
                 name = jts.pop()
             elif len(jts) == 2:
-                raise ValueError('Inconsistent join table definition')
+                raise ConsistencyError('Inconsistent join table definition')
 
             def delete(f, record):
                 (f == record).delete()
@@ -346,11 +348,11 @@ class Join(object):
         else:
             target = self.target
             if target is None:
-                raise ValueError('Missing target')
+                raise ConsistencyError('Missing target')
             if isinstance(self.target, Join):
                 # Try to create the jointable and override `query`
                 if self.jointable is None:
-                    raise ValueError('Missing join table')
+                    raise ConsistencyError('Missing join table')
                 return self._query
             return lambda v: self.target == v
 

@@ -19,6 +19,8 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+from ._except import ValidationError
+
 
 class _Sentinal:
     pass
@@ -161,7 +163,7 @@ class Query(object):
         """
         if len(self._addargs) == 2:
             if len(arg) != 0:
-                raise TypeError('Positional arguments not accepted for this query')
+                raise TypeError('Positional arguments not accepted')
             table, kw = self._addargs
         else:
             table, kw, fieldname = self._addargs
@@ -183,7 +185,7 @@ class Query(object):
                 try:
                     r.validate_delete()
                 except AssertionError as err:
-                    raise ValueError(*err.args)
+                    raise ValidationError(*err.args)
                 except:
                     raise
                 else:
@@ -223,7 +225,7 @@ class Query(object):
                 if isinstance(field, Field):
                     value = [value]
                 elif not isinstance(field, Join):
-                    raise KeyError("'{}' is not a Field".format(f))
+                    raise AttributeError("'{}' is not a Field".format(f))
                 for item in value:
                     if isinstance(item, Table):
                         result.add(item)
@@ -240,7 +242,7 @@ class Query(object):
         Return a single value from the query results.
 
         If the query is empty and *default* is specified, then it is returned
-        instead.  Otherwise an exception is raised.
+        instead.  Otherwise an `IndexError` is raised.
         """
         try:
             return next(iter(self))
@@ -249,6 +251,6 @@ class Query(object):
         except:
             raise
         if default is _Sentinal:
-            raise IndexError
+            raise IndexError('Query has no results')
         else:
             return default

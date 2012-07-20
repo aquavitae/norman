@@ -201,12 +201,12 @@ are defined in `TableMeta`, the metaclass used to create `Table`.
         Raise an exception if the record contains invalid data.
 
         This is usually re-implemented in subclasses, and checks that all
-        data in the record is valid.  If not, and exception should be raised.
+        data in the record is valid.  If not, an exception should be raised.
         Internal validate (e.g. uniqueness checks) occurs before this
-        method is called, and a failure will result in a `ValueError` being
-        raised.  For convenience, any `AssertionError` which is raised here
-        is considered to indicate invalid data, and is re-raised as a
-        `ValueError`.  This allows all validation errors (both from this
+        method is called, and a failure will result in a `ValidationError`
+        being raised.  For convenience, any `AssertionError` which is raised
+        here is considered to indicate invalid data, and is re-raised as a
+        `ValidationError`.  This allows all validation errors (both from this
         function and from internal checks) to be captured in a single
         *except* statement.
 
@@ -219,36 +219,11 @@ are defined in `TableMeta`, the metaclass used to create `Table`.
         Raise an exception if the record cannot be deleted.
 
         This is called just before a record is deleted and is usually
-        re-implemented to check for other referring instances.  For example,
-        the following structure only allows deletions of *Name* instances
-        not in a *Grouper*.
-
-        >>> class Name(Table):
-        ...     name = Field()
-        ...     group = Field(default=None)
-        ...
-        ...     def validate_delete(self):
-        ...         assert self.group is None, "Can't delete '{}'".format(self.group)
-        ...
-        >>> class Grouper(Table):
-        ...     id = Field()
-        ...     names = Group(Name, lambda s: {'group': s})
-        ...
-        >>> group = Grouper(id=1)
-        >>> n1 = Name(name='grouped', group=group)
-        >>> n2 = Name(name='not grouped', group=None)
-        >>> Name.delete(name='not grouped')
-        >>> Name.delete(name='grouped')
-        Traceback (most recent call last):
-            ...
-        ValueError: Can't delete 'grouped'
-        >>> {name.name for name in Name.get()}
-        {'grouped'}
+        re-implemented to check for other referring instances.  This method
+        can also be used to propogate deletions and can safely modify
+        this or other tables.
 
         Exceptions are handled in the same was as for `validate`.
-
-        This method can also be used to propogate deletions and can safely
-        modify this or other tables.
 
 
 Fields
@@ -395,7 +370,9 @@ factory, returning a `Query` for a given instance of the owning table.
         The join table in a *many-to-many* join.
 
         This is `None` if the join is not a *many-to-many* join, and is
-        read only.
+        read only.  If a jointable does not yet exist then it is created,
+        but not added to any database.  If the two joins which define it have
+        conflicting information, a `ConsistencyError` is raise.
 
 
     .. attribute:: name
@@ -411,3 +388,38 @@ factory, returning a `Query` for a given instance of the owning table.
     .. attribute:: query
 
         A function which accepts an instance of `owner` and returns a `Query`.
+
+
+Exceptions and Warnings
+-----------------------
+
+Exceptions
+^^^^^^^^^^
+
+.. class:: NormanError
+
+    Base class for all Norman exceptions.
+
+
+.. class:: ConsistencyError
+
+    Raised on a fatal inconsistency in the data structure.
+
+
+.. class:: ValidationError
+
+    Raised when an operation resulting in table validation failing.
+
+    For now this inherits from `NormanError`, `ValueError` and `TypeError`
+    to keep it backwardly compatible.  This will change in version 0.7.0
+
+
+Warnings
+^^^^^^^^
+
+.. class:: NormanWarning
+
+    Base class for all Norman warnings.
+
+    Currently all warnings use this class.  In the future, this behaviour
+    will change, and subclasses will be used.

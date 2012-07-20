@@ -28,7 +28,7 @@ Validators
 
     :param func:     A callable which returns `False` if the value passes.
     :param default:  The value to return if *func* returns `True`.  If this is
-                     omitted, an exception is raised.
+                     omitted, a `ValidationError` is raised.
 
 
 .. function:: istrue(func[, default])
@@ -37,12 +37,12 @@ Validators
 
     :param func:     A callable which returns `True` if the value passes.
     :param default:  The value to return if *func* returns `False`.  If this is
-                     omitted, an exception is raised.
+                     omitted, a `ValidationError` is raised.
 
 
 .. function:: istype(t[, t2[, t3[, ...]]])
 
-    Return a `Field` validator which raises an exception on an invalid type.
+    Return a validator which raises a `ValidationError` on an invalid type.
 
     :param t: The expected type, or types.
 
@@ -69,7 +69,7 @@ Validators
     unchanged.
 
     The return value is always a `datetime.date` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
 
 
 .. function:: todatetime([fmt])
@@ -86,7 +86,7 @@ Validators
     information with ``1900-1-1`` or ``00:00:00``.
 
     The return value is always a `datetime.datetime` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
 
 
 .. function:: totime([fmt])
@@ -102,4 +102,4 @@ Validators
     unchanged.
 
     The return value is always a `datetime.time` object.  If the value
-    cannot be converted an exception is raised.
+    cannot be converted a `ValidationError` is raised.
