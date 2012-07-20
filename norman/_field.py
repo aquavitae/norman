@@ -187,7 +187,7 @@ class Field(object):
 
     def __eq__(self, value):
         q = Query(_eq, self, value)
-        q._addargs = (self.owner, {self.name:value})
+        q._setaddargs(self.owner, {self.name:value})
         return q
 
     def __ne__(self, value):

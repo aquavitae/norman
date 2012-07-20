@@ -166,7 +166,7 @@ class TestQuery(TestCase):
 
     def test_add_field2_fails(self):
         q = (self.A.a == 1).field('b').field('e')
-        with assert_raises(NotImplementedError):
+        with assert_raises(AttributeError):
             q.add(self.br[0])
 
     def test_field(self):

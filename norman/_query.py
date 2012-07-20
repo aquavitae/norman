@@ -128,7 +128,7 @@ class Query(object):
             if not set(kw1.keys()) & set(kw2.keys()):
                 kw = dict(kw1)
                 kw.update(kw2)
-                q._addargs = (table, kw)
+                q._setaddargs(table, kw)
         return q
 
     def __or__(self, other):
@@ -140,7 +140,14 @@ class Query(object):
     def __xor__(self, other):
         return Query(lambda a, b: set(a) ^ set(b), self, other)
 
-    def add(self, *arg, **kwargs):
+    def _setaddargs(self, table, kwargs, field=None):
+        if field is None:
+            self._addargs = (table, kwargs)
+        else:
+            self._addargs = (table, kwargs, field)
+        self.add = self._add
+
+    def _add(self, *arg, **kwargs):
         """
         Add a record based on the query criteria.
 
@@ -152,8 +159,6 @@ class Query(object):
         queries created by `field`, and is a record to add to the field.
         See `field` for more information.
         """
-        if len(self._addargs) not in (2, 3):
-            raise NotImplementedError
         if len(self._addargs) == 2:
             if len(arg) != 0:
                 raise TypeError('Positional arguments not accepted for this query')
@@ -226,7 +231,7 @@ class Query(object):
         q = Query(op, self, fieldname)
         if len(self._addargs) == 2:
             table, kw = self._addargs
-            q._addargs = table, kw, fieldname
+            q._setaddargs(table, kw, fieldname)
         return q
 
 
