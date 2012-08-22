@@ -87,6 +87,7 @@ class Database(object):
         Delete all records from all tables in the database.
         """
         for table in self._tables:
-            table.delete()
+            while table._instances:
+                table._instances.popitem()
 
     # TODO: delete(record)
