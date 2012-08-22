@@ -28,6 +28,9 @@ class NormanWarning(UserWarning):
     will change, and subclasses will be used.
     """
 
+#TODO: Situations where warning should be raised:
+#    Field set to record outside database
+#    record used which has been deleted.
 
 class NormanError(Exception):
     """

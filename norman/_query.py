@@ -49,16 +49,13 @@ class Query(object):
     A set-like object which represents the results of a query.
 
     This object should never be instantiated directly, instead it should
-    be created as the result of a query on a `Table` or `Field`.
+    be created as the result of a `Field` comparison or by using the `query`
+    function.
 
     This object allows most operations permitted on sets, such as unions
     and intersections.  Comparison operators (such as ``<``) are not
-    supported, except for equality tests.
-
-    Queries are considered `True` if they contain any results, and `False`
-    if they do not.
-
-    The following operations are supported:
+    supported, except for equality tests.  The following operations are
+    supported:
 
     =================== =======================================================
     Operation           Description
@@ -79,6 +76,9 @@ class Query(object):
     ``q1 - q2``         Return a new `Query` object containing records in
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
+    
+    Queries are evaluate to `True` if they contain any results, and `False`
+    if they do not.
     """
 
     def __init__(self, op, *args):
@@ -174,10 +174,8 @@ class Query(object):
 
     def delete(self):
         """
-        Delete all records matching the query.
-
-        Records are deleted from the table.  If no records match,
-        nothing is deleted.
+        Delete all records matching the query from their table.  If no 
+        records match, nothing is deleted.
         """
         for r in self:
             # Check if its been deleted by validate_delete
@@ -212,7 +210,7 @@ class Query(object):
 
         is the same as::
 
-             (Table1.id == 4).add(table2=table2_instance)
+            (Table1.id == 4).add(table2=table2_instance)
         """
         from ._table import Table
         from ._field import Field, Join
@@ -239,10 +237,9 @@ class Query(object):
 
     def one(self, default=_Sentinal):
         """
-        Return a single value from the query results.
-
-        If the query is empty and *default* is specified, then it is returned
-        instead.  Otherwise an `IndexError` is raised.
+        Return a single value from the query results.  If the query is
+        empty and *default* is specified, then it is returned instead.  
+        Otherwise an `IndexError` is raised.
         """
         try:
             return next(iter(self))

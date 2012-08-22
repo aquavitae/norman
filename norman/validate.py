@@ -32,10 +32,11 @@ _Sentinel = _Sentinel()
 
 def ifset(func):
     """
-    Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
-
-    This is normally used as a wrapper around another validator to permit
-    `NotSet` values to pass.  For example::
+    Return a `~norman.Field` validator returning ``func(value)`` if *value*
+    is not `~norman.NotSet`.  If *value* is `~norman.NotSet`, then it is
+    returned and ``func`` is never called.  This is normally used as a wrapper
+    around another validator to permit `~norman.NotSet` values to pass.
+    For example::
 
         >>> validator = ifset(istype(float))
         >>> validator(4.3)
@@ -57,11 +58,11 @@ def ifset(func):
 
 def isfalse(func, default=_Sentinel):
     """
-    Return a `Field` validator which passes if *func* returns `False`.
+    Return a `~norman.Field` validator which passes if *func* returns `False`.
 
     :param func:     A callable which returns `False` if the value passes.
     :param default:  The value to return if *func* returns `True`.  If this is
-                     omitted, a `ValidationError` is raised.
+                     omitted, a `~norman.ValidationError` is raised.
     """
     def inner(value):
         if not func(value):
@@ -75,11 +76,11 @@ def isfalse(func, default=_Sentinel):
 
 def istrue(func, default=_Sentinel):
     """
-    Return a `Field` validator which passes if *func* returns `True`.
+    Return a `~norman.Field` validator which passes if *func* returns `True`.
 
     :param func:     A callable which returns `True` if the value passes.
     :param default:  The value to return if *func* returns `False`.  If this is
-                     omitted, a `ValidationError` is raised.
+                     omitted, a `~norman.ValidationError` is raised.
     """
     def inner(value):
         if func(value):
@@ -93,7 +94,8 @@ def istrue(func, default=_Sentinel):
 
 def istype(*t):
     """
-    Return a validator which raises a `ValidationError` on an invalid type.
+    Return a validator which raises a `~norman.ValidationError` on an invalid
+    type.
 
     :param t: The expected type, or types.
     """
@@ -107,7 +109,7 @@ def istype(*t):
 
 def settype(t, default):
     """
-    Return a `Field` validator which converts the value to a type
+    Return a `~norman.Field` validator which converts the value to type *t*.
 
     :param t:       The required type.
     :param default: If the value cannot be converted, then use this value
@@ -123,18 +125,17 @@ def settype(t, default):
 
 def todate(fmt=None):
     """
-    Return a validator which converts a string to a `datetime.date`.
-
-    If *fmt* is omitted, the ISO representation used by
-    `datetime.date.__str__` is used, otherwise it should be a format
-    string for `datetime.strptime`.
+    Return a validator which converts a string to a `datetime.date`.  If
+    *fmt* is omitted, the ISO representation used by `datetime.date.__str__`
+    is used, otherwise it should be a format string for
+    `datetime.datetime.strptime`.
 
     If the value passed to the validator is a `datetime.datetime`, the *date*
     component is returned.  If it is a `datetime.date` it is returned
     unchanged.
 
     The return value is always a `datetime.date` object.  If the value
-    cannot be converted a `ValidationError` is raised.
+    cannot be converted a `~norman.ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):
@@ -153,11 +154,10 @@ def todate(fmt=None):
 
 def todatetime(fmt=None):
     """
-    Return a validator which converts a string to a `datetime.datetime`.
-
-    If *fmt* is omitted, the ISO representation used by
+    Return a validator which converts a string to a `datetime.datetime`.  If
+    *fmt* is omitted, the ISO representation used by 
     `datetime.datetime.__str__` is used, otherwise it should be a format
-    string for `datetime.strptime`.
+    string for `datetime.datetime.strptime`.
 
     If the value passed to the validator is a `datetime.datetime` it is
     returned unchanged.  If it is a `datetime.date` or `datetime.time`,
@@ -165,7 +165,7 @@ def todatetime(fmt=None):
     information with ``1900-1-1`` or ``00:00:00``.
 
     The return value is always a `datetime.datetime` object.  If the value
-    cannot be converted a `ValidationError` is raised.
+    cannot be converted a `~norman.ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):
@@ -190,17 +190,16 @@ def todatetime(fmt=None):
 def totime(fmt=None):
     """
     Return a validator which converts a string to a `datetime.time`.
-
     If *fmt* is omitted, the ISO representation used by
     `datetime.time.__str__` is used, otherwise it should be a format
-    string for `datetime.strptime`.
+    string for `datetime.datetime.strptime`.
 
     If the value passed to the validator is a `datetime.datetime`, the *time*
     component is returned.  If it is a `datetime.time` it is returned
     unchanged.
 
     The return value is always a `datetime.time` object.  If the value
-    cannot be converted a `ValidationError` is raised.
+    cannot be converted a `~norman.ValidationError` is raised.
     """
     def inner(value, _fmt=fmt):
         if isinstance(value, datetime.datetime):

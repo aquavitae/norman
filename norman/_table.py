@@ -48,9 +48,6 @@ class TableMeta(type):
     """
     Base metaclass for all tables.
 
-    The methods provided by this metaclass are essentially those which apply
-    to the table (as opposed to those which apply records).
-
     Tables support a limited sequence-like interface, with rapid lookup
     through indexed fields.  The sequence operations supported are ``__len__``,
     ``__contains__`` and ``__iter__``, and all act on instances of the table,
@@ -76,21 +73,6 @@ class TableMeta(type):
                 cls._fields[n] = value
 
         cls.hooks = collections.defaultdict(list)
-        """
-        A `dict` containing lists of callables to be run when an event occurs.
-
-        Two events are supported: validation on setting a field value and
-        deletion, identified by keys ``'validate'`` and ``'delete'``
-        respectively.  When a triggering event occurs, each hook in the list
-        is called in order with the affected table instance as a single
-        argument until an exception occurs.  If the exception is
-        an `AssertionError` it is converted to a `ValueError`.  If no exception
-        occurs, the event is considered to have passed, otherwise it fails
-        and the table record rolls back to its previous state.
-
-        These hooks are called before `Table.validate` and
-        `Table.validate_delete`, and behave in the same way.
-        """
 
         return cls
 
@@ -118,15 +100,7 @@ class TableMeta(type):
                 cls._fields[name] = value
         super(TableMeta, cls).__setattr__(name, value)
 
-    def iter(cls, **kwargs):
-        """
-        Iterate over records with field values matching *kwargs*.
-        """
-        if not kwargs:
-            return iter(cls)
-        qs = (getattr(cls, k) == v for k, v in kwargs.items())
-        q = functools.reduce(lambda a, b: a & b, qs)
-        return iter(q)
+    #TODO: addhook decorator, or something similar
 
     def contains(cls, **kwargs):
         """
@@ -138,12 +112,6 @@ class TableMeta(type):
         except StopIteration:
             return False
         return True
-
-    def get(cls, **kwargs):
-        """
-        Return a set of all records with field values matching *kwargs*.
-        """
-        return set(cls.iter(**kwargs))
 
     def delete(cls, records=None, **keywords):
         """
@@ -213,6 +181,22 @@ class TableMeta(type):
         Return an iterator over field names in the table
         """
         return cls._fields.keys()
+
+    def get(cls, **kwargs):
+        """
+        Return a set of all records with field values matching *kwargs*.
+        """
+        return set(cls.iter(**kwargs))
+
+    def iter(cls, **kwargs):
+        """
+        Iterate over records with field values matching *kwargs*.
+        """
+        if not kwargs:
+            return iter(cls)
+        qs = (getattr(cls, k) == v for k, v in kwargs.items())
+        q = functools.reduce(lambda a, b: a & b, qs)
+        return iter(q)
 
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
@@ -302,9 +286,10 @@ class Table(_TableBase):
         This contains an id which is unique in the session.
 
         It's primary use is as an identity key during serialisation.  Valid
-        values are any integer except 0, or a UUID.  The default
+        values are any integer except 0, or a valid `uuid`.  The default
         value is calculated using `uuid.uuid4` upon its first call.
-        It is not necessarily required that it be universally unique.
+        It is not necessary that the value be unique outside the session,
+        unless required by the serialiser.
         """
         try:
             return self.__uid

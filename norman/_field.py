@@ -40,12 +40,6 @@ class NotSet(object):
 
 # Sentinel indicating that the field value has not yet been set.
 NotSet = NotSet()
-NotSet.__doc__ = \
-"""
-A sentinel object indicating that the field value has not yet been set.
-
-This evaluates to `False` in conditional statements.
-"""
 
 
 def _op(op):
@@ -93,11 +87,7 @@ class Field(object):
     >>> class MyTable(Table):
     ...     name = Field()
 
-    `Field` objects support *get* and *set* operations, similar to
-    *properties*, but also provide additional options.  They are intended
-    for use with `Table` subclasses.
-
-    Field options are set as keyword arguments when it is initialised
+    Field options are set as keyword arguments when it is initialised.
 
     ========== ============ ===================================================
     Keyword    Default      Description
@@ -122,15 +112,11 @@ class Field(object):
                             to the next validator.
     ========== ============ ===================================================
 
-    Note that *unique* and *index* are table-level controls, and are not used
-    by `Field` directly.  It is the responsibility of the table to
-    implement the necessary constraints and indexes.
-
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
     the table class is created.
 
-    Fields can be used with comparison operators to return a `_Results`
+    Fields can be used with comparison operators to return a `Query`
     object containing matching records.  For example::
 
         >>> class MyTable(Table):
@@ -140,11 +126,20 @@ class Field(object):
         >>> t1 = MyTable(oid=1, value=2)
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
-        _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
+        Query(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
 
+    The following comparisons are supported for a `Field` object: ``==``,
+    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
+    test for containment, e.g. `` Table.field & mylist`` returns all records
+    where the value of ``field`` is in ``mylist``.
+    
     .. seealso::
 
-        `validators` for some pre-build validators.
+        `validate`
+            For some pre-build validators.
+            
+        :doc:`queries`
+            For more information of queries in Norman.
     """
 
     def __init__(self, **kwargs):
@@ -213,9 +208,7 @@ class Field(object):
 class Join(object):
 
     """
-    A join, returning a `Query`.
-
-    Joins can be created with the following arguments:
+    Joins can be created in several ways:
 
     ``Join(query=queryfactory)``
         Explicitly set the query factory.  `!queryfactory` is a callable which
@@ -262,7 +255,8 @@ class Join(object):
     @property
     def target(self):
         """
-        Return the target of the join, or `None` if the target cannot be found.
+        The target of the join, or `None` if the target cannot be found.
+        This attribute is read only.
         """
         if len(self._args) == 0:
             return None

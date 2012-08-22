@@ -9,9 +9,9 @@ Tools
 =====
 
 .. deprecated:: 0.6.2
-
     The purpose of most of these tools was validation.  Since the inclusion
-    of the `validate` module, the functionality here is no longer needed.
+    of the `norman.validate` module, the functionality here is no longer
+    needed.
 
 
 Some useful tools for use with Norman are provided in `norman.tools`.

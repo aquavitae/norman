@@ -15,11 +15,10 @@ the `Query` class.  Queries are constructed by manipulating `Field` and other
 .. contents::
 
 
-Tutorial
+Examples
 --------
 
-The purpose of this short tutorial is to explain the basic concepts behind
-Norman queries.
+The following examples explain the basic concepts behind Norman queries.
 
 Queries are constructed as a series of field comparisons, for example::
 
@@ -28,7 +27,7 @@ Queries are constructed as a series of field comparisons, for example::
 
 These can be joined together with set combination operators::
 
-    q3 = MyTable.age > 4 | MyTable.parent.name == 'Bill'
+    q3 = (MyTable.age > 4) | (MyTable.parent.name == 'Bill')
 
 Containment in an iterable can be checked using the ``&`` operator.  This
 is the same usage as in `set`::
@@ -43,7 +42,9 @@ container::
 A custom function can be used for filtering records from a `Table` or
 another `Query`::
 
-    isvalid = lambda record: record.parrot.endswith('notlob')
+    def isvalid(record):
+        return record.parrot.endswith('notlob')
+        
     q6 = query(isvalid, q5)
 
 If the filter function is omitted, then all records are assumed to pass.
@@ -60,55 +61,16 @@ calling it as a function::
     q7()
 
 
-
 API
 ---
 
-.. function:: query([func, ]table)
-
-    Return a new `Query` for records in *table* for which *func* is `True`.
-
-    *table* is a `Table` or `Query` object.  If *func* is missing, all
-    records are assumed to pass.  If it is specified, is should accept a
-    record as its argument and return `True` for passing records.
+.. autofunction:: query([func], table)
 
 
-.. class:: Query
+.. autoclass:: Query
 
-    A set-like object which represents the results of a query.
-
-    This object should never be instantiated directly, instead it should
-    be created as the result of a query on a `Table` or `Field`.
-
-    This object allows most operations permitted on sets, such as unions
-    and intersections.  Comparison operators (such as ``<``) are not
-    supported, except for equality tests.
-
-    The following operations are supported:
-
-    =================== =======================================================
-    Operation           Description
-    =================== =======================================================
-    ``r in q``          Return `True` if record ``r`` is in the results of
-                        query ``q``.
-    ``len(q)``          Return the number of results in ``q``.
-    ``iter(q)``         Return an iterator over records in ``q``.
-    ``q1 == q2``        Return `True` if ``q1`` and ``q2`` contain the same
-                        records.
-    ``q1 != q2``        Return `True` if ``not a == b``
-    ``q1 & q2``         Return a new `Query` object containing records in
-                        both ``q1`` and ``q2``.
-    ``q1 | q2``         Return a new `Query` object containing records in
-                        either ``q1`` or ``q2``.
-    ``q1 ^ q2``         Return a new `Query` object containing records in
-                        either ``q1`` or ``q2``, but not both.
-    ``q1 - q2``         Return a new `Query` object containing records in
-                        ``q1`` which are not in ``q2``.
-    =================== =======================================================
-
-
-    .. method:: add([**kwargs])
-
+    .. method:: add([arg, **kwargs])
+        
         Add a record based on the query criteria.
 
         This method is only available for queries of the form
@@ -119,53 +81,20 @@ API
         queries created by `field`, and is a record to add to the field.
         See `field` for more information.
 
-
-    .. method:: delete
-
-        Delete all records matching the query.
-
-        Records are deleted from the table.  If no records match,
-        nothing is deleted.
+    .. automethod:: delete
 
 
-    .. method:: field(fieldname)
-
-        Return a new `Query` containing records in a single field.
-
-        The set of records returned by this is similar to::
-
-            set(getattr(r, fieldname) for r in query)
-
-        However, the returned object is another `Query` instead of a set.
-        Only instances of a `Table` subclass are contained in the results,
-        other values are dropped.  This is functionally similar to a SQL
-        query on a foreign key.  If the target field is a `Join`, then all
-        the results of each join are concatenated.
-
-        If this query supports addition, then the resultant query will too,
-        but with slightly different parameters.  For example::
-
-            (Table1.id == 4).field('tble2').add(table2_instance)
-
-        is the same as::
-
-             (Table1.id == 4).add(table2=table2_instance)
+    .. automethod:: field(fieldname)
 
 
-    .. method:: one([default])
-
-        Return a single value from the query results.
-
-        If the query is empty and *default* is specified, then it is returned
-        instead.  Otherwise an exception is raised.
+    .. automethod:: one([default])
 
 
 Groups
 ------
 
 .. deprecated:: 0.6
-
-    Use `Join` or `query` instead.
+    Use a `Join` or `Query` instead.
 
 
 .. class:: Group(table[, matcher=None], **kwargs)
