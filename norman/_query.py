@@ -81,6 +81,9 @@ class Query(object):
     
     Queries are evaluate to `True` if they contain any results, and `False`
     if they do not.
+    
+    Calling a query forces it to be re-evaluated, and the query object is
+    returned.
     """
 
     def __init__(self, op, *args):
@@ -108,6 +111,7 @@ class Query(object):
             else:
                 args.append(a)
         self._results = self._op(*args)
+        return self
 
     def __contains__(self, record):
         return record in set(self)

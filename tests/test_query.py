@@ -189,3 +189,12 @@ class TestQuery(TestCase):
         q1 = self.B.d == 1
         q2 = q1.field('a')
         assert set(q2) == set([self.ar[0]] + self.ar[2:])
+
+    def test_call_return(self):
+        q = self.A.a == 1
+        assert len(q) == 2
+        self.A(a=1)
+        assert len(q) == 2
+        q2 = q()
+        assert q2 is q
+        assert len(q2) == 3

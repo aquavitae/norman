@@ -44,7 +44,7 @@ another `Query`::
 
     def isvalid(record):
         return record.parrot.endswith('notlob')
-        
+
     q6 = query(isvalid, q5)
 
 If the filter function is omitted, then all records are assumed to pass.
@@ -56,9 +56,10 @@ The result of each of these is a `Query` object, which is a set-like
 iterable of records.
 
 An existing query can be refreshed after the base data has changed by
-calling it as a function::
+calling it as a function.  The return value is the query iteself, so
+to ensure that the result is up to date, you could call::
 
-    q7()
+    latest_size = len(q7())
 
 
 API
@@ -70,7 +71,7 @@ API
 .. autoclass:: Query
 
     .. method:: add([arg, **kwargs])
-        
+
         Add a record based on the query criteria.
 
         This method is only available for queries of the form
