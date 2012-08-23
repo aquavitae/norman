@@ -40,7 +40,9 @@ def query(arg1, arg2=None):
     else:
         table = arg2
         func = arg1
-    return Query(func, table)
+    def op(t):
+        return set(r for r in t if func(r))
+    return Query(op, table)
 
 
 class Query(object):

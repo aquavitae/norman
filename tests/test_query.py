@@ -64,9 +64,20 @@ class TestExamples(TestCase):
         assert set(query) == set([self.ar[1]])
 
     def test_custom_function(self):
-        func = lambda a: a & set([3, 5])
-        q = query(func, self.A.a)
+        func = lambda a: a.a in [3, 5]
+        q = query(func, self.A)
         assert set(q) == set([self.ar[3], self.ar[5]])
+
+
+class TestQueryFunc(TestCase):
+
+    def test(self):
+        def f(record):
+            return record.c in 'bx'
+        q = query(f, self.A)
+        got = set(q)
+        expect = set([self.ar[1], self.ar[2], self.ar[5]])
+        assert got == expect
 
 
 class TestQuery(TestCase):
