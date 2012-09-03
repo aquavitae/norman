@@ -78,10 +78,10 @@ class Query(object):
     ``q1 - q2``         Return a new `Query` object containing records in
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
-    
+
     Queries are evaluate to `True` if they contain any results, and `False`
     if they do not.
-    
+
     Calling a query forces it to be re-evaluated, and the query object is
     returned.
     """
@@ -180,7 +180,7 @@ class Query(object):
 
     def delete(self):
         """
-        Delete all records matching the query from their table.  If no 
+        Delete all records matching the query from their table.  If no
         records match, nothing is deleted.
         """
         for r in self:
@@ -240,11 +240,10 @@ class Query(object):
             q._setaddargs(table, kw, fieldname)
         return q
 
-
     def one(self, default=_Sentinal):
         """
         Return a single value from the query results.  If the query is
-        empty and *default* is specified, then it is returned instead.  
+        empty and *default* is specified, then it is returned instead.
         Otherwise an `IndexError` is raised.
         """
         try:
