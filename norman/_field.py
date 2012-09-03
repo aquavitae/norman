@@ -25,6 +25,7 @@ import operator
 import weakref
 from collections import defaultdict
 
+from ._except import ConsistencyError, ValidationError
 from ._query import Query
 
 
@@ -39,12 +40,6 @@ class NotSet(object):
 
 # Sentinel indicating that the field value has not yet been set.
 NotSet = NotSet()
-NotSet.__doc__ = \
-"""
-A sentinel object indicating that the field value has not yet been set.
-
-This evaluates to `False` in conditional statements.
-"""
 
 
 def _op(op):
@@ -92,11 +87,7 @@ class Field(object):
     >>> class MyTable(Table):
     ...     name = Field()
 
-    `Field` objects support *get* and *set* operations, similar to
-    *properties*, but also provide additional options.  They are intended
-    for use with `Table` subclasses.
-
-    Field options are set as keyword arguments when it is initialised
+    Field options are set as keyword arguments when it is initialised.
 
     ========== ============ ===================================================
     Keyword    Default      Description
@@ -113,17 +104,19 @@ class Field(object):
     readonly   False        Prohibits setting the variable, unless its value
                             is `NotSet`.  This can be used with *default*
                             to simulate a constant.
+    validate   None         If set, should be a list of functions which are
+                            to be used as validators for the field.  Each
+                            function should accept a and return a single value,
+                            and should raise an exception if the value is
+                            invalid.  The return value is the value passed
+                            to the next validator.
     ========== ============ ===================================================
-
-    Note that *unique* and *index* are table-level controls, and are not used
-    by `Field` directly.  It is the responsibility of the table to
-    implement the necessary constraints and indexes.
 
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
     the table class is created.
 
-    Fields can be used with comparison operators to return a `_Results`
+    Fields can be used with comparison operators to return a `Query`
     object containing matching records.  For example::
 
         >>> class MyTable(Table):
@@ -133,7 +126,20 @@ class Field(object):
         >>> t1 = MyTable(oid=1, value=2)
         >>> t2 = MyTable(oid=2, value=1)
         >>> Table.value == 1
-        _Results(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
+        Query(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
+
+    The following comparisons are supported for a `Field` object: ``==``,
+    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
+    test for containment, e.g. `` Table.field & mylist`` returns all records
+    where the value of ``field`` is in ``mylist``.
+    
+    .. seealso::
+
+        `validate`
+            For some pre-build validators.
+            
+        :doc:`queries`
+            For more information of queries in Norman.
     """
 
     def __init__(self, **kwargs):
@@ -141,6 +147,7 @@ class Field(object):
         self.index = kwargs.get('index', False) or self.unique
         self.default = kwargs.get('default', NotSet)
         self.readonly = kwargs.get('readonly', False)
+        self.validators = kwargs.get('validate', [])
         self._data = {}
         if self.index:
             self._index = defaultdict(weakref.WeakSet)
@@ -171,11 +178,13 @@ class Field(object):
         """
         if (self.readonly and
             self.__get__(instance, instance.__class__) is not NotSet):
-            raise TypeError('Field is read only')
+            raise ValidationError('Field is read only')
         self._data[instance] = value
 
     def __eq__(self, value):
-        return Query(_eq, self, value)
+        q = Query(_eq, self, value)
+        q._setaddargs(self.owner, {self.name:value})
+        return q
 
     def __ne__(self, value):
         return Query(_op(operator.ne), self, value)
@@ -199,67 +208,148 @@ class Field(object):
 class Join(object):
 
     """
-    A special field representing a one-to-many join to another table.
+    Joins can be created in several ways:
 
-    This is best explained through an example::
+    ``Join(query=queryfactory)``
+        Explicitly set the query factory.  `!queryfactory` is a callable which
+        accepts a single argument and returns a `Query`.
 
-        >>> class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> class Parent(Table):
-        ...     children = Join(Child.parent)
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+    ``Join(table.field)``
+        This is the most common format, since most joins simply involve looking
+        up a field value in another table.  This is equivalent to specifying
+        the following query factory::
 
-    The initialisation parameters specify the field in the foreign table which
-    contains a reference to the owning table, and may be specified in one of
-    two ways.  If the foreign table is already defined (as in the above
-    example), then only one argument is required.  If it has not been
-    defined, or is self-referential, the first agument may be the database
-    instance and the second the canonical field name, including the table
-    name.  So an alternate definition of the above *Parent* class would be::
+            def queryfactory(value):
+                return table.field == value
 
-        >>> db = Database()
-        >>> @db.add
-        ... class Parent(Table):
-        ...     children = Join(db, 'Child.parent')
-        ...
-        >>> @db.add
-        ... class Child(Table):
-        ...     parent = Field()
-        ...
-        >>> p = Parent()
-        >>> c1 = Child(parent=p)
-        >>> c2 = Child(parent=p)
-        >>> p.children
-        {c1, c2}
+    ``Join(db, 'table.field`)``
+        This has the same affect as the previous example, but is used when the
+        foreign field has not yet been created.  In this case, the query
+        factory first locates ``'table.field'`` in the `Database` ``db``.
 
-    As with a `Field`, a `Join` has read-only attributes *name* and *owner*.
+    ``Join(other.join)``
+        It is possible set the target of a join to another join, creating a
+        *many-to-many* relationship.  When used in this way, a join table is
+        automatically created, and can be accessed from `Join.jointable`.
+        If the optional keyword parameter *jointable* is used, the join table
+        name is set to it.
+
+        .. seealso::
+
+            http://en.wikipedia.org/wiki/Many-to-many_(data_model)
+                For more information on *many-to-many* joins.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self._args = args
+        self._query = kwargs.get('query', None)
+        self._jt_name = kwargs.get('jointable', None)
+        self._jointable = None
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
         else:
-            if len(self._args) == 1:
-                field = self._args[0]
-            else:
-                table, field = self._args[1].split('.')
-                table = self._args[0][table]
-                field = getattr(table, field)
-            return field == instance
+            return self.query(instance)
+
+    @property
+    def target(self):
+        """
+        The target of the join, or `None` if the target cannot be found.
+        This attribute is read only.
+        """
+        if len(self._args) == 0:
+            return None
+        elif len(self._args) == 1:
+            return self._args[0]
+        else:
+            db = self._args[0]
+            table, field = self._args[1].split('.')
+            if table in db:
+                table = db[table]
+                if hasattr(table, field):
+                    field = getattr(table, field)
+                    return field
+        return None
+
+    @property
+    def jointable(self):
+        """
+        The join table in a *many-to-many* join.
+
+        This is `None` if the join is not a *many-to-many* join, and is
+        read only.  If a jointable does not yet exist then it is created,
+        but not added to any database.  If the two joins which define it have
+        conflicting information, a `ConsistencyError` is raise.
+        """
+        if self._jointable is None:
+            # Try creating it
+            target = self.target
+            if not isinstance(target, Join):
+                return None
+
+            jts = set([self._jt_name, target._jt_name, None])
+            jts.remove(None)
+            if len(jts) == 0:
+                name = '_' + ''.join(sorted(j.owner.__name__
+                                            for j in (self, target)))
+            elif len(jts) == 1:
+                name = jts.pop()
+            elif len(jts) == 2:
+                raise ConsistencyError('Inconsistent join table definition')
+
+            def delete(f, record):
+                (f == record).delete()
+
+            from .validate import istype
+            from ._table import TableMeta, Table
+
+            t1, t2 = self.owner, target.owner
+            f1 = Field(validate=[istype(t1)])
+            f2 = Field(validate=[istype(t2)])
+            JT = TableMeta(name, (Table,), {t1.__name__: f1, t2.__name__: f2})
+            t1.hooks['delete'].append(functools.partial(delete, f1))
+            t2.hooks['delete'].append(functools.partial(delete, f2))
+
+            self._jointable = JT
+            target._jointable = JT
+            self.query = lambda r: (f1 == r).field(f2.name)
+            target.query = lambda r: (f2 == r).field(f1.name)
+
+        return self._jointable
 
     @property
     def name(self):
+        """
+        The name of the `Join`. This is read only.
+        """
         return self._name
 
     @property
     def owner(self):
+        """
+        The `Table` containing the `Join`.  This is read only.
+        """
         return self._owner
+
+    @property
+    def query(self):
+        """
+        A function which accepts an instance of `owner` and returns a `Query`.
+        """
+        if self._query is not None:
+            return self._query
+        else:
+            target = self.target
+            if target is None:
+                raise ConsistencyError('Missing target')
+            if isinstance(self.target, Join):
+                # Try to create the jointable and override `query`
+                if self.jointable is None:
+                    raise ConsistencyError('Missing join table')
+                return self._query
+            return lambda v: self.target == v
+
+    @query.setter
+    def query(self, value):
+        self._query = value

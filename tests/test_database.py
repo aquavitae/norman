@@ -64,3 +64,16 @@ class TestDatabase(object):
         r = self.db.add(Tb)
         assert r is Tb
         assert Tb in self.db
+
+    def test_reset_blocked(self):
+        'Reset should work even if validate_delete fails'
+        class Tb(Table):
+            def validate_delete(self):
+                raise ValueError
+        self.db.add(Tb)
+        tb = Tb()
+        with assert_raises(ValueError):
+            Tb.delete(tb)
+        assert tb in Tb
+        self.db.reset()
+        assert len(Tb) == 0

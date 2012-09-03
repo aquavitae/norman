@@ -23,48 +23,26 @@ from __future__ import unicode_literals
 class Database(object):
 
     """
-    The main database class containing a list of tables.
+    `Database` instances act as containers of `Table` objects, and support a
+    basic dict-like interface.  Tables are identified by their name, which is
+    obtained by ``table.__name__``.
 
-    `Database` instances act as containers of `Table` objects, and support
-    ``__getitem__``, ``__contains__`` and ``__iter__``.  ``__getitem__``
-    returns a table given its name (i.e. its class name), ``__contains__``
-    returns whether a `Table` object is managed by the database and
-    ``__iter__`` returns a iterator over the tables.
+    In addition to the methods described below, database support the following
+    operations.
 
-    Tables may be added to the database when they are created by using
-    `Database.add` as a class decorator.  For example:
+    =================== =======================================================
+    Operation           Description
+    =================== =======================================================
+    ``db[name]``        Return a `Table` by name
+    ``name in db``      Return `True` if a `Table` named *name* is in the
+                        database.
+    ``table in db``     Return `True` if a `Table` object is in the database.
+    ``iter(db)``        Return an iterator over `Table` objects in the
+                        database.
+    =================== =======================================================
 
-    >>> db = Database()
-    >>> @db.add
-    ... class MyTable(Table):
-    ...     name = Field()
-    >>> MyTable in db
-    True
-
-    The database can be written to a file through the `serialise` module.
-    Currently only sqlite3 is supported.  If a `Database` instance represents
-    a document state, it can be saved using the following code:
-
-    .. doctest::
-        :options: +SKIP
-
-        >>> serialise.Sqlite3().dump('file.sqlite')
-
-    And reloaded:
-
-    .. doctest::
-        :options: +SKIP
-
-        >>> serialise.Sqlite3().load('file.sqlite')
-
-    :note:
-        The sqlite database created does not contain any constraints
-        at all (not even type constraints).  This is because the sqlite
-        database is meant to be used purely for file storage.
-
-    In the sqlite database, all values are saved as strings (determined
-    from ``str(value)``.  Keys (foreign and primary) are globally unique
-    integers > 0.  `None` is stored as *NULL*, and `NotSet` as 0.
+    Tables are not required to belong to a database, or may belong to many
+    databases.
     """
 
     def __init__(self):
@@ -106,7 +84,10 @@ class Database(object):
 
     def reset(self):
         """
-        Delete all records from all tables.
+        Delete all records from all tables in the database.
         """
         for table in self._tables:
-            table.delete()
+            while table._instances:
+                table._instances.popitem()
+
+    # TODO: delete(record)

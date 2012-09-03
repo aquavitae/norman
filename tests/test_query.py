@@ -64,9 +64,20 @@ class TestExamples(TestCase):
         assert set(query) == set([self.ar[1]])
 
     def test_custom_function(self):
-        func = lambda a: a & set([3, 5])
-        q = query(func, self.A.a)
+        func = lambda a: a.a in [3, 5]
+        q = query(func, self.A)
         assert set(q) == set([self.ar[3], self.ar[5]])
+
+
+class TestQueryFunc(TestCase):
+
+    def test(self):
+        def f(record):
+            return record.c in 'bx'
+        q = query(f, self.A)
+        got = set(q)
+        expect = set([self.ar[1], self.ar[2], self.ar[5]])
+        assert got == expect
 
 
 class TestQuery(TestCase):
@@ -139,3 +150,51 @@ class TestQuery(TestCase):
     def test_bool_false(self):
         q = self.A.a == -100
         assert bool(q) is False
+
+    def test_add_single(self):
+        q = self.A.a == 1
+        a = q.add(c='5')
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.c == '5'
+
+    def test_add_and(self):
+        q = (self.A.a == 1) & (self.A.c == '5')
+        assert len(q) == 0
+        a = q.add()
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.c == '5'
+        assert len(q) == 1
+
+    def test_add_field(self):
+        q = (self.A.a == 1).field('b')
+        a = q.add(self.br[2], c='c')
+        assert isinstance(a, self.A)
+        assert a.a == 1
+        assert a.b is self.br[2]
+        assert a.c == 'c'
+
+    def test_add_field2_fails(self):
+        q = (self.A.a == 1).field('b').field('e')
+        with assert_raises(AttributeError):
+            q.add(self.br[0])
+
+    def test_field(self):
+        q1 = self.A.a >= 2
+        q2 = q1.field('b')
+        assert set(q2) == set([self.br[0], self.br[2]])
+
+    def test_field_join(self):
+        q1 = self.B.d == 1
+        q2 = q1.field('a')
+        assert set(q2) == set([self.ar[0]] + self.ar[2:])
+
+    def test_call_return(self):
+        q = self.A.a == 1
+        assert len(q) == 2
+        self.A(a=1)
+        assert len(q) == 2
+        q2 = q()
+        assert q2 is q
+        assert len(q2) == 3

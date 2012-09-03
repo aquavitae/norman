@@ -8,7 +8,7 @@
 Serialisation
 =============
 
-In addition to supporting the `pickle` protocol, `norman` provides a
+In addition to supporting the `pickle` protocol, Norman provides a
 framework for serialising and de-serializing databases to other formats
 through the `norman.serialise` module.  Serialisation classes inherit
 `Serialiser`, and should reimplement at least `~Serialiser.iterfile`
@@ -49,38 +49,16 @@ grouped by functionality:
 Serialiser framework
 --------------------
 
-.. class:: Serialiser(db)
-
-    An abstract base class providing a framework for serialisers.
-
-    Subclasses are instantiated with a `~norman.Database` object, and
-    serialisation and de-serialisation is done through the `write` and `read`
-    methods.  Class methods `dump` and `load` may also be used.
-
-    Subclasses are required to implement `iterfile` and its counterpart,
-    `write_record`, but may re-implement any other methods to customise
-    behaviour.
+.. autoclass:: Serialiser(db)
 
 
-    .. attribute:: db
-
-        The database handled by the serialiser.
+    .. autoattribute:: db
 
 
-    .. attribute:: fh
-
-        An open file (or database connection), or `None`.
-
-        This is set to the result of `open`.  If a file is not currently
-        open, then this is `None`.
+    .. autoattribute:: fh
 
 
-    .. attribute:: mode
-
-        Indicates the current operation.
-
-        This is set to ``'w'`` during *dump* operations and ``'r'`` during
-        *load*.  At other times it is `None`.
+    .. autoattribute:: mode
 
 
     .. classmethod:: dump(db, filename)
@@ -99,208 +77,45 @@ Serialiser framework
         provided for compatibility with the `pickle` API.
 
 
-    .. method:: close
+    .. automethod:: close
 
-        Close the currently opened file.
+    .. automethod:: create_records(records)
 
-        The default behaviour is to call the file object's `!close` method.
-        This method is always called once a file has been opened, even if an
-        exception occurs during writing.
+    .. automethod:: finalise_read
 
+    .. automethod:: finalise_write
 
-    .. method:: create_records(records)
+    .. automethod:: initialise_read
 
-        Create one or more new records.
+    .. automethod:: initialise_write
 
-        This is called for every group of cyclic records.  For example,
-        if records *a* references record *b*, which references record *c*, and
-        record *c* references record *a*, then records *a*, *b*, and *c*
-        form a cycle.  If record *d* references record *e* but record *e*
-        doesn't reference any other record, each of them are considered to
-        be isolated.
+    .. automethod:: isuid(field, value)
 
-        *records* is an iterator yielding tuples of
-        ``(table, uid, data, cycles)`` for each record in the cycle, or only
-        one record if there is no cycle.  The first three values are the same
-        as those returned by `iterfile`, except that foreign uids in data
-        have been dereferenced.  *cycles* is a set of field names which
-        contain the cyclic data.
+    .. automethod:: iterdb
 
-        The default behaviour is to remove the cyclic fields from *data*
-        for each record, create the records using ``table(**data)``
-        and assign the created records to the cyclic fields.  The *uid*
-        of each record is also assigned to its *_uid* attribute.
+    .. automethod:: iterfile
 
-        The return value is an iterator over ``(uid, record)`` pairs.
+    .. automethod:: read(filename)
 
+    .. automethod:: open(filename)
 
-    .. method:: finalise_read
+    .. automethod:: run_read
 
-        Finalise the file after reading data.
+    .. automethod:: run_write
 
-        This is called after `run_read` but before `close`, and can be
-        re-implemented to for implementation-specific finalisation.
+    .. automethod:: simplify(record)
 
-        The default implementation does nothing.
+    .. automethod:: write(filename)
 
-
-    .. method:: finalise_write
-
-        Finalise the file after writing data.
-
-        This is called after `run_write` but before `close`, and can be
-        re-implemented to for implementation-specific finalisation.
-
-        The default implementation does nothing.
-
-
-    .. method:: initialise_read
-
-        Prepare the file for reading data.
-
-        This is called before `run_read` but after `open`, and can be
-        re-implemented to for implementation-specific setup.
-
-        The default implementation does nothing.
-
-
-    .. method:: initialise_write
-
-        Prepare the file for writing data.
-
-        This is called before `run_write` but after `open`, and can be
-        re-implemented to for implementation-specific setup.
-
-        The default implementation does nothing.
-
-
-    .. method:: isuid(field, value)
-
-        Return `True` if *value*, for the specified *field*, could be a *uid*.
-
-        *field* is a `~norman.Field` object.
-
-        This only needs to check whether the value could possibly represent
-        another field.  It is only actually considered a *uid* if there is
-        another record which matches it.
-
-        By default, this returns `True` for all strings which match a UUID
-        regular expression, e.g. ``'a8098c1a-f86e-11da-bd1a-00112444be1e'``.
-
-
-    .. method:: iterdb
-
-        Return an iterator over records in the database.
-
-        Records should be returned in the order they are to be written.  The
-        default implementation is a generator which iterates over records in
-        each table.
-
-
-    .. method:: iterfile
-
-        Return an iterator over records read from the file.
-
-        Each item returned by the iterator should be a tuple of
-        ``(table, uid, data)`` where  *table* is the `~norman.Table`
-        containing the record, *uid* is a globally unique value identifying
-        the record and *data* is a dict of field values for the record,
-        possibly containing other uids.
-
-        This is commonly implemented as a generator.
-
-
-    .. method:: read(filename)
-
-        Load data into `db` from *filename*.
-
-        *fieldname* is used only to open the file using `open`, so, depending
-        on the implementation could be anything (e.g. a URL) which `open`
-        recognises.  It could even be omitted entirely if, for example,
-        the serialiser reads from stdin.
-
-
-    .. method:: open(filename)
-
-        Open *filename* for the current `mode`.
-
-        The return value should be a handle to the open file.  The default
-        behaviour is to open the file as binary using the builtin *open*
-        function.
-
-
-    .. method:: run_read
-
-        Read data from the currently opened file.
-
-        This is called between `initialise_read` and `finalise_read`, and
-        converts each value returned by `iterfile` into a record using
-        `create_records`.  It also attempts to re-map nested records by
-        searching for matching uids.
-
-        Cycles in the data are detected, and all records involved in
-        in a cycle are created in `create_records`.
-
-
-    .. method:: run_write
-
-        Called by `dump` to write data.
-
-        This is called after `initialise_write` and before `finalise_write`,
-        and simply calls `write_record` for each value yielded by `iterdb`.
-
-
-    .. method:: simplify(record)
-
-        Convert a record to a simple python structure.
-
-        The default implementation converts *record* to a `dict` of
-        field values, omitting `~norman.NotSet` values and replacing other
-        records with their *_uid* properties.  The return value of this
-        implementation is a tuple of ``(tablename, record._uid, record_dict)``.
-
-
-    .. method:: write(filename)
-
-        Write the database to *filename*.
-
-        *fieldname* is used only to open the file using `open`, so, depending
-        on the implementation could be anything (e.g. a URL) which `open`
-        recognises.  It could even be omitted entirely if, for example,
-        the serialiser dumps the database as formatted text to stdout.
-
-
-    .. method:: write_record(record)
-
-        Write *record* to the current file.
-
-        This is called by `run_write` for every record yielded by `iterdb`.
-        *record* is the values returned by `simplify`.
+    .. automethod:: write_record(record)
 
 
 Sqlite
 ------
 
-.. class Sqlite
+.. autoclass:: Sqlite
 
-    This is a `Serialiser` which reads and writes to a sqlite database.
-    
-    Each table in `db` is dumped to a sqlite table with the same field names.
-    An additional field, *_uid_* is included which contains the record's
-    *_uid*.  The sqlite database does not have any constraints, not even
-    primary key constraints, as it is intended to be used purely for storage.
-    
-    The following methods are re-implemented from `Serialiser`:
-    
-    *   `finalise_write` commits changes to the database.
-    *   `initialise_write` starts a database transaction and create tables.
-    *   `initialise_read` sets the `sqlite3` row factory.
-    *   `iterfile` yield records from each valid table in the file which 
-        matches a table in `db`.
-    *   `open` returns an open database connection to *filename*.
-    *   `write_record` adds a record to the sqlite database.
-  
-        
+
 .. class:: Sqlite3
 
     .. deprecated:: 0.6.1

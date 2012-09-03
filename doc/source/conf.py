@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.todo',
+              'sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx']
 
@@ -62,7 +63,7 @@ copyright = '2011, David Townshend'
 # built documents.
 
 # The full version, including alpha/beta/rc tags.
-release = '0.6.1'
+release = '0.6.2'
 # The short X.Y version.
 version = release.rsplit('.', 1)[0]
 

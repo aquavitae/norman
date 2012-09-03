@@ -23,7 +23,7 @@ import weakref
 import timeit
 
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, Join, _table
+from norman import Table, Field, NotSet, Join, _table, ValidationError
 from norman._query import Query
 
 import sys
@@ -161,7 +161,7 @@ class TestTable(object):
             v = Field()
             def validate(self):
                 assert False
-        with assert_raises(ValueError):
+        with assert_raises(ValidationError):
             T(v=1)
 
     def test_init_defaults(self):
@@ -172,6 +172,15 @@ class TestTable(object):
         t = T()
         assert t.a == 1
         assert t.b is NotSet
+
+    def test_setattr(self):
+        'Test that fields can be assigned late'
+        f = Field()
+        self.T.other = f
+        t = self.T(other=4)
+        assert self.T.other is f
+        assert t.other == 4
+        assert f.owner is self.T
 
     def test_name(self):
         'Test that Table.name == "Table"'
@@ -339,6 +348,17 @@ class TestTable(object):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
 
+    def test_field_validate_fails(self):
+        'Test when a field validation fails while creating a record.'
+        def fail(r):
+            assert False
+
+        class T(Table):
+            f = Field(validate=[fail])
+
+        with assert_raises(ValidationError):
+            T(f=3)
+
 
 class TestInheritance(object):
 
@@ -493,3 +513,47 @@ class TestValidateDelete(object):
         t3 = T(value=3)
         T.delete(value=1)
         assert set(T) == set([t2])
+
+
+class TestHooks:
+
+    def test_validate(self):
+        calls = []
+        class T(Table):
+            value = Field()
+            def validate(self):
+                calls.append('validate')
+
+        def one(inst):
+            assert isinstance(inst, T)
+            calls.append('one')
+
+        def two(inst):
+            assert isinstance(inst, T)
+            calls.append('two')
+
+        T.hooks['validate'] += [one, two]
+
+        t = T(value=4)
+        assert calls == ['validate', 'one', 'two']
+
+    def test_validate_delete(self):
+        calls = []
+        class T(Table):
+            value = Field()
+            def validate_delete(self):
+                calls.append('delete')
+
+        def one(inst):
+            assert isinstance(inst, T)
+            calls.append('one')
+
+        def two(inst):
+            assert isinstance(inst, T)
+            calls.append('two')
+
+        T.hooks['delete'] += [one, two]
+
+        t = T(value=4)
+        T.delete(t)
+        assert calls == ['delete', 'one', 'two'], calls

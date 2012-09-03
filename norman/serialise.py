@@ -85,21 +85,20 @@ def tarjan(graph):
 class Serialiser:
 
     """
-    An abstract base class providing a framework for serialisers.
-
-    Subclasses are instantiated with a `~norman.Database` object, and
-    serialisation and de-serialisation is done through the `write` and `read`
+    An abstract base class providing a framework for serialisers.  Subclasses
+    are instantiated with a `~norman.Database` object, and serialisation
+    and de-serialisation is done through the `write` and `read`
     methods.  Class methods `dump` and `load` may also be used.
 
     Subclasses are required to implement `iterfile` and its counterpart,
     `write_record`, but may re-implement any other methods to customise
     behaviour.
+
+    Serialisers are created with a single argument, specifying the database
+    upon which it acts.
     """
 
     def __init__(self, db):
-        """
-        Create a new serialiser for *db*.
-        """
         self._db = db
         self._fh = None
         self._mode = None
@@ -114,70 +113,57 @@ class Serialiser:
     @property
     def fh(self):
         """
-        An open file (or database connection), or `None`.
-
-        This is set to the result of `open`.  If a file is not currently
-        open, then this is `None`.
+        An open file (or database connection), or `None`.   This is set to
+        the result of `open`.  If a file is not currently open, then this
+        is `None`.
         """
         return self._fh
 
     @property
     def mode(self):
         """
-        Indicates the current operation.
-
-        This is set to ``'w'`` during *dump* operations and ``'r'`` during
-        *load*.  At other times it is `None`.
+        Indicates the current mode of operation.  This is set to ``'w'`` 
+        during *dump* operations and ``'r'`` during *load*.  At other
+        times it is `None`.
         """
         return self._mode
 
     @classmethod
     def dump(cls, db, filename):
         """
-        This is a convenience method for calling `write`.
-
-        This is equivalent to ``Serialise(db).write(filename)`` and is
-        provided for compatibility with the `pickle` API.
+        This is a convenience method for calling `write` and is equivalent
+        to ``Serialise(db).write(filename)``.
         """
         return cls(db).write(filename)
 
     @classmethod
     def load(cls, db, filename):
         """
-        This is a convenience method for calling `read`.
-
-        This is equivalent to ``Serialise(db).read(filename)`` and is
-        provided for compatibility with the `pickle` API.
+        This is a convenience method for calling `read` and is equivalent
+        to ``Serialise(db).read(filename)``.
         """
         return cls(db).read(filename)
 
     def close(self):
         """
-        Close the currently opened file.
-
-        The default behaviour is to call the file object's `!close` method.
-        This method is always called once a file has been opened, even if an
-        exception occurs during writing.
+        Close the currently opened file.  The default behaviour is to call
+        the file object's `!close` method.  This method is always called
+        once a file has been opened, even if an exception occurs during
+        writing.
         """
         self.fh.close()
 
     def create_records(self, records):
         """
-        Create one or more new records.
+        Create a group of records.  *records* is an iterable containing
+        co-dependant records, i.e. records which cyclically reference each
+        other.  In many cases, *records* will contain only a single record.
 
-        This is called for every group of cyclic records.  For example,
-        if records *a* references record *b*, which references record *c*, and
-        record *c* references record *a*, then records *a*, *b*, and *c*
-        form a cycle.  If record *d* references record *e* but record *e*
-        doesn't reference any other record, each of them are considered to
-        be isolated.
-
-        *records* is an iterator yielding tuples of
-        ``(table, uid, data, cycles)`` for each record in the cycle, or only
-        one record if there is no cycle.  The first three values are the same
-        as those returned by `iterfile`, except that foreign uids in data
+        Each record returned by *records* is a tuples of
+        ``(table, uid, data, cycles)`` .  The first three values are the same
+        as those returned by `iterfile`, except that foreign uids in *data*
         have been dereferenced.  *cycles* is a set of field names which
-        contain the cyclic data.
+        contain the cyclic references.
 
         The default behaviour is to remove the cyclic fields from *data*
         for each record, create the records using ``table(**data)``
@@ -200,10 +186,9 @@ class Serialiser:
 
     def finalise_read(self):
         """
-        Finalise the file after reading data.
-
-        This is called after `run_read` but before `close`, and can be
-        re-implemented to for implementation-specific finalisation.
+        Finalise the file after reading data.  This is called after
+        `run_read` but before `close`, and can be re-implemented for 
+        implementation-specific finalisation.
 
         The default implementation does nothing.
         """
@@ -423,10 +408,22 @@ class Sqlite(Serialiser):
     """
     This is a `Serialiser` which reads and writes to a sqlite database.
 
-    Each table in `db` is dumped to a sqlite table with the same field names.
-    An additional field, *_uid_* is included which contains the record's
-    *_uid*.  The sqlite database does not have any constraints, not even
-    primary key constraints, as it is intended to be used purely for storage.
+    Each table in `~Serialiser.db` is dumped to a sqlite table with the
+    same field names.  An additional field, *_uid_* is included which
+    contains the record's *_uid*.  The sqlite database does not have any
+    constraints, not even primary key constraints, as it is intended to
+    be used purely for storage.
+
+    The following methods are re-implemented from `Serialiser`:
+
+    *   `~Serialiser.finalise_write` commits changes to the database.
+    *   `~Serialiser.initialise_write` starts a database transaction and
+        create tables.
+    *   `~Serialiser.initialise_read` sets the `sqlite3` row factory.
+    *   `~Serialiser.iterfile` yield records from each valid table in the
+        file which matches a table in `~Serialiser.db`.
+    *   `~Serialiser.open` returns an open database connection to *filename*.
+    *   `~Serialiser.write_record` adds a record to the sqlite database.
     """
 
     def finalise_write(self):

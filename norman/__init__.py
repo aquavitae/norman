@@ -37,11 +37,12 @@ from the `Table` class and fields added to it by creating `Field` class
 attributes.
 """
 
-__version__ = '0.6.1'
+__version__ = '0.6.2'
 __author__ = 'David Townshend'
 
 from ._table import Table
 from ._field import Field, Join, NotSet
-from ._query import query
+from ._query import query, Query
 from ._group import Group
 from ._database import Database
+from ._except import NormanWarning, NormanError, ConsistencyError, ValidationError

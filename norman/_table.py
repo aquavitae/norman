@@ -19,11 +19,13 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import collections
 import copy
 import functools
 import re
 import uuid
 
+from ._except import ConsistencyError, ValidationError
 from ._field import Field, Join
 from ._query import Query
 from ._compat import unicode, long, recursive_repr
@@ -45,9 +47,6 @@ class TableMeta(type):
 
     """
     Base metaclass for all tables.
-
-    The methods provided by this metaclass are essentially those which apply
-    to the table (as opposed to those which apply records).
 
     Tables support a limited sequence-like interface, with rapid lookup
     through indexed fields.  The sequence operations supported are ``__len__``,
@@ -72,6 +71,9 @@ class TableMeta(type):
                 value._owner = cls
             if isinstance(value, Field):
                 cls._fields[n] = value
+
+        cls.hooks = collections.defaultdict(list)
+
         return cls
 
     def __init__(cls, name, bases, cdict):
@@ -86,15 +88,19 @@ class TableMeta(type):
     def __iter__(cls):
         return iter(cls._instances.values())
 
-    def iter(cls, **kwargs):
-        """
-        Iterate over records with field values matching *kwargs*.
-        """
-        if not kwargs:
-            return iter(cls)
-        qs = (getattr(cls, k) == v for k, v in kwargs.items())
-        q = functools.reduce(lambda a, b: a & b, qs)
-        return iter(q)
+    def __setattr__(cls, name, value):
+        if isinstance(value, (Field, Join)):
+            if hasattr(value, '_owner'):
+                raise ConsistencyError('Field already belongs to a table')
+            if hasattr(cls, name):
+                raise ConsistencyError("Field '{}' already exists".format(name))
+            value._name = name
+            value._owner = cls
+            if isinstance(value, Field):
+                cls._fields[name] = value
+        super(TableMeta, cls).__setattr__(name, value)
+
+    #TODO: addhook decorator, or something similar
 
     def contains(cls, **kwargs):
         """
@@ -106,12 +112,6 @@ class TableMeta(type):
         except StopIteration:
             return False
         return True
-
-    def get(cls, **kwargs):
-        """
-        Return a set of all records with field values matching *kwargs*.
-        """
-        return set(cls.iter(**kwargs))
 
     def delete(cls, records=None, **keywords):
         """
@@ -131,24 +131,24 @@ class TableMeta(type):
         ...            T(id=6, value='c'),
         ...            T(id=7, value='c'),
         ...            T(id=8, value='b'),
-        ...            T(id=9, value='a'),
-        >>> [t.id for t in T.get()]
+        ...            T(id=9, value='a')]
+        >>> sorted(t.id for t in T.get())
         [1, 2, 3, 4, 5, 6, 7, 8, 9]
         >>> T.delete(records[:4], value='b')
-        >>> [t.id for t in T.get()]
+        >>> sorted(t.id for t in T.get())
         [1, 3, 5, 6, 7, 8, 9]
 
         If no records are specified, then all are used.
 
         >>> T.delete(value='a')
-        >>> [t.id for t in T.get()]
+        >>> sorted(t.id for t in T.get())
         [3, 5, 6, 7, 8]
 
         If no keywords are given, then all records in in *records* are deleted.
 
-        >>> T.delete(records[2:4])
-        >>> [t.id for t in T.get()]
-        [3, 5, 8]
+        >>> T.delete(records[2:5])
+        >>> sorted(t.id for t in T.get())
+        [6, 7, 8]
 
         If neither records nor keywords are deleted, then the entire
         table is cleared.
@@ -167,8 +167,10 @@ class TableMeta(type):
             if r:
                 try:
                     r.validate_delete()
+                    for v in cls.hooks['delete']:
+                        v(r)
                 except AssertionError as err:
-                    raise ValueError(*err.args)
+                    raise ValidationError(*err.args)
                 except:
                     raise
                 else:
@@ -180,6 +182,22 @@ class TableMeta(type):
         """
         return cls._fields.keys()
 
+    def get(cls, **kwargs):
+        """
+        Return a set of all records with field values matching *kwargs*.
+        """
+        return set(cls.iter(**kwargs))
+
+    def iter(cls, **kwargs):
+        """
+        Iterate over records with field values matching *kwargs*.
+        """
+        if not kwargs:
+            return iter(cls)
+        qs = (getattr(cls, k) == v for k, v in kwargs.items())
+        q = functools.reduce(lambda a, b: a & b, qs)
+        return iter(q)
+
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
 
@@ -189,8 +207,13 @@ class Table(_TableBase):
     """
     Each instance of a Table subclass represents a record in that Table.
 
-    This class should be inherited from to define the fields in the table.
-    It may also optionally provide a `validate` method.
+    This class should be subclassed to define the fields in the table.
+    It may also optionally provide `validate` and `validate_delete` methods.
+
+    `Field` names should not start with ``_``, as these names are reserved
+    for internal use.  Fields may be added to a `Table` after the `Table`
+    is created, provided they do not already belong to another `Table`, and
+    the `Field` name is not already used in the `Table`.
     """
 
     def __init__(self, **kwargs):
@@ -201,13 +224,13 @@ class Table(_TableBase):
         if badkw:
             raise AttributeError(badkw)
         data.update(kwargs)
-        validate = self.validate
-        self.validate = lambda: None
+        validate = self._validate
+        self._validate = lambda: None
         try:
             for k, v in data.items():
                 setattr(self, k, v)
         finally:
-            self.validate = validate
+            self._validate = validate
         self._validate()
         self._instances[key] = self
 
@@ -218,6 +241,15 @@ class Table(_TableBase):
             field = None
         if isinstance(field, Field):
             oldvalue = getattr(self, attr)
+            # Get new value by validation
+            try:
+                for validator in field.validators:
+                    value = validator(value)
+            except Exception as err:
+                if isinstance(err, AssertionError):
+                    raise ValidationError(*err.args)
+                else:
+                    raise
             # To avoid endless recursion if validate changes a value
             if oldvalue != value:
                 field.__set__(self, value)
@@ -231,7 +263,7 @@ class Table(_TableBase):
                         msg = ('{}={}'.format(k, v) for k, v in uniques.items())
                         msg = ', '.join(msg)
                         msg = 'Not unique: {}'.format(msg)
-                        raise ValueError(msg)
+                        raise ValidationError(msg)
                 try:
                     self._validate()
                 except:
@@ -260,9 +292,10 @@ class Table(_TableBase):
         This contains an id which is unique in the session.
 
         It's primary use is as an identity key during serialisation.  Valid
-        values are any integer except 0, or a UUID.  The default
+        values are any integer except 0, or a valid `uuid`.  The default
         value is calculated using `uuid.uuid4` upon its first call.
-        It is not necessarily required that it be universally unique.
+        It is not necessary that the value be unique outside the session,
+        unless required by the serialiser.
         """
         try:
             return self.__uid
@@ -284,13 +317,15 @@ class Table(_TableBase):
 
     def _validate(self):
         """
-        Convert AssertionError to ValueError
+        Convert AssertionError to ValidationError
         """
         try:
             self.validate()
+            for v in self.__class__.hooks['validate']:
+                v(self)
         except Exception as err:
             if isinstance(err, AssertionError):
-                raise ValueError(*err.args)
+                raise ValidationError(*err.args)
             else:
                 raise
 
@@ -299,12 +334,12 @@ class Table(_TableBase):
         Raise an exception if the record contains invalid data.
 
         This is usually re-implemented in subclasses, and checks that all
-        data in the record is valid.  If not, and exception should be raised.
+        data in the record is valid.  If not, an exception should be raised.
         Internal validate (e.g. uniqueness checks) occurs before this
-        method is called, and a failure will result in a `ValueError` being
-        raised.  For convenience, any `AssertionError` which is raised here
-        is considered to indicate invalid data, and is re-raised as a
-        `ValueError`.  This allows all validation errors (both from this
+        method is called, and a failure will result in a `ValidationError`
+        being raised.  For convenience, any `AssertionError` which is raised
+        here is considered to indicate invalid data, and is re-raised as a
+        `ValidationError`.  This allows all validation errors (both from this
         function and from internal checks) to be captured in a single
         *except* statement.
 
@@ -318,37 +353,10 @@ class Table(_TableBase):
         Raise an exception if the record cannot be deleted.
 
         This is called just before a record is deleted and is usually
-        re-implemented to check for other referring instances.  For example,
-        the following structure only allows deletions of *Name* instances
-        not in a *Group*.
-
-        >>> class Name(Table):
-        ...  name = Field()
-        ...  group = Field(default=None)
-        ...
-        ...  def validate_delete(self):
-        ...      assert self.group is None, "Can't delete '{}'".format(self.name)
-        ...
-        >>> class Group(Table)
-        ...  id = Field()
-        ...  @property
-        ...  def names(self):
-        ...      return Name.get(group=self)
-        ...
-        >>> group = Group(id=1)
-        >>> n1 = Name(name='grouped', group=group)
-        >>> n2 = Name(name='not grouped')
-        >>> Name.delete(name='not grouped')
-        >>> Name.delete(name='grouped')
-        Traceback (most recent call last):
-            ...
-        AssertionError: Can't delete "grouped"
-        >>> {name.name for name in Name.get()}
-        {'grouped'}
+        re-implemented to check for other referring instances.  This method
+        can also be used to propogate deletions and can safely modify
+        this or other tables.
 
         Exceptions are handled in the same was as for `validate`.
-
-        This method can also be used to propogate deletions and can safely
-        modify this or other tables.
         """
         pass

@@ -19,6 +19,8 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+from ._except import ValidationError
+
 
 class _Sentinal:
     pass
@@ -38,7 +40,9 @@ def query(arg1, arg2=None):
     else:
         table = arg2
         func = arg1
-    return Query(func, table)
+    def op(t):
+        return set(r for r in t if func(r))
+    return Query(op, table)
 
 
 class Query(object):
@@ -47,16 +51,13 @@ class Query(object):
     A set-like object which represents the results of a query.
 
     This object should never be instantiated directly, instead it should
-    be created as the result of a query on a `Table` or `Field`.
+    be created as the result of a `Field` comparison or by using the `query`
+    function.
 
     This object allows most operations permitted on sets, such as unions
     and intersections.  Comparison operators (such as ``<``) are not
-    supported, except for equality tests.
-
-    Queries are considered `True` if they contain any results, and `False`
-    if they do not.
-
-    The following operations are supported:
+    supported, except for equality tests.  The following operations are
+    supported:
 
     =================== =======================================================
     Operation           Description
@@ -77,12 +78,22 @@ class Query(object):
     ``q1 - q2``         Return a new `Query` object containing records in
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
+
+    Queries are evaluate to `True` if they contain any results, and `False`
+    if they do not.
+
+    Calling a query forces it to be re-evaluated, and the query object is
+    returned.
     """
 
     def __init__(self, op, *args):
+        # _op is a callable which returns an iterable, which will be assigned
+        # to _results.  _op will be called with each argument in *args,
+        # any Query objects in *args will be replaced with their _results.
         self._op = op
         self._args = args
         self._results = None
+        self._addargs = tuple()
 
     def __bool__(self):
         try:
@@ -100,6 +111,7 @@ class Query(object):
             else:
                 args.append(a)
         self._results = self._op(*args)
+        return self
 
     def __contains__(self, record):
         return record in set(self)
@@ -116,7 +128,16 @@ class Query(object):
         return len(set(self))
 
     def __and__(self, other):
-        return Query(lambda a, b: set(a) & set(b), self, other)
+        q = Query(lambda a, b: set(a) & set(b), self, other)
+        if (len(self._addargs) == 2 and len(other._addargs) == 2 and
+            self._addargs[0] is other._addargs[0]):
+            table, kw1 = self._addargs
+            kw2 = other._addargs[1]
+            if not set(kw1.keys()) & set(kw2.keys()):
+                kw = dict(kw1)
+                kw.update(kw2)
+                q._setaddargs(table, kw)
+        return q
 
     def __or__(self, other):
         return Query(lambda a, b: set(a) | set(b), self, other)
@@ -127,12 +148,40 @@ class Query(object):
     def __xor__(self, other):
         return Query(lambda a, b: set(a) ^ set(b), self, other)
 
+    def _setaddargs(self, table, kwargs, field=None):
+        if field is None:
+            self._addargs = (table, kwargs)
+        else:
+            self._addargs = (table, kwargs, field)
+        self.add = self._add
+
+    def _add(self, *arg, **kwargs):
+        """
+        Add a record based on the query criteria.
+
+        This method is only available for queries of the form
+        ``field == value``, a ``&`` combination of them, or a `field`
+        query created from a query of this form.  *kwargs* is
+        the same as used for creating a `Table` instance, but is
+        updated to include the query criteria. *arg* is only used for
+        queries created by `field`, and is a record to add to the field.
+        See `field` for more information.
+        """
+        if len(self._addargs) == 2:
+            if len(arg) != 0:
+                raise TypeError('Positional arguments not accepted')
+            table, kw = self._addargs
+        else:
+            table, kw, fieldname = self._addargs
+            kwargs[fieldname] = arg[0]
+        kwargs.update(kw)
+        self._results = None
+        return table(**kwargs)
+
     def delete(self):
         """
-        Delete all records matching the query.
-
-        Records are deleted from the table.  If no records match,
-        nothing is deleted.
+        Delete all records matching the query from their table.  If no
+        records match, nothing is deleted.
         """
         for r in self:
             # Check if its been deleted by validate_delete
@@ -140,18 +189,62 @@ class Query(object):
                 try:
                     r.validate_delete()
                 except AssertionError as err:
-                    raise ValueError(*err.args)
+                    raise ValidationError(*err.args)
                 except:
                     raise
                 else:
                     del r.__class__._instances[r._key]
 
+    def field(self, fieldname):
+        """
+        Return a new `Query` containing records in a single field.
+
+        The set of records returned by this is similar to::
+
+            set(getattr(r, fieldname) for r in query)
+
+        However, the returned object is another `Query` instead of a set.
+        Only instances of a `Table` subclass are contained in the results,
+        other values are dropped.  This is functionally similar to a SQL
+        query on a foreign key.  If the target field is a `Join`, then all
+        the results of each join are concatenated.
+
+        If this query supports addition, then the resultant query will too,
+        but with slightly different parameters.  For example::
+
+            (Table1.id == 4).field('tble2').add(table2_instance)
+
+        is the same as::
+
+            (Table1.id == 4).add(table2=table2_instance)
+        """
+        from ._table import Table
+        from ._field import Field, Join
+
+        def op(a, f):
+            result = set()
+            for record in a:
+                field = getattr(record.__class__, f)
+                value = getattr(record, f)
+                if isinstance(field, Field):
+                    value = [value]
+                elif not isinstance(field, Join):
+                    raise AttributeError("'{}' is not a Field".format(f))
+                for item in value:
+                    if isinstance(item, Table):
+                        result.add(item)
+            return result
+        q = Query(op, self, fieldname)
+        if len(self._addargs) == 2:
+            table, kw = self._addargs
+            q._setaddargs(table, kw, fieldname)
+        return q
+
     def one(self, default=_Sentinal):
         """
-        Return a single value from the query results.
-
-        If the query is empty and *default* is specified, then it is returned
-        instead.  Otherwise an exception is raised.
+        Return a single value from the query results.  If the query is
+        empty and *default* is specified, then it is returned instead.
+        Otherwise an `IndexError` is raised.
         """
         try:
             return next(iter(self))
@@ -160,6 +253,6 @@ class Query(object):
         except:
             raise
         if default is _Sentinal:
-            raise IndexError
+            raise IndexError('Query has no results')
         else:
             return default
