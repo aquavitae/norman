@@ -242,8 +242,14 @@ class Table(_TableBase):
         if isinstance(field, Field):
             oldvalue = getattr(self, attr)
             # Get new value by validation
-            for validator in field.validators:
-                value = validator(value)
+            try:
+                for validator in field.validators:
+                    value = validator(value)
+            except Exception as err:
+                if isinstance(err, AssertionError):
+                    raise ValidationError(*err.args)
+                else:
+                    raise
             # To avoid endless recursion if validate changes a value
             if oldvalue != value:
                 field.__set__(self, value)
@@ -311,7 +317,7 @@ class Table(_TableBase):
 
     def _validate(self):
         """
-        Convert AssertionError to ValueError
+        Convert AssertionError to ValidationError
         """
         try:
             self.validate()

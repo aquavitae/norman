@@ -46,7 +46,7 @@ def ifset(func):
         >>> validator(None)
         Traceback (most recent call last):
             ...
-        TypeError: None
+        norman._except.ValidationError: None
     """
     def inner(value):
         if value is NotSet:

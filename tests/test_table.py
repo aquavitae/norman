@@ -23,7 +23,7 @@ import weakref
 import timeit
 
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, Join, _table
+from norman import Table, Field, NotSet, Join, _table, ValidationError
 from norman._query import Query
 
 import sys
@@ -161,7 +161,7 @@ class TestTable(object):
             v = Field()
             def validate(self):
                 assert False
-        with assert_raises(ValueError):
+        with assert_raises(ValidationError):
             T(v=1)
 
     def test_init_defaults(self):
@@ -347,6 +347,17 @@ class TestTable(object):
         with assert_raises(ValueError):
             t.name = 'abcd'
         assert t.name == 'ABC', t.name
+
+    def test_field_validate_fails(self):
+        'Test when a field validation fails while creating a record.'
+        def fail(r):
+            assert False
+
+        class T(Table):
+            f = Field(validate=[fail])
+
+        with assert_raises(ValidationError):
+            T(f=3)
 
 
 class TestInheritance(object):

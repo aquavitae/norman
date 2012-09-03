@@ -27,17 +27,7 @@ class Test_ifset(object):
     Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
     
     This is normally used as a wrapper around another validator to permit
-    `NotSet` values to pass.  For example::
-    
-        >>> validator = ifset(istype(float))
-        >>> validator(4.3)
-        4.3
-        >>> validator(NotSet)
-        NotSet
-        >>> validator(None)
-        Traceback (most recent call last):
-            ...
-        TypeError: None
+    `NotSet` values to pass.
     """
 
     def test(self):
