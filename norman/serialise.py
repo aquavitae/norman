@@ -23,6 +23,7 @@ import contextlib
 import re
 import sqlite3
 import logging
+import uuid
 
 from ._table import Table
 from ._field import NotSet
@@ -143,6 +144,15 @@ class Serialiser:
         to ``Serialise(db).read(filename)``.
         """
         return cls(db).read(filename)
+
+    @classmethod
+    def uid(cls):
+        """
+        Create a new uid value.  This is useful for files which do not
+        natively provide a uid, and can be used to generate one in
+        `iterfile`.
+        """
+        return unicode(uuid.uuid4())
 
     def close(self):
         """

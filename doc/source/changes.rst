@@ -8,10 +8,18 @@ This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
+Norman-0.6.3
+------------
+
+*Release Date: Not yet released*
+
+-   Add a `uid` convenience method to `serialise.Serialise`
+
+
 Norman-0.6.2
 ------------
 
-*Release Date: Not Released*
+*Release Date: 2012-09-03*
 
 -   Add built-in support for many-to-many joins.
 -   Hooks added to `Table` to allow more control over validation.

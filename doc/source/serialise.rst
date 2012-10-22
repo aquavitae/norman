@@ -77,6 +77,13 @@ Serialiser framework
         provided for compatibility with the `pickle` API.
 
 
+    .. classmethod:: uid
+
+        Create a new uid value.  This is useful for files which do not
+        natively provide a uid, and can be used to generate one in
+        `iterfile`.
+
+
     .. automethod:: close
 
     .. automethod:: create_records(records)
