@@ -14,6 +14,7 @@ Norman-0.6.3
 -   Add a `serialise.Serialiser.uid` convenience method.
 -   Add support for optional keyword arguments to serialisers.
 -   Add a new `~serialise.CSV` serialiser.
+-   Add an *autoindex* class attribute to `Field` objects.
 
 
 Norman-0.6.2

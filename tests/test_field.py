@@ -34,6 +34,29 @@ def test_NotSet_compare():
     assert not NotSet
 
 
+class TestAutoIndex(object):
+
+    def setup(self):
+        self.autoindex = Field.autoindex
+
+    def teardown(self):
+        Field.autoindex = self.autoindex
+
+    def check(self, auto, kwargs, expect):
+        Field.autoindex = auto
+        f = Field(**kwargs)
+        assert f.index == expect
+
+    def test_combinations(self):
+        c = [[True, {}, True],
+             [False, {}, False],
+             [True, {'index': False}, False],
+             [False, {'index': True}, True],
+             [False, {'unique': True, 'index': False}, True]]
+        for a, k, e in c:
+            yield self.check, a, k, e
+
+
 class TestSingleField(object):
 
     def setup(self):

@@ -97,7 +97,7 @@ class Field(object):
                             a primary key.  If more than one field have this
                             set then records are expected to be unique on all
                             of them.  Unique fields are always indexed.
-    index      False        True if the field should be indexed.  Indexed
+    index      autoindex    True if the field should be indexed.  Indexed
                             fields are much faster to look up.  Setting
                             ``unique = True`` implies ``index = True``
     default    None         If missing, `NotSet` is used.
@@ -111,6 +111,11 @@ class Field(object):
                             invalid.  The return value is the value passed
                             to the next validator.
     ========== ============ ===================================================
+
+    A class attribute, *autoindex* can be set to automatically index new
+    fields if *index* or *unique* are not given.  This can be changed at
+    any time and does not effect already created fields.  The default value
+    is `False`, but this will change to `True` in version 0.7.
 
     Fields have read-only properties, *name* and *owner* which are
     set to the assigned name and the owning table respectively when
@@ -142,9 +147,11 @@ class Field(object):
             For more information of queries in Norman.
     """
 
+    autoindex = False
+
     def __init__(self, **kwargs):
         self.unique = kwargs.get('unique', False)
-        self.index = kwargs.get('index', False) or self.unique
+        self.index = kwargs.get('index', self.autoindex) or self.unique
         self.default = kwargs.get('default', NotSet)
         self.readonly = kwargs.get('readonly', False)
         self.validators = kwargs.get('validate', [])
