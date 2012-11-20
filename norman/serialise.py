@@ -20,12 +20,13 @@ from __future__ import with_statement
 from __future__ import unicode_literals
 
 import contextlib
+import csv
 import re
 import sqlite3
 import logging
 import uuid
 
-from ._table import Table
+from ._table import Table, TableMeta
 from ._field import NotSet
 from ._compat import unicode
 
@@ -501,6 +502,99 @@ class Sqlite(Serialiser):
         qmarks = ', '.join('?' * len(values))
         query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
         self.fh.execute(query, values)
+
+
+class CSV(Serialiser):
+
+    """
+    This is a `Serialiser` which reads and writes to a csv file.
+
+    Since csv files can only represent a single table, this serialiser
+    expects a `~norman.Table` in place of a `~norman.Database` as the
+    required argument.  For internal consistency, *db* may still be specified,
+    but is not required or used.  This means that `Serialiser`,
+    `~Serialiser.load` and `~Serialiser.dump` can be called in two ways,
+    although the first shown is preferred:
+
+        CSV.load(MyTable, filename)
+        CSV.load(db, MyTable, filename)
+
+    *db* and *table* can also be set using keyword arguments.  Any additional
+    keyword arguments and passed to `csv.DictReader` and `csv.DictWriter`.
+    If *fieldnames*  as required by `csv.DictWriter` is missing, it will be
+    set to a sorted list of the fields in the table.
+
+    Note that this currently does not support any sort of complex objects in
+    fields (such as other records), and all objects contained in the table
+    are serialised as strings.  Likewise, all data is read in as text, and it
+    is up to the table to format the data is required.
+
+    The following methods are re-implemented from `Serialiser`:
+
+    *   `~Serialiser.load`, `~Serialiser.dump` and `~Serialiser` require a
+        `~norman.Table` instead of a `~norman.Database` (see above).
+    *   `~Serialiser.initialise_write` writes the header row.
+    *   `~Serialiser.isuid` always returns `False`.
+    *   `~Serialiser.iterdb` iterates over records in the specified table.
+    *   `~Serialiser.iterfile` yields records the csv file.
+    *   `~Serialiser.open` opens the csv file in the appropriate mode for the
+        current Python version (see `csv` for details) and returns a
+        `csv.DictReader` or `csv.DictWriter` object.
+    *   `~Serialiser.write_record` writes a row to the `csv.DictWriter` object.
+    """
+
+    def __init__(self, db=None, table=None, **kwargs):
+        if isinstance(db, TableMeta):
+            table = db
+            db = None
+        super(CSV, self).__init__(db, **kwargs)
+        self._table = table
+
+    @property
+    def table(self):
+        return self._table
+
+    @classmethod
+    def load(cls, db=None, table=None, **kwargs):
+        super(CSV, cls).load(db, table, **kwargs)
+
+    @classmethod
+    def dump(cls, db=None, table=None, **kwargs):
+        super(CSV, cls).dump(db, table, **kwargs)
+
+    def initialise_write(self):
+        fieldnames = self.options['fieldnames']
+        self.fh.writerow(dict(zip(fieldnames, fieldnames)))
+
+    def isuid(self, field, value):
+        return False
+
+    def iterdb(self):
+        for record in self.table:
+            yield record
+
+    def iterfile(self):
+        for record in self.fh:
+            yield self.table, self.uid(), record
+
+    def open(self, filename):
+        import sys
+        if sys.version >= '3':
+            csvfile = open(filename, self.mode, newline='')
+        else:
+            csvfile = open(filename, self.mode + 'b')
+
+        if self.mode == 'w':
+            if 'fieldnames' not in self.options:
+                self.options['fieldnames'] = sorted(self.table.fields())
+            fh = csv.DictWriter(csvfile, **self.options)
+        else:
+            fh = csv.DictReader(csvfile, **self.options)
+        fh.close = csvfile.close
+        return fh
+
+    def write_record(self, record):
+        self.fh.writerow(record[2])
 
 
 class Sqlite3:

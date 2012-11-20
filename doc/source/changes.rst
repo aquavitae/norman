@@ -13,8 +13,9 @@ Norman-0.6.3
 
 *Release Date: Not yet released*
 
--   Add a `uid` convenience method to `serialise.Serialise`
+-   Add a `serialise.Serialiser.uid` convenience method.
 -   Add support for optional keyword arguments to serialisers.
+-   Add a new `~serialise.CSV` serialiser.
 
 
 Norman-0.6.2

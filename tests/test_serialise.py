@@ -206,6 +206,43 @@ class TestSqlite(TestCase):
             assert False
 
 
+class TestCSV(TestCase):
+
+    def setup(self):
+        class T(Table):
+            name = Field()
+            age = Field()
+            number = Field()
+        self.T = T
+        self.expect = ['age,name,number\n', '43,matt,2\n',
+                       '3,bob,4\n', '29,peter,-9.32\n']
+
+    def test_init(self):
+        for args in [(self.T,), (self.T, db)]:
+            s = serialise.CSV(*args)
+            assert s.table is self.T
+            assert s.db is None
+
+    def test_tocsv(self):
+        self.T(name='matt', age=43, number=2)
+        self.T(name='bob', age=3, number=4)
+        self.T(name='peter', age=29, number= -9.32)
+        serialise.CSV.dump(self.T, 'test')
+        with open('test', 'rt') as f:
+            data = set(l for l in f)
+        assert data == set(self.expect), data
+
+    def text_fromcsv(self):
+        with open('test', 'wt') as f:
+            for l in self.expect:
+                f.write(l)
+        serialise.CSV.load(self.T, 'test')
+        assert len(self.T) == 3
+        assert (self.T.name == 'matt' & self.T.age == 43).one().number == 2
+        assert (self.T.name == 'bob' & self.T.age == 3).one().number == 4
+        assert (self.T.name == 'peter' & self.T.age == 29).one().number == -9.32
+
+
 class TestSqlite3(TestCase):
 
     def test_tofromsql(self):

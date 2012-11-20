@@ -122,6 +122,12 @@ Serialiser framework
     .. automethod:: write_record(record)
 
 
+CSV
+---
+
+.. autoclass:: CSV
+
+
 Sqlite
 ------
 
