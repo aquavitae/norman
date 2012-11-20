@@ -61,6 +61,11 @@ Serialiser framework
     .. autoattribute:: mode
 
 
+    .. attribute:: options
+    
+        A dict containing keyword arguments passed at initialisation.
+        
+
     .. classmethod:: dump(db, filename)
 
         This is a convenience method for calling `write`.

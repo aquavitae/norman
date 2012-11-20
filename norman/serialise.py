@@ -83,7 +83,7 @@ def tarjan(graph):
                 yield r
 
 
-class Serialiser:
+class Serialiser(object):
 
     """
     An abstract base class providing a framework for serialisers.  Subclasses
@@ -95,14 +95,17 @@ class Serialiser:
     `write_record`, but may re-implement any other methods to customise
     behaviour.
 
-    Serialisers are created with a single argument, specifying the database
-    upon which it acts.
+    Serialisers are created with a single required argument, specifying the
+    database upon which it acts.  They also support arbitrary keyword
+    arguments which are set to an `options` dict and are intended to be used
+    for setting serialisation options used by specific serialisers.
     """
 
-    def __init__(self, db):
+    def __init__(self, db, **kwargs):
         self._db = db
         self._fh = None
         self._mode = None
+        self.options = kwargs
 
     @property
     def db(self):
@@ -130,20 +133,20 @@ class Serialiser:
         return self._mode
 
     @classmethod
-    def dump(cls, db, filename):
+    def dump(cls, db, filename, **kwargs):
         """
         This is a convenience method for calling `write` and is equivalent
-        to ``Serialise(db).write(filename)``.
+        to ``Serialise(db, **kwargs).write(filename)``.
         """
-        return cls(db).write(filename)
+        return cls(db, **kwargs).write(filename)
 
     @classmethod
-    def load(cls, db, filename):
+    def load(cls, db, filename, **kwargs):
         """
         This is a convenience method for calling `read` and is equivalent
-        to ``Serialise(db).read(filename)``.
+        to ``Serialise(db, **kwargs).read(filename)``.
         """
-        return cls(db).read(filename)
+        return cls(db, **kwargs).read(filename)
 
     @classmethod
     def uid(cls):
