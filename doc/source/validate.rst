@@ -20,6 +20,9 @@ for use in the *validate* parameter of `~norman.Field`\ s.
 .. autofunction:: istype(t[, t2[, t3[, ...]]])
 
 
+.. autofunction:: map(mapping)
+
+
 .. autofunction:: settype(t, default)
 
 

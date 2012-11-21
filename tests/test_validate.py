@@ -109,6 +109,21 @@ class Test_istype(object):
             v('4')
 
 
+class Test_map(object):
+
+    def test_passing(self):
+        v = validate.map({1: 'one', 0: NotSet})
+        assert v(1) == 'one'
+
+    def test_notset(self):
+        v = validate.map({1: 'one', 0: NotSet})
+        assert v(0) is NotSet
+
+    def test_missing(self):
+        v = validate.map({1: 'one', 0: NotSet})
+        assert v(2) == 2
+
+
 class Test_settype(object):
 
     """

@@ -107,6 +107,27 @@ def istype(*t):
     return inner
 
 
+def map(mapping):
+    """
+    Return a validator which maps values to new values.
+
+    :param mapping: A dict mapping old values to new values.
+
+    If a value is passed which has no mapping then it is accepted unchanged.
+    For example::
+
+        >>> validator = map({1: 'one', 0: NotSet})
+        >>> validator(1)
+        'one'
+        >>> validator(0)
+        NotSet
+        >>> validator(2)
+        2
+    """
+    def inner(value):
+        return mapping.setdefault(value, value)
+    return inner
+
 def settype(t, default):
     """
     Return a `~norman.Field` validator which converts the value to type *t*.

@@ -15,6 +15,7 @@ Norman-0.6.3
 -   Add support for optional keyword arguments to serialisers.
 -   Add a new `~serialise.CSV` serialiser.
 -   Add an *autoindex* class attribute to `Field` objects.
+-   Add `validate.map` validator to convert values.
 
 
 Norman-0.6.2
