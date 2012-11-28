@@ -20,7 +20,11 @@ from __future__ import unicode_literals
 
 import os
 from nose.tools import assert_raises
-from mock import patch
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from norman import Database, Table, Field, tools, serialise, NotSet
 from norman._compat import unicode
@@ -48,7 +52,7 @@ class Address(Table):
 
     @property
     def people(self):
-        return Person.get(address=self)
+        return set(Person.address == self)
 
     def validate(self):
         assert isinstance(self.town, (type(NotSet), Town)), self.town
@@ -81,7 +85,8 @@ class TestCase(object):
         assert set(db.tablenames()) == set(['Town', 'Address', 'Person'])
         streets = set(a.street for a in db['Address'])
         assert streets == set(['easy', 'some']), streets
-        address = next(db['Address'].iter(street='easy'))
+        address = db['Address'].street == 'easy'
+        address = address.one()
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])
 

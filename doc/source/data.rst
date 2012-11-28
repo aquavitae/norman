@@ -84,32 +84,11 @@ records should always be contained in the table.  To avoid problems, use
     `Table.validate_delete`, and behave in the same way.
 
 
-.. automethod:: Table.contains(**kwargs)
-
-    .. deprecated:: 0.6.2
-        Use :doc:`queries` instead.
-
-
-.. automethod:: Table.delete([records=None,] **keywords)
-
-    .. deprecated:: 0.6.2
-        As of version 0.7, this method will not only support *records*.
-        To delete by keyword arguments, used `Query.delete`.
+.. automethod:: Table.delete([records=None])
 
 
 .. automethod:: Table.fields
 
-
-.. automethod:: Table.get(**kwargs)
-
-    .. deprecated:: 0.6.2
-        Use :doc:`queries` instead.
-
-
-.. automethod:: Table.iter(**kwargs)
-
-    .. deprecated:: 0.6.2
-        Use :doc:`queries` instead.
 
 Records
 ^^^^^^^

@@ -43,6 +43,5 @@ __author__ = 'David Townshend'
 from ._table import Table
 from ._field import Field, Join, NotSet
 from ._query import query, Query
-from ._group import Group
 from ._database import Database
 from ._except import NormanWarning, NormanError, ConsistencyError, ValidationError

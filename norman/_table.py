@@ -102,56 +102,10 @@ class TableMeta(type):
 
     #TODO: addhook decorator, or something similar
 
-    def contains(cls, **kwargs):
+    def delete(cls, records=None):
         """
-        Return `True` if the table contains any records matching *kwargs*.
-        """
-        it = cls.iter(**kwargs)
-        try:
-            next(it)
-        except StopIteration:
-            return False
-        return True
-
-    def delete(cls, records=None, **keywords):
-        """
-        Delete delete all instances in *records* which match *keywords*.
-
-        If *records* is omitted then the entire table is searched.  For
-        example:
-
-        >>> class T(Table):
-        ...     id = Field()
-        ...     value = Field()
-        >>> records = [T(id=1, value='a'),
-        ...            T(id=2, value='b'),
-        ...            T(id=3, value='c'),
-        ...            T(id=4, value='b'),
-        ...            T(id=5, value='b'),
-        ...            T(id=6, value='c'),
-        ...            T(id=7, value='c'),
-        ...            T(id=8, value='b'),
-        ...            T(id=9, value='a')]
-        >>> sorted(t.id for t in T.get())
-        [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        >>> T.delete(records[:4], value='b')
-        >>> sorted(t.id for t in T.get())
-        [1, 3, 5, 6, 7, 8, 9]
-
-        If no records are specified, then all are used.
-
-        >>> T.delete(value='a')
-        >>> sorted(t.id for t in T.get())
-        [3, 5, 6, 7, 8]
-
-        If no keywords are given, then all records in in *records* are deleted.
-
-        >>> T.delete(records[2:5])
-        >>> sorted(t.id for t in T.get())
-        [6, 7, 8]
-
-        If neither records nor keywords are deleted, then the entire
-        table is cleared.
+        Delete delete all instances in *records*.  If *records* is
+        omitted then all records in the table are deleted.
         """
         if records is None:
             records = set(cls)
@@ -159,9 +113,8 @@ class TableMeta(type):
             records = set([records])
         else:
             records = set(records)
-        kwmatch = set(cls.iter(**keywords))
-        keys = [r._key for r in records & kwmatch]
-        for key in keys:
+        for r in records:
+            key = r._key
             # Check if its been deleted by validate_delete
             r = cls._instances.get(key, None)
             if r:
@@ -181,22 +134,6 @@ class TableMeta(type):
         Return an iterator over field names in the table
         """
         return cls._fields.keys()
-
-    def get(cls, **kwargs):
-        """
-        Return a set of all records with field values matching *kwargs*.
-        """
-        return set(cls.iter(**kwargs))
-
-    def iter(cls, **kwargs):
-        """
-        Iterate over records with field values matching *kwargs*.
-        """
-        if not kwargs:
-            return iter(cls)
-        qs = (getattr(cls, k) == v for k, v in kwargs.items())
-        q = functools.reduce(lambda a, b: a & b, qs)
-        return iter(q)
 
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
@@ -255,12 +192,12 @@ class Table(_TableBase):
                 field.__set__(self, value)
                 if field.unique:
                     table = self.__class__
-                    uniques = dict((f, getattr(self, f)) for f in table.fields()
-                                   if getattr(table, f).unique)
-                    existing = set(table.iter(**uniques)) - {self}
+                    uniques = (getattr(table, f) == getattr(self, f)
+                               for f in table.fields() if getattr(table, f).unique)
+                    existing = set(functools.reduce(lambda a, b: a & b, uniques)) - set([self])
                     if existing:
                         field.__set__(self, oldvalue)
-                        msg = ('{}={}'.format(k, v) for k, v in uniques.items())
+                        msg = ('{}={}'.format(k, v) for k, v in uniques)
                         msg = ', '.join(msg)
                         msg = 'Not unique: {}'.format(msg)
                         raise ValidationError(msg)

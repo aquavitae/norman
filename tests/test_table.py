@@ -216,47 +216,6 @@ class TestTable(object):
         t2 = self.T(oid=2)
         assert t1 in self.T
 
-    def test_contains_method(self):
-        'Test the `contains` method.'
-        t1 = self.T(oid=1)
-        t2 = self.T(oid=2)
-        assert self.T.contains(oid=1)
-        assert not self.T.contains(oid=3)
-
-    def test_iter(self):
-        'Test iter(table)'
-        t1 = self.T(oid=1)
-        t2 = self.T(oid=2)
-        result = set(i for i in self.T)
-        assert result == set([t1, t2])
-
-    def test_iter_method(self):
-        'Test that iter returns the matching records.'
-        p1 = self.T(oid=1)
-        p2 = self.T(oid=2)
-        p3 = self.T(oid=3)
-        p = set(self.T.iter(oid=1))
-        assert p == set([p1]), p
-
-    def test_iter_other_attr(self):
-        'Test that iter finds matches for non-indexed fields.'
-        p1 = self.T(oid=1, name='Mike', age=23)
-        p2 = self.T(oid=2, name='Mike', age=22)
-        p3 = self.T(oid=3, name='Mike', age=23)
-        p = set(self.T.iter(age=23))
-        assert p == set([p1, p3]), p
-
-    def test_get(self):
-        p1 = self.T(oid=1)
-        p2 = self.T(oid=2)
-        p3 = self.T(oid=3)
-        p = self.T.get(oid=1)
-        assert set(p) == set([p1])
-
-    def test_get_type(self):
-        p = self.T.get()
-        assert isinstance(p, set)
-
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
         t = self.T(oid=1)
@@ -265,12 +224,14 @@ class TestTable(object):
 
     def test_index_speed(self):
         'Getting indexed fields should be ten times faster'
-        count = 500
+        assert self.T.oid.index
+        assert not self.T.age.index
+        count = 1000
         for i in range(count):
             self.T(oid=i, name='Mike', age=int(i % 10))
         number = 100
-        fast = timeit.timeit(lambda: self.T.iter(oid=300), number=number)
-        slow = timeit.timeit(lambda: self.T.iter(age=5), number=number)
+        fast = timeit.timeit(lambda: list(self.T.oid == 300), number=number)
+        slow = timeit.timeit(lambda: list(self.T.age == 5), number=number)
         assert fast * 10 < slow, (fast, slow)
 
     def test_delete_instance(self):
@@ -290,16 +251,6 @@ class TestTable(object):
         p3 = self.T(oid=3, name='Mike', age=23)
         self.T.delete([p1, p2])
         assert p1 not in self.T
-        assert p2 not in self.T
-        assert p3 in self.T
-
-    def test_delete_attribute(self):
-        'Test deletion by attribute'
-        p1 = self.T(oid=1, name='Mike', age=23)
-        p2 = self.T(oid=2, name='Mike', age=22)
-        p3 = self.T(oid=3, name='Mike', age=23)
-        self.T.delete(oid=2)
-        assert p1 in self.T
         assert p2 not in self.T
         assert p3 in self.T
 
@@ -492,14 +443,14 @@ class TestValidateDelete(object):
     def test_valid(self):
         t = self.T(value=5)
         assert set(self.T) == set([t])
-        self.T.delete(value=5)
+        self.T.delete(t)
         assert set(self.T) == set()
 
     def test_invalid(self):
         t = self.T(value=0)
         assert set(self.T) == set([t])
         with assert_raises(ValueError):
-            self.T.delete(value=0)
+            self.T.delete(t)
         assert set(self.T) == set([t])
 
     def test_propogate(self):
@@ -507,11 +458,11 @@ class TestValidateDelete(object):
             value = Field()
             def validate_delete(self):
                 if self.value != 3:
-                    T.delete(value=3)
+                    T.delete(t3)
         t1 = T(value=1)
         t2 = T(value=2)
         t3 = T(value=3)
-        T.delete(value=1)
+        T.delete(t1)
         assert set(T) == set([t2])
 
 

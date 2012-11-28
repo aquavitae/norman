@@ -47,7 +47,7 @@ class Address(Table):
 
     @property
     def people(self):
-        return Person.get(address=self)
+        return list(Person.address == self)
 
     def validate(self):
         assert isinstance(self.town, Town)
@@ -101,6 +101,7 @@ class TestCase1(object):
         assert set(db.tablenames()) == set(['Town', 'Address', 'Person'])
         streets = set(a.street for a in db['Address'])
         assert streets == set(['easy', 'some']), streets
-        address = next(db['Address'].iter(street='easy'))
+        address = db['Address'].street == 'easy'
+        address = address.one()
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])

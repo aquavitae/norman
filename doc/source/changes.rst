@@ -8,7 +8,7 @@ This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
-Norman-0.6.3
+Norman-0.7.0
 ------------
 
 *Release Date: Not yet released*
@@ -18,6 +18,7 @@ Norman-0.6.3
 -   Add a new `~serialise.CSV` serialiser.
 -   Add an *autoindex* class attribute to `Field` objects.
 -   Add `validate.map` validator to convert values.
+-   Deprecated functionality removed
 
 
 Norman-0.6.2
