@@ -51,7 +51,7 @@ def _op(op):
         if field.index:
             keysets = (k for v, k in field._index.items() if op(v, value))
             try:
-                keys = functools.reduce(lambda a, b: a & b, keysets)
+                keys = functools.reduce(lambda a, b: a | b, keysets)
             except TypeError:
                 keys = set()
             return set(table._instances[k] for k in keys \

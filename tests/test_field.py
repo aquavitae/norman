@@ -149,6 +149,16 @@ class TestOperations(object):
         got = set(self.T.a & [0, 3])
         assert got == set([self.records[0], self.records[3]])
 
+    def test_indexed_and(self):
+        # Test a bug where multiple matches on an indexed field were removed
+        class T(Table):
+            a = Field(index=True)
+            b = Field(index=True)
+
+        r = [T(a=1, b=1), T(a=2, b=2), T(a=3, b=1), T(a=2, b=2)]
+        got = set(T.a & [1, 2])
+        assert got == set([r[0], r[1], r[3]]), got
+
 
 class TestJoin(object):
 
