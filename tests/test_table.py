@@ -380,6 +380,20 @@ class TestUnique(object):
         with assert_raises(ValueError):
             T(a=1, b=2)
 
+    def test_validation(self):
+        'Test changing to a unique value during validation'
+        class T(Table):
+            a = Field(unique=True)
+            b = Field()
+            def validate(self):
+                self.a = self.b
+        t1 = T(b=1)
+        t2 = T(b=2)
+        assert t1.a == 1
+        assert t2.a == 2
+        with assert_raises(ValidationError):
+            t2.b = 1
+
 
 class TestValidateDelete(object):
 
