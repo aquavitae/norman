@@ -42,6 +42,15 @@ class NotSet(object):
 NotSet = NotSet()
 
 
+def _op(op):
+    def inner(field, value):
+        if field.index:
+            return set(op(field._index, value))
+        else:
+            return set(r for r in field.owner._instances
+                       if op(getattr(r, field.name), value))
+    return inner
+
 class Field(object):
 
     """
@@ -157,67 +166,31 @@ class Field(object):
         self._data[instance] = value
 
     def __eq__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_eq(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) == value)
-        q = Query(op, self, value)
+        q = Query(_op(operator.eq), self, value)
         q._setaddargs(self.owner, {self.name: value})
         return q
 
     def __ne__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_ne(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) != value)
-        return Query(op, self, value)
+        return Query(_op(operator.ne), self, value)
 
     def __gt__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_gt(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) > value)
-        return Query(op, self, value)
+        return Query(_op(operator.gt), self, value)
 
     def __lt__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_lt(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) < value)
-        return Query(op, self, value)
+        return Query(_op(operator.lt), self, value)
 
     def __ge__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_ge(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) >= value)
-        return Query(op, self, value)
+        return Query(_op(operator.ge), self, value)
 
     def __le__(self, value):
-        def op(field, value):
-            if field.index:
-                return set(field._index.iter_le(value))
-            else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) <= value)
-        return Query(op, self, value)
+        return Query(_op(operator.le), self, value)
 
     def __and__(self, values):
         def op(field, value):
             if field.index:
                 r = set()
                 for v in value:
-                    r |= set(field._index.iter_eq(v))
+                    r |= set(field._index == v)
                 return r
             else:
                 return set(r for r in field.owner._instances

@@ -141,7 +141,7 @@ class TestOperations(object):
 
     def test_le(self):
         got = set(self.T.a <= 2)
-        assert got == set(self.records[:3])
+        assert got == set(self.records[:3]), got
 
     def test_ne(self):
         got = set(self.T.a != 2)

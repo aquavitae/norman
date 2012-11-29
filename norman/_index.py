@@ -77,7 +77,7 @@ class Index(object):
             del keys[index]
             del records[index]
 
-    def iter_eq(self, k):
+    def __eq__(self, k):
         """
         Iterate over all items with ``key == k``
         """
@@ -90,7 +90,7 @@ class Index(object):
             j = bisect_right(keys, k)
             return iter(records[i:j])
 
-    def iter_ne(self, k):
+    def __ne__(self, k):
         """
         Iterate over all items with ``key != k``
         """
@@ -106,7 +106,7 @@ class Index(object):
             it3 = iter(records[j:])
             return itertools.chain(it1, it2, it3)
 
-    def iter_le(self, k):
+    def __le__(self, k):
         """
         Iterate over all items with ``key <= k``
         """
@@ -115,7 +115,7 @@ class Index(object):
         i = bisect_right(keys, k)
         return iter(records[:i])
 
-    def iter_lt(self, k):
+    def __lt__(self, k):
         """
         Iterate over all items with ``key < k``
         """
@@ -124,7 +124,7 @@ class Index(object):
         i = bisect_left(keys, k)
         return iter(records[:i])
 
-    def iter_ge(self, k):
+    def __ge__(self, k):
         """
         Iterate over all items with ``key >= k``
         """
@@ -133,7 +133,7 @@ class Index(object):
         i = bisect_left(keys, k)
         return iter(records[i:])
 
-    def iter_gt(self, k):
+    def __gt__(self, k):
         """
         Iterate over all items with ``key > k``
         """

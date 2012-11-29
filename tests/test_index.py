@@ -61,7 +61,7 @@ class TestIndex_Empty(object):
         i.insert(NotSet, 'n1')
         i.insert('a', 'A')
         assert i._bins == (set(['n1']), (['2', 'a'], ['v2', 'A']))
-        it = list(i.iter_gt(2))
+        it = list(i > 2)
         assert it == ['A']
 
 
@@ -86,33 +86,33 @@ class TestPopulated(object):
         assert len(self.i) == 6, len(self.i)
 
     def test_iter_value(self):
-        got = set(self.i.iter_eq(2))
+        got = set(self.i == 2)
         assert got == set(['v2a', 'v2b'])
 
     def test_iter_NotSet(self):
-        got = set(self.i.iter_eq(NotSet))
+        got = set(self.i == NotSet)
         assert got == set(['n1', 'n2'])
 
     def test_iter_ne_value(self):
-        got = set(self.i.iter_ne(2))
+        got = set(self.i != 2)
         assert got == set(['n1', 'n2', 'v1', 'v3']), got
 
     def test_iter_ne_NotSet(self):
-        got = set(self.i.iter_ne(NotSet))
+        got = set(self.i != NotSet)
         assert got == set(['v1', 'v2a', 'v2b', 'v3'])
 
     def test_iter_lt(self):
-        got = set(self.i.iter_lt(2))
+        got = set(self.i < 2)
         assert got == set(['v1'])
 
     def test_iter_le(self):
-        got = set(self.i.iter_le(2))
+        got = set(self.i <= 2)
         assert got == set(['v1', 'v2a', 'v2b'])
 
     def test_iter_gt(self):
-        got = set(self.i.iter_gt(2))
+        got = set(self.i > 2)
         assert got == set(['v3'])
 
     def test_iter_ge(self):
-        got = set(self.i.iter_ge(2))
+        got = set(self.i >= 2)
         assert got == set(['v2a', 'v2b', 'v3'])
