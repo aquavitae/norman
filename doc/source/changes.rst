@@ -19,6 +19,8 @@ Norman-0.7.0
 -   Add an *autoindex* class attribute to `Field` objects.
 -   Add `validate.map` validator to convert values.
 -   Deprecated functionality removed
+-   Improved the implementation of indexes.  This results in several major
+    internal changes.
 
 
 Norman-0.6.2

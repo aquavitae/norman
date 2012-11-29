@@ -89,5 +89,9 @@ class Database(object):
         for table in self._tables:
             while table._instances:
                 table._instances.popitem()
+                for field in table._fields.values():
+                    if field.index:
+                        field._index.clear()
+
 
     # TODO: delete(record)

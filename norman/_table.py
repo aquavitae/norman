@@ -127,6 +127,11 @@ class TableMeta(type):
                 except:
                     raise
                 else:
+                    # Remove all index references
+                    for field in cls._fields.values():
+                        if field.index:
+                            value = getattr(r, field.name)
+                            field._index.remove(value, r)
                     del cls._instances[r._key]
 
     def fields(cls):
@@ -210,10 +215,10 @@ class Table(_TableBase):
             if field.index:
                 index = field._index
                 try:
-                    index[oldvalue].remove(self._key)
-                except KeyError:
+                    index.remove(value, self)
+                except (KeyError, ValueError):
                     pass
-                index[value].add(self._key)
+                index.insert(value, self)
         else:
             super(Table, self).__setattr__(attr, value)
 
@@ -297,3 +302,15 @@ class Table(_TableBase):
         Exceptions are handled in the same was as for `validate`.
         """
         pass
+
+    def __eq__(self, other):
+        """
+        Identical objects are equal.
+        """
+        return self is other
+
+    def __gt__(self, other):
+        """
+        Compare by string.
+        """
+        return str(self) > str(other)

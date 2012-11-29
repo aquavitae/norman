@@ -167,6 +167,18 @@ Joins have the following attributes.
 .. autoattribute:: Join.target
 
 
+Indexes
+-------
+
+Indexes are generally created with automatically as needed by fields, but
+if desired, their operation can be customised by specifically setting an
+`Index` instance or subclass to a field's *_index* property.  This must be
+done before any records are created.  In the future, customising the index
+may be made easier.
+
+.. autoclass:: Index
+
+
 Exceptions and Warnings
 -----------------------
 

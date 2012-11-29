@@ -30,34 +30,6 @@ import sys
 if sys.version < '3':
     range = xrange
 
-###############################################################################
-# Some test data
-
-
-def convidx(table, index):
-    'Utility to convert an index (i.e. defaultdict with a weakset) to a dict'
-    r = [(value, set(table._instances[k] for k in keys)) \
-                for value, keys in table._fields[index]._index.items()]
-    return dict(a for a in r if a[1])
-
-
-def test_conv_index():
-    class K(object): pass
-    k1 = K()
-    k2 = K()
-    f1 = K()
-    f2 = K()
-    f1._index = collections.defaultdict(weakref.WeakSet)
-    f2._index = collections.defaultdict(weakref.WeakSet)
-    class T(object):
-        _instances = {k1: 'i1', k2: 'i2'}
-        _fields = {'f1': f1, 'f2': f2}
-    f1._index['a'].add(k1)
-    f1._index['a'].add(k2)
-    f1._index['b'].add(k1)
-    f2._index['a'] #note: is this actually required?
-    assert convidx(T, 'f1') == {'a': set(['i1', 'i2']), 'b': set(['i1'])}
-    assert convidx(T, 'f2') == {}
 
 class Test_I(object):
 
@@ -130,8 +102,6 @@ class TestTable(object):
         assert t.oid is NotSet
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {NotSet: set([t])}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: set([t])}
 
     def test_init_single(self):
         'Test initialisation with a single argument.'
@@ -139,8 +109,6 @@ class TestTable(object):
         assert t.oid == 1, t.oid
         assert t.name is NotSet
         assert t.age is NotSet
-        assert convidx(self.T, 'oid') == {1: set([t])}, convidx(self.T, 'oid')
-        assert convidx(self.T, 'name') == {NotSet: set([t])}
 
     def test_init_many(self):
         'Test initialisation with many arguments.'
@@ -148,8 +116,6 @@ class TestTable(object):
         assert t.oid == 1
         assert t.name is 'Mike'
         assert t.age is 23
-        assert convidx(self.T, 'oid') == {1: set([t])}
-        assert convidx(self.T, 'name') == {'Mike': set([t])}
 
     def test_init_bad_kwargs(self):
         'Invalid keywords raise AttributeError.'
@@ -159,8 +125,10 @@ class TestTable(object):
     def test_init_invalid(self):
         class T(Table):
             v = Field()
+
             def validate(self):
                 assert False
+
         with assert_raises(ValidationError):
             T(v=1)
 
@@ -219,8 +187,8 @@ class TestTable(object):
     def test_indexes_updated(self):
         'Test that indexes are updated when a value changes'
         t = self.T(oid=1)
-        i = convidx(self.T, 'oid')
-        assert i == {1: set([t])}, i
+        b = self.T.oid._index._bins
+        assert b == (set(), ([1], [t]))
 
     def test_index_speed(self):
         'Getting indexed fields should be ten times faster'
@@ -243,6 +211,7 @@ class TestTable(object):
         assert p1 not in self.T
         assert p2 in self.T
         assert p3 in self.T
+        assert self.T.oid._index._bins == (set(), ([2, 3], [p2, p3]))
 
     def test_delete_instances(self):
         'Test deleting a list of instances'
@@ -458,7 +427,8 @@ class TestValidateDelete(object):
             value = Field()
             def validate_delete(self):
                 if self.value != 3:
-                    T.delete(t3)
+                    self.__class__.delete(t3)
+
         t1 = T(value=1)
         t2 = T(value=2)
         t3 = T(value=3)

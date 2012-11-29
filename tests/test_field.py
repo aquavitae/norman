@@ -24,14 +24,16 @@ class MockTable(object):
     validate = lambda: None
 
 
-def test_NotSet():
-    'Test that NotSet cannot be instantiated.'
-    with assert_raises(TypeError):
-        NotSet()
+class TestNotSet(object):
 
-def test_NotSet_compare():
-    'Test that bool(NotSet) is False.'
-    assert not NotSet
+    def test_NotSet(self):
+        'Test that NotSet cannot be instantiated.'
+        with assert_raises(TypeError):
+            NotSet()
+
+    def test_NotSet_compare(self):
+        'Test that bool(NotSet) is False.'
+        assert not NotSet
 
 
 class TestAutoIndex(object):

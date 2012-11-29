@@ -42,40 +42,6 @@ class NotSet(object):
 NotSet = NotSet()
 
 
-def _op(op):
-    """
-    Return a function for ``Table.field <op> value``
-    """
-    def _ops(field, value):
-        table = field.owner
-        if field.index:
-            keysets = (k for v, k in field._index.items() if op(v, value))
-            try:
-                keys = functools.reduce(lambda a, b: a | b, keysets)
-            except TypeError:
-                keys = set()
-            return set(table._instances[k] for k in keys \
-                       if k in table._instances)
-        else:
-            return set(r for r in table._instances.values()
-                       if op(getattr(r, field.name), value))
-    return _ops
-
-
-def _eq(field, value):
-    """
-    Return a set of ``Table.field == value``
-    """
-    table = field.owner
-    if field.index:
-        keys = field._index[value]
-        return set(table._instances[k] for k in keys \
-                   if k in table._instances)
-    else:
-        return set(r for r in table._instances.values()
-                   if getattr(r, field.name) == value)
-
-
 class Field(object):
 
     """
@@ -137,12 +103,12 @@ class Field(object):
     ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
     test for containment, e.g. `` Table.field & mylist`` returns all records
     where the value of ``field`` is in ``mylist``.
-    
+
     .. seealso::
 
         `validate`
             For some pre-build validators.
-            
+
         :doc:`queries`
             For more information of queries in Norman.
     """
@@ -157,7 +123,9 @@ class Field(object):
         self.validators = kwargs.get('validate', [])
         self._data = {}
         if self.index:
-            self._index = defaultdict(weakref.WeakSet)
+            from ._index import Index
+            self._index = Index()
+            #self._index = defaultdict(weakref.WeakSet)
 
     @property
     def name(self):
@@ -189,27 +157,72 @@ class Field(object):
         self._data[instance] = value
 
     def __eq__(self, value):
-        q = Query(_eq, self, value)
-        q._setaddargs(self.owner, {self.name:value})
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_eq(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) == value)
+        q = Query(op, self, value)
+        q._setaddargs(self.owner, {self.name: value})
         return q
 
     def __ne__(self, value):
-        return Query(_op(operator.ne), self, value)
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_ne(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) != value)
+        return Query(op, self, value)
 
     def __gt__(self, value):
-        return Query(_op(operator.gt), self, value)
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_gt(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) > value)
+        return Query(op, self, value)
 
     def __lt__(self, value):
-        return Query(_op(operator.lt), self, value)
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_lt(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) < value)
+        return Query(op, self, value)
 
     def __ge__(self, value):
-        return Query(_op(operator.ge), self, value)
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_ge(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) >= value)
+        return Query(op, self, value)
 
     def __le__(self, value):
-        return Query(_op(operator.le), self, value)
+        def op(field, value):
+            if field.index:
+                return set(field._index.iter_le(value))
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) <= value)
+        return Query(op, self, value)
 
     def __and__(self, values):
-        return Query(_op(lambda a, b: a in b), self, values)
+        def op(field, value):
+            if field.index:
+                r = set()
+                for v in value:
+                    r |= set(field._index.iter_eq(v))
+                return r
+            else:
+                return set(r for r in field.owner._instances.values()
+                           if getattr(r, field.name) in value)
+        return Query(op, self, values)
 
 
 class Join(object):
