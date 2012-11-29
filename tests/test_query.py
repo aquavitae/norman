@@ -127,7 +127,7 @@ class TestQuery(TestCase):
 
     def test_delete(self):
         self.query.delete()
-        assert set(self.A._instances.values()) == set(self.ar[2:])
+        assert self.A._instances == set(self.ar[2:])
 
     def test_one_success(self):
         result = self.query.one()

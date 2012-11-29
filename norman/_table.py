@@ -36,13 +36,6 @@ _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 _re_uuid = re.compile(_re_uuid)
 
 
-class _I:
-    """
-    An empty, hashable and weak referenceable object.
-    """
-    pass
-
-
 class TableMeta(type):
 
     """
@@ -63,7 +56,7 @@ class TableMeta(type):
                 fulldict[n] = value
         fulldict.update(cdict)
         cls = type.__new__(mcs, name, bases, fulldict)
-        cls._instances = {}
+        cls._instances = set()
         cls._fields = {}
         for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
@@ -83,10 +76,10 @@ class TableMeta(type):
         return len(cls._instances)
 
     def __contains__(cls, record):
-        return record._key in cls._instances
+        return record in cls._instances
 
     def __iter__(cls):
-        return iter(cls._instances.values())
+        return iter(cls._instances)
 
     def __setattr__(cls, name, value):
         if isinstance(value, (Field, Join)):
@@ -114,10 +107,8 @@ class TableMeta(type):
         else:
             records = set(records)
         for r in records:
-            key = r._key
             # Check if its been deleted by validate_delete
-            r = cls._instances.get(key, None)
-            if r:
+            if r in cls._instances:
                 try:
                     r.validate_delete()
                     for v in cls.hooks['delete']:
@@ -132,7 +123,7 @@ class TableMeta(type):
                         if field.index:
                             value = getattr(r, field.name)
                             field._index.remove(value, r)
-                    del cls._instances[r._key]
+                    cls._instances.remove(r)
 
     def fields(cls):
         """
@@ -159,8 +150,6 @@ class Table(_TableBase):
     """
 
     def __init__(self, **kwargs):
-        key = _I()
-        self._key = key
         data = dict([(f, getattr(self, f)) for f in self.__class__.fields()])
         badkw = set(kwargs.keys()) - set(data.keys())
         if badkw:
@@ -174,7 +163,7 @@ class Table(_TableBase):
         finally:
             self._validate = validate
         self._validate()
-        self._instances[key] = self
+        self._instances.add(self)
 
     def __setattr__(self, attr, value):
         try:

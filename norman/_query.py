@@ -185,15 +185,7 @@ class Query(object):
         """
         for r in self:
             # Check if its been deleted by validate_delete
-            if r.__class__._instances.get(r._key, None):
-                try:
-                    r.validate_delete()
-                except AssertionError as err:
-                    raise ValidationError(*err.args)
-                except:
-                    raise
-                else:
-                    del r.__class__._instances[r._key]
+            r.__class__.delete(r)
 
     def field(self, fieldname):
         """

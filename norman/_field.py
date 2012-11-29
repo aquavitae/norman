@@ -161,7 +161,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_eq(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) == value)
         q = Query(op, self, value)
         q._setaddargs(self.owner, {self.name: value})
@@ -172,7 +172,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_ne(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) != value)
         return Query(op, self, value)
 
@@ -181,7 +181,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_gt(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) > value)
         return Query(op, self, value)
 
@@ -190,7 +190,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_lt(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) < value)
         return Query(op, self, value)
 
@@ -199,7 +199,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_ge(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) >= value)
         return Query(op, self, value)
 
@@ -208,7 +208,7 @@ class Field(object):
             if field.index:
                 return set(field._index.iter_le(value))
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) <= value)
         return Query(op, self, value)
 
@@ -220,7 +220,7 @@ class Field(object):
                     r |= set(field._index.iter_eq(v))
                 return r
             else:
-                return set(r for r in field.owner._instances.values()
+                return set(r for r in field.owner._instances
                            if getattr(r, field.name) in value)
         return Query(op, self, values)
 

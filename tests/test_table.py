@@ -31,25 +31,6 @@ if sys.version < '3':
     range = xrange
 
 
-class Test_I(object):
-
-    def test_hash(self):
-        'Test that _I is hashable.'
-        i1 = _table._I()
-        i2 = _table._I()
-        h1 = hash(i1)
-        h2 = hash(i2)
-        assert h1 != h2
-
-    def test_weakref(self):
-        'Test that _I can have a weak ref.'
-        i = _table._I()
-        ref = weakref.ref(i)
-        assert ref() is i
-        del i
-        assert ref() is None
-
-
 class TestFields(object):
 
     def setup(self):
