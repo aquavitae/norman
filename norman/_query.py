@@ -40,9 +40,28 @@ def query(arg1, arg2=None):
     else:
         table = arg2
         func = arg1
+
     def op(t):
         return set(r for r in t if func(r))
+
+    op.__name__ = func.__name__
     return Query(op, table)
+
+
+def _or(a, b):
+    return set(a) | set(b)
+
+
+def _and(a, b):
+    return set(a) & set(b)
+
+
+def _sub(a, b):
+    return set(a) - set(b)
+
+
+def _xor(a, b):
+    return set(a) ^ set(b)
 
 
 class Query(object):
@@ -128,7 +147,7 @@ class Query(object):
         return len(set(self))
 
     def __and__(self, other):
-        q = Query(lambda a, b: set(a) & set(b), self, other)
+        q = Query(_and, self, other)
         if (len(self._addargs) == 2 and len(other._addargs) == 2 and
             self._addargs[0] is other._addargs[0]):
             table, kw1 = self._addargs
@@ -140,13 +159,13 @@ class Query(object):
         return q
 
     def __or__(self, other):
-        return Query(lambda a, b: set(a) | set(b), self, other)
+        return Query(_or, self, other)
 
     def __sub__(self, other):
-        return Query(lambda a, b: set(a) - set(b), self, other)
+        return Query(_sub, self, other)
 
     def __xor__(self, other):
-        return Query(lambda a, b: set(a) ^ set(b), self, other)
+        return Query(_xor, self, other)
 
     def _setaddargs(self, table, kwargs, field=None):
         if field is None:
@@ -154,6 +173,35 @@ class Query(object):
         else:
             self._addargs = (table, kwargs, field)
         self.add = self._add
+
+    def __str__(self):
+        """
+        Produce an text representation of the query.  This is useful for
+        debugging.
+        """
+        names = {'_or': ' | ',
+                 '_and': ' & ',
+                 '_xor': ' ^ ',
+                 '_sub': ' - ',
+                 'eq': ' == ',
+                 'ne': ' != ',
+                 'gt': ' > ',
+                 'ge': ' >= ',
+                 'lt': ' < ',
+                 'le': ' <= ',
+                 'and': ' & '}
+
+        strargs = []
+        for a in self._args:
+            if isinstance(a, Query):
+                strargs.append('(%s)' % str(a))
+            else:
+                strargs.append(str(a))
+        opname = self._op.__name__
+        if opname in names:
+            return names[opname].join(strargs)
+        else:
+            return '%s(%s)' % (opname, ', '.join(strargs))
 
     def _add(self, *arg, **kwargs):
         """

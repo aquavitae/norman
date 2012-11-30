@@ -47,8 +47,9 @@ def _op(op):
         if field.index:
             return set(op(field._index, value))
         else:
-            return set(r for r in field.owner._instances
-                       if op(getattr(r, field.name), value))
+            return set(r for r, v in field.owner._store.iter_field(field)
+                       if op(v, value))
+    inner.__name__ = op.__name__
     return inner
 
 class Field(object):
@@ -130,11 +131,9 @@ class Field(object):
         self.default = kwargs.get('default', NotSet)
         self.readonly = kwargs.get('readonly', False)
         self.validators = kwargs.get('validate', [])
-        self._data = {}
         if self.index:
             from ._index import Index
             self._index = Index()
-            #self._index = defaultdict(weakref.WeakSet)
 
     @property
     def name(self):
@@ -154,16 +153,10 @@ class Field(object):
         if instance is None:
             return self
         else:
-            return self._data.get(instance, self.default)
+            return self.owner._store.get(instance, self)
 
-    def __set__(self, instance, value):
-        """
-        Set a value for an instance.
-        """
-        if (self.readonly and
-            self.__get__(instance, instance.__class__) is not NotSet):
-            raise ValidationError('Field is read only')
-        self._data[instance] = value
+    def __hash__(self):
+        return id(self)
 
     def __eq__(self, value):
         q = Query(_op(operator.eq), self, value)
@@ -186,16 +179,19 @@ class Field(object):
         return Query(_op(operator.le), self, value)
 
     def __and__(self, values):
-        def op(field, value):
+        def _and(field, value):
             if field.index:
                 r = set()
                 for v in value:
                     r |= set(field._index == v)
                 return r
             else:
-                return set(r for r in field.owner._instances
-                           if getattr(r, field.name) in value)
-        return Query(op, self, values)
+                return set(r for r, v in field.owner._store.iter_field(field)
+                           if v in value)
+        return Query(_and, self, values)
+
+    def __str__(self):
+        return '.'.join([self._owner.__name__, self.name])
 
 
 class Join(object):

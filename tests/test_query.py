@@ -127,7 +127,7 @@ class TestQuery(TestCase):
 
     def test_delete(self):
         self.query.delete()
-        assert self.A._instances == set(self.ar[2:])
+        assert set(self.A) == set(self.ar[2:])
 
     def test_one_success(self):
         result = self.query.one()
@@ -198,3 +198,11 @@ class TestQuery(TestCase):
         q2 = q()
         assert q2 is q
         assert len(q2) == 3
+
+    def test_str1(self):
+        q = self.A.a == 1
+        assert str(q) == 'A.a == 1', str(q)
+
+    def test_str2(self):
+        q = (self.A.a >= 1) | ((self.A.b != 4) & (self.A.c & [1, 2, 3]))
+        assert str(q) == '(A.a >= 1) | ((A.b != 4) & (A.c & [1, 2, 3]))', str(q)

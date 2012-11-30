@@ -87,7 +87,7 @@ class Database(object):
         Delete all records from all tables in the database.
         """
         for table in self._tables:
-            table._instances = set()
+            table._store.clear()
             for field in table._fields.values():
                 if field.index:
                     field._index.clear()

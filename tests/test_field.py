@@ -19,11 +19,6 @@ from nose.tools import assert_raises
 from norman import Database, Field, NotSet, Table, Join
 
 
-class MockTable(object):
-    _updateinstance = lambda: None
-    validate = lambda: None
-
-
 class TestNotSet(object):
 
     def test_NotSet(self):
@@ -62,9 +57,9 @@ class TestAutoIndex(object):
 class TestSingleField(object):
 
     def setup(self):
-        class Table(MockTable):
+        class T(Table):
             a = Field()
-        self.T = Table
+        self.T = T
 
     def test_kwargs(self):
         'Test that kwargs are set'

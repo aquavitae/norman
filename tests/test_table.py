@@ -83,6 +83,7 @@ class TestTable(object):
         assert t.oid is NotSet
         assert t.name is NotSet
         assert t.age is NotSet
+        assert t in self.T
 
     def test_init_single(self):
         'Test initialisation with a single argument.'
@@ -278,6 +279,9 @@ class TestInheritance(object):
         self.I = I
         self.Other = Other
 
+    def test_store(self):
+        assert self.B._store is not self.I._store
+
     def test_fields(self):
         assert set(self.B.fields()) == set(['a'])
         assert set(self.I.fields()) == set(['a', 'b'])
@@ -289,12 +293,6 @@ class TestInheritance(object):
     def test_owner(self):
         assert self.B.a.owner is self.B
         assert self.I.a.owner is self.I
-
-    def test_data(self):
-        b = self.B(a=1)
-        i = self.I(a=2)
-        assert list(self.B.a._data.values()) == [1]
-        assert list(self.I.a._data.values()) == [2]
 
     def test_join(self):
         b = self.B()
@@ -361,7 +359,7 @@ class TestUnique(object):
         with assert_raises(ValueError):
             t2.oid = 1
         assert t1.oid == 1
-        assert t2.oid == 2
+        assert t2.oid == 2, t2.oid
 
     def test_unique_delete_set(self):
         'Deleting a record allows the value to be reused.'

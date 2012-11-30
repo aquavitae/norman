@@ -21,6 +21,8 @@ Norman-0.7.0
 -   Deprecated functionality removed
 -   Improved the implementation of indexes.  This results in several major
     internal changes.
+-   Abstract the table data into a new `Store` object.
+-   Improved implementation of `Query.__str__`
 
 
 Norman-0.6.2

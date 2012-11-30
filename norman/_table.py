@@ -26,10 +26,9 @@ import re
 import uuid
 
 from ._except import ConsistencyError, ValidationError
-from ._field import Field, Join
-from ._query import Query
+from ._field import Field, Join, NotSet
 from ._compat import unicode, long, recursive_repr
-from .tools import reduce2
+from .store import DefaultStore
 
 
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -54,16 +53,16 @@ class TableMeta(type):
                 if isinstance(value, (Field, Join)):
                     value = copy.copy(value)
                 fulldict[n] = value
+        fulldict['_store'] = DefaultStore()
         fulldict.update(cdict)
         cls = type.__new__(mcs, name, bases, fulldict)
-        cls._instances = set()
         cls._fields = {}
         for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
                 value._name = n
                 value._owner = cls
             if isinstance(value, Field):
-                cls._fields[n] = value
+                cls._fields[value.name] = value
 
         cls.hooks = collections.defaultdict(list)
 
@@ -73,13 +72,13 @@ class TableMeta(type):
         super(TableMeta, cls).__init__(name, bases, cdict)
 
     def __len__(cls):
-        return len(cls._instances)
+        return cls._store.record_count()
 
     def __contains__(cls, record):
-        return record in cls._instances
+        return cls._store.has_record(record)
 
     def __iter__(cls):
-        return iter(cls._instances)
+        return cls._store.iter_records()
 
     def __setattr__(cls, name, value):
         if isinstance(value, (Field, Join)):
@@ -90,7 +89,7 @@ class TableMeta(type):
             value._name = name
             value._owner = cls
             if isinstance(value, Field):
-                cls._fields[name] = value
+                cls._fields[value.name] = value
         super(TableMeta, cls).__setattr__(name, value)
 
     #TODO: addhook decorator, or something similar
@@ -108,7 +107,7 @@ class TableMeta(type):
             records = set(records)
         for r in records:
             # Check if its been deleted by validate_delete
-            if r in cls._instances:
+            if r in cls:
                 try:
                     r.validate_delete()
                     for v in cls.hooks['delete']:
@@ -123,7 +122,8 @@ class TableMeta(type):
                         if field.index:
                             value = getattr(r, field.name)
                             field._index.remove(value, r)
-                    cls._instances.remove(r)
+                    # Remove from instances
+                    cls._store.remove_record(r)
 
     def fields(cls):
         """
@@ -147,6 +147,9 @@ class Table(_TableBase):
     for internal use.  Fields may be added to a `Table` after the `Table`
     is created, provided they do not already belong to another `Table`, and
     the `Field` name is not already used in the `Table`.
+
+    The internal data store used can be set by assigning an instance of
+    a `Store` to `_store`.  The default is to use `DefaultStore`.
     """
 
     def __init__(self, **kwargs):
@@ -162,16 +165,20 @@ class Table(_TableBase):
                 setattr(self, k, v)
         finally:
             self._validate = validate
-        self._validate()
-        self._instances.add(self)
+        self._store.add_record(self)
+        try:
+            self._validate()
+        except ValidationError:
+            self._store.remove_record(self)
+            raise
 
     def __setattr__(self, attr, value):
+        cls = self.__class__
         try:
-            field = getattr(self.__class__, attr)
-        except AttributeError:
-            field = None
-        if isinstance(field, Field):
-            oldvalue = getattr(self, attr)
+            field = cls._fields[attr]
+        except KeyError:
+            super(Table, self).__setattr__(attr, value)
+        else:
             # Get new value by validation
             try:
                 for validator in field.validators:
@@ -181,35 +188,33 @@ class Table(_TableBase):
                     raise ValidationError(*err.args)
                 else:
                     raise
+            oldvalue = cls._store.get(self, field)
             # To avoid endless recursion if validate changes a value
             if oldvalue != value:
-                field.__set__(self, value)
-                if field.unique:
-                    table = self.__class__
-                    uniques = (getattr(table, f) == getattr(self, f)
-                               for f in table.fields() if getattr(table, f).unique)
-                    existing = set(functools.reduce(lambda a, b: a & b, uniques)) - set([self])
-                    if existing:
-                        field.__set__(self, oldvalue)
-                        msg = ('{}={}'.format(k, v) for k, v in uniques)
-                        msg = ', '.join(msg)
-                        msg = 'Not unique: {}'.format(msg)
-                        raise ValidationError(msg)
+                if field.readonly and oldvalue is not NotSet:
+                    raise ValidationError('Field is read only')
+                cls._store.set(self, field, value)
                 try:
+                    if field.unique:
+                        # construct query
+                        query = (f == cls._store.get(self, f)
+                                 for f in cls._fields.values() if f.unique)
+                        query = functools.reduce(lambda a, b: a & b, query)
+                        existing = set(query) - set([self])
+                        if existing:
+                            raise ValidationError('Not unique')
                     self._validate()
                 except:
-                    field.__set__(self, oldvalue)
+                    cls._store.set(self, field, oldvalue)
                     raise
-            # Update the index
-            if field.index:
-                index = field._index
-                try:
-                    index.remove(value, self)
-                except (KeyError, ValueError):
-                    pass
-                index.insert(value, self)
-        else:
-            super(Table, self).__setattr__(attr, value)
+                # Update the index
+                if field.index:
+                    index = field._index
+                    try:
+                        index.remove(value, self)
+                    except (KeyError, ValueError):
+                        pass
+                    index.insert(value, self)
 
     @recursive_repr()
     def __repr__(self):

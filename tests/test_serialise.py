@@ -204,10 +204,12 @@ class TestSqlite(TestCase):
         'Make sure sqlite3 closes on an exception.'
         with patch.object(Person, 'fields', side_effect=TypeError):
             with assert_raises(TypeError):
-                serialise.Sqlite3().dump(db, 'file')
+                serialise.Sqlite().dump(db, 'file')
         try:
-            os.unlink('file')
+            os.stat('file')
         except OSError:
+            assert True
+        else:
             assert False
 
 
@@ -246,42 +248,3 @@ class TestCSV(TestCase):
         assert (self.T.name == 'matt' & self.T.age == 43).one().number == 2
         assert (self.T.name == 'bob' & self.T.age == 3).one().number == 4
         assert (self.T.name == 'peter' & self.T.age == 29).one().number == -9.32
-
-
-class TestSqlite3(TestCase):
-
-    def test_tofromsql(self):
-        serialise.Sqlite3().dump(db, 'test')
-        db.reset()
-        serialise.Sqlite3().load(db, 'test')
-        self.check_integrity(db)
-
-    def test_bad_sql(self):
-        'Should be tolerant of incorrect tables and fields.'
-        import logging
-        import sqlite3
-        logging.disable(logging.CRITICAL)
-        sql = """
-            CREATE TABLE "other" ("field");
-            CREATE TABLE "provinces" ("oid", "name", "number");
-            CREATE TABLE "units" ("field");
-            CREATE TABLE "cycles" ("oid", "name");
-            INSERT INTO "units" VALUES ('a value');
-            INSERT INTO "provinces" VALUES (1, 'Eastern Cape', 42);
-            INSERT INTO "cycles" VALUES (2, 'bad value');
-            INSERT INTO "cycles" VALUES (3, '2009/10');
-        """
-        conn = sqlite3.connect('test')
-        conn.executescript(sql)
-        conn.close()
-        serialise.Sqlite3().load(db, 'test')
-
-    def test_tosqlite_exception(self):
-        'Make sure sqlite3 closes on an exception.'
-        with patch.object(Person, 'fields', side_effect=TypeError):
-            with assert_raises(TypeError):
-                serialise.Sqlite3().dump(db, 'file')
-        try:
-            os.unlink('file')
-        except OSError:
-            assert False
