@@ -53,10 +53,11 @@ class TableMeta(type):
                 if isinstance(value, (Field, Join)):
                     value = copy.copy(value)
                 fulldict[n] = value
-        fulldict['_store'] = DefaultStore()
         fulldict.update(cdict)
         cls = type.__new__(mcs, name, bases, fulldict)
         cls._fields = {}
+        if '_store' not in cdict:
+            cls._store = DefaultStore(cls)
         for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
                 value._name = n

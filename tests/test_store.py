@@ -86,6 +86,6 @@ class BaseTestCase(object):
 class TestDefaultStore(BaseTestCase):
 
     def setup(self):
-        self.store = DefaultStore()
+        self.store = DefaultStore(None)
         super(TestDefaultStore, self).setup()
 

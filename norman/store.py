@@ -51,6 +51,14 @@ class StoreBase(_Base):
     called with a record argument which does not yet exist, it should add it.
     """
 
+    def __init__(self, table):
+        """
+        The table is passed as an initialisation parameter, intended for
+        stores which pre-allocate storage according to the table definition.
+        Other stores may ignore it.
+        """
+        pass
+
     @abc.abstractmethod
     def add_record(self, record):
         """
@@ -136,7 +144,7 @@ class DefaultStore(StoreBase):
     objects.  It provides a balance between speed and memory footprint.
     """
 
-    def __init__(self):
+    def __init__(self, table):
         self._data = {}
 
     def add_record(self, record):
