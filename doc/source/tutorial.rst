@@ -97,18 +97,6 @@ This tells the `!Author` table that its `!books` attribute should contain all
             assert isinstance(self.name, str)
             assert isinstance(self.author, str)
 
-This is dynamic link, so every time the `!books` attribute is queried, the
-`!Book` table is scanned for matching values.  Since each record has to be
-checked individually this can become very slow, so the `!author` field
-can be indexed to improve performance by adding an *index* argument to
-its definition.  It is worth noting that unique fields are automatically
-indexed, so `!Book.name` already supports fast lookups::
-
-    class Book(Table):
-        ...
-        author = Field(index=True)
-        ...
-
 A `Join` can also point to another `Join`, creating what is termed a
 many-to-many relationship.  These are discussed later, since they rely on
 a `Database` being used.
@@ -133,7 +121,7 @@ becomes::
     class Book(Table):
         refno = Field(unique=True)
         name = Field()
-        author = Field(index=True)
+        author = Field()
 
         def validate(self):
             assert isinstance(self.refno, int)
@@ -243,6 +231,24 @@ examples show how to extract various bit of information from the database.
 4.  Records can be added based on certain queries::
 
         (Author.nationality == 'British').add(surname='Adams', intials='D')
+
+Since 0.7, all fields are automatically indexed, so queries are fast.
+Depending on the application, it is possible to change how the data
+is indexed, allowing for more control over how data can be queried.
+For example, if we were more concerned about querying books by title length,
+we could use `len` as the index key function::
+        
+    class Book(Table):
+        ...
+        name = Field(key=len)
+        ...
+        
+Then we could query all books with a title longer than 10 characters::
+
+    Book.name > ' '*10 
+    
+Note that the target of the query is also affected by the key, so we need
+to give it a value such that ``len(value)`` returns 10.
 
 
 Serialisation

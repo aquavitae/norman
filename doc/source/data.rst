@@ -50,8 +50,8 @@ Accordingly, there are many class-level operations which are only applicable
 to a `Table`, and others which only apply to records.  The class methods shown
 in `Table` are not visible to instances.
 
-
 .. autoclass:: Table
+
 
 Table objects
 ^^^^^^^^^^^^^
@@ -67,6 +67,12 @@ records should always be contained in the table.  To avoid problems, use
 `Table.validate_delete` to automatically clean dangling references.
 
 
+.. attribute:: Table._store
+
+    A `Store` instanced used as a storage backend.  This may be overridden
+    when the class is created to use a customised `Store` object.
+     
+    
 .. attribute:: Table.hooks
 
     A `dict` containing lists of callables to be run when an event occurs.
@@ -123,6 +129,18 @@ indicate this.
 
 .. autoclass:: Field
 
+    .. autoattribute:: default
+    
+    .. autoattribute:: key
+    
+    .. autoattribute:: name
+
+    .. autoattribute:: owner
+   
+    .. autoattribute:: readonly
+
+    .. autoattribute:: unique
+
 
 Joins
 -----
@@ -167,18 +185,6 @@ Joins have the following attributes.
 .. autoattribute:: Join.target
 
 
-Indexes
--------
-
-Indexes are generally created with automatically as needed by fields, but
-if desired, their operation can be customised by specifically setting an
-`Index` instance or subclass to a field's *_index* property.  This must be
-done before any records are created.  In the future, customising the index
-may be made easier.
-
-.. autoclass:: Index
-
-
 Exceptions and Warnings
 -----------------------
 
@@ -210,3 +216,16 @@ Warnings
 
     Currently all warnings use this class.  In the future, this behaviour
     will change, and subclasses will be used.
+
+    
+Advanced API
+============
+
+Two structures, `Store` and `Index` manage the data internally.  These are
+documented for completeness, but should seldom need to be used directly.
+
+.. autoclass:: Store
+    :members:
+
+.. autoclass:: Index
+    :members:

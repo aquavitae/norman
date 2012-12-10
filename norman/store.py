@@ -17,167 +17,310 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import abc
-
+import collections
+import itertools
+from bisect import bisect_left, bisect_right
 from ._field import NotSet
 
 
-_Base = abc.ABCMeta(str('_Base'), (object,), {})
-
-
-class StoreBase(_Base):
+class Index(object):
 
     """
-    This is an abstract base class which defines how data is internally
-    stored for a table.  Typical examples of how this could be implemented
-    include using a numpy array, disk storage, or python builtin types.
-    Each storage type has different advantages, and should be chosen depending
-    on the intended behaviour of the table.
+    An index stores records as sorted lists of ``(keyvalue, record)`` pairs,
+    where *keyvalue* is a key based on the data cell value, determined by
+    the return value of `Field.key`, which should always return the same,
+    sortable type.  If a return value cannot be sorted, then it is stored
+    separately by its hash, and comparisons (except for equality checks)
+    cannot be used with it.  It is is not hashable, then it is stored by `id`,
+    so equality checks will actually return identity matches.
+    Note that `NotSet` is handled separately, and is never evaluated with
+    `Field.key`.  The default `Field.key` returns a tuple of
+    ``(type, keyvalue)`` for recognised types.  The implementation is::
 
+        def key(value):
+            if isinstance(value, numbers.Real):
+                return '0Real', value
+            elif isinstance(value, str):
+                return '1str', value
+            elif isinstance(value, bytes):
+                return '2bytes', value
+            else:
+                raise TypeError
+
+    The following examples show a few example of how this can be used:
+
+        >>> import re
+        >>> from norman import Table, Field
+        >>> class MyTable(Table):
+        ...    numbers = Field(key=lambda x: re.findall('\d+', x))
+        ...
+        >>> r1 = MyTable(numbers='number 1, numbers 2 and 3')
+        >>> r2 = MyTable(numbers='45 and 46')
+        >>> r3 = MyTable(numbers='a, b, c = 5, 6, 7')
+        >>> r4 = MyTable(numbers='no numbers here')
+        >>> set(MyTable.numbers > 'number 3') == set((r2, r3))
+        True
+        >>> set(MyTable.numbers < '1 or 2') == set((r4,))
+        True
+    """
+
+    def __init__(self, field):
+        self.field = field
+        self.clear()
+
+    def __len__(self):
+        return (len(self._ordered[0]) +
+                sum(len(d) for d in self._unordered.values()))
+
+    def clear(self):
+        """
+        Delete all items from the index.
+        """
+        self._ordered = ([], [])
+        self._unordered = collections.defaultdict(list)
+
+    def insert(self, value, record):
+        """
+        Insert a new item.  If equal keys are found, add to the right.
+        """
+        if value is NotSet:
+            self._unordered[NotSet].append((NotSet, record))
+        else:
+            try:
+                key = self.field.key(value)
+                i = bisect_right(self._ordered[0], key)
+            except (TypeError, ValueError):
+                try:
+                    key = hash(value)
+                except TypeError:
+                    key = id(value)
+                self._unordered[key].append((value, record))
+            else:
+                self._ordered[0].insert(i, key)
+                self._ordered[1].insert(i, record)
+
+    def remove(self, value, record):
+        """
+        Remove first occurrence of ``(value, record)``.
+        """
+        if value is NotSet:
+            self._unordered[NotSet].remove((NotSet, record))
+            if len(self._unordered[NotSet]) == 0:
+                del self._unordered[NotSet]
+        else:
+            try:
+                key = self.field.key(value)
+                i = bisect_left(self._ordered[0], key)
+                j = bisect_right(self._ordered[0], key)
+            except (TypeError, ValueError):
+                try:
+                    key = hash(value)
+                except TypeError:
+                    key = id(value)
+                self._unordered[key].remove((value, record))
+                if len(self._unordered[key]) == 0:
+                    del self._unordered[key]
+            else:
+                index = self._ordered[1][i:j].index(record) + i
+                del self._ordered[0][index]
+                del self._ordered[1][index]
+
+    def __eq__(self, value):
+        """
+        Iterate over all items with ``key == value``
+        """
+        if value is NotSet:
+            return (r for v, r in self._unordered[NotSet])
+        try:
+            key = self.field.key(value)
+            i = bisect_left(self._ordered[0], key)
+            j = bisect_right(self._ordered[0], key)
+        except (TypeError, ValueError):
+            try:
+                key = hash(value)
+            except TypeError:
+                key = id(value)
+            return (r for v, r in self._unordered[key] if v == value)
+        else:
+            return iter(self._ordered[1][i:j])
+
+    def __ne__(self, value):
+        """
+        Iterate over all items with ``key != value``.
+        """
+        try:
+            key = self.field.key(value)
+            i = bisect_left(self._ordered[0], key)
+            j = bisect_right(self._ordered[0], key)
+        except (TypeError, ValueError):
+            try:
+                key = hash(value)
+            except TypeError:
+                key = id(value)
+            for k, l in self._unordered.items():
+                for d in l:
+                    if d[0] != value:
+                        yield d[1]
+            for r in self._ordered[1]:
+                yield r
+        else:
+            for l in self._unordered.values():
+                for r in l:
+                    yield r[1]
+            for r in self._ordered[1][:i]:
+                yield r
+            for r in self._ordered[1][j:]:
+                yield r
+
+    def __le__(self, value):
+        """
+        Iterate over all items with ``key <= k``
+        """
+        key = self.field.key(value)
+        i = bisect_right(self._ordered[0], key)
+        return iter(self._ordered[1][:i])
+
+    def __lt__(self, value):
+        """
+        Iterate over all items with ``key < k``
+        """
+        key = self.field.key(value)
+        i = bisect_left(self._ordered[0], key)
+        return iter(self._ordered[1][:i])
+
+    def __ge__(self, value):
+        """
+        Iterate over all items with ``key >= k``
+        """
+        key = self.field.key(value)
+        i = bisect_left(self._ordered[0], key)
+        return iter(self._ordered[1][i:])
+
+    def __gt__(self, value):
+        """
+        Iterate over all items with ``key > k``
+        """
+        key = self.field.key(value)
+        i = bisect_right(self._ordered[0], key)
+        return iter(self._ordered[1][i:])
+
+
+class Store(object):
+
+    """
     Stores are designed to hide the implementation details and expose
     a consistent API, so that they can be switched out without any other
     changes to the table.
 
-    Tables are exposed as an array of records, where each cell in the table
-    is identified by a `Table` instance and `Field`.  Cells are unordered,
-    although implementations may order them internally.
-
-    The store has two functions, `get` and `set`, which are used to access
-    the data.  To support queries, `iter_field` yields pairs of
-    ``(record, value)`` for a specific field.  `NotSet` is returned for
-    any values which have not been set.  `iter_record` yields all record in
-    the data store.
-
-    `set` should dynamically handle new fields and records, i.e. if it is
-    called with a record argument which does not yet exist, it should add it.
+    Tables are exposed as an array of cells, where each cell is identified
+    by `Table` and `Field` instances.  Cells are unordered, although
+    implementations may order them internally.
     """
 
-    def __init__(self, table):
-        """
-        The table is passed as an initialisation parameter, intended for
-        stores which pre-allocate storage according to the table definition.
-        Other stores may ignore it.
-        """
-        pass
+    def __init__(self):
+        self.indexes = {}
+        self.fields = {}
+        self.clear()
 
-    @abc.abstractmethod
+    def add_field(self, field):
+        """
+        Called whenever a new field is added to the table.
+        """
+        self.indexes[field] = Index(field)
+        self.fields[field.name] = field
+
     def add_record(self, record):
         """
-        Called whenever a new record is created.  The main purpose of this
-        is to ensure that subsequent queries such as `iter_records` return
-        ther correct results, even if no data has actually been set on the
-        record.
+        Called whenever a new record is created.
         """
-        return NotImplemented
+        self._data.setdefault(record, {})
+        for field in self.fields.values():
+            self.indexes[field].insert(field.default, record)
 
-    @abc.abstractmethod
     def clear(self):
         """
-        Delete all records and fields in the store.
+        Delete all records in the store.
         """
-        return NotImplemented
+        self._data = {}
+        for i in self.indexes.values():
+            i.clear()
 
-    @abc.abstractmethod
+    def get(self, record, field):
+        """
+        Return the value in a cell specified by *record* and *field*.  This
+        should respect any field defaults.  If this is called with a record
+        or field that has not been added, the behaviour is unspecified.
+        """
+        return self._data[record].get(field, field.default)
+
     def has_record(self, record):
         """
         Return True if the record has an entry in the data store.
         """
-        return NotImplemented
+        return record in self._data
 
-    @abc.abstractmethod
-    def get(self, record, field):
+    def iter_field(self, field):
         """
-        Return the item in a cell by *record* and *field*.  If the value
-        does not exist in the data store, the field's default should be
-        returned.
+        Iterate over pairs of ``(record, value)`` for the specified field.
+        This should respect any field defaults.  If this is called with a
+        field that has not been added, the behaviour is unspecified.
         """
-        return NotImplemented
+        for record, data in self._data.items():
+            yield record, data.get(field, field.default)
 
-    @abc.abstractmethod
-    def iter_field(self, name):
-        """
-        Iterate over pairs of (record, value) for the specified field, using
-        ``field.default`` for missing values.
-        """
-        return NotImplemented
-
-    @abc.abstractmethod
     def iter_records(self):
         """
         Return an iterator over all records in the data store.
         """
-        return NotImplemented
+        return iter(self._data.keys())
 
-    @abc.abstractmethod
+    def iter_unset(self, field):
+        """
+        Iterate over records which do not have a value set on *field*, that is,
+        those for which ``store.get(record, field)`` will return
+        ``field.default``.  This is used for managing indexes.
+        """
+
     def record_count(self):
         """
         Return the number of records in the table.
         """
-        return NotImplemented
-
-    @abc.abstractmethod
-    def remove_record(self, record):
-        """
-        Remove a record from the data store.
-        """
-        return NotImplemented
-
-    @abc.abstractmethod
-    def remove_field(self, name):
-        """
-        Remove a field.
-        """
-        return NotImplemented
-
-    @abc.abstractmethod
-    def set(self, key, field, value):
-        """
-        Set the data in a record.  If the record matching key does not exist
-        then it is created.
-        """
-        return NotImplemented
-
-
-class DefaultStore(StoreBase):
-
-    """
-    This is the default store used, and is implemented using python builtin
-    objects.  It provides a balance between speed and memory footprint.
-    """
-
-    def __init__(self, table):
-        self._data = {}
-
-    def add_record(self, record):
-        self._data.setdefault(record, {})
-
-    def clear(self):
-        self._data = {}
-
-    def get(self, record, field):
-        try:
-            return self._data[record][field]
-        except KeyError:
-            return field.default
-
-    def has_record(self, record):
-        return record in self._data
-
-    def iter_field(self, field):
-        for i, r in self._data.items():
-            yield i, r.get(field, field.default)
-
-    def iter_records(self):
-        return iter(self._data.keys())
-
-    def record_count(self):
         return len(self._data)
 
     def remove_record(self, record):
+        """
+        Remove a record.
+        """
+        for field in self.fields.values():
+            value = self.get(record, field)
+            self.indexes[field].remove(value, record)
         del self._data[record]
 
     def remove_field(self, field):
+        """
+        Remove a field.
+        """
         for r in self._data.values():
             r.pop(field, None)
 
-    def set(self, key, field, value):
-        self._data.setdefault(key, {})[field] = value
+    def set(self, record, field, value):
+        """
+        Set the data in a record.
+        """
+        old = self.get(record, field)
+        self._data[record][field] = value
+        index = self.indexes[field]
+        index.remove(old, record)
+        index.insert(value, record)
+
+    def setdefault(self, field, value):
+        """
+        Called when the default value of a field in changed.
+        """
+        if value != field.default:
+            index = self.indexes[field]
+            unset = set(r for r, d in self._data.items() if field not in d)
+            for r in (index == field.default):
+                if r in unset:
+                    index.remove(self._default, r)
+                    index.insert(value, r)

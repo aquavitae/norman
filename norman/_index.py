@@ -64,7 +64,7 @@ class Index(object):
 
     def remove(self, value, record):
         """
-        Remove first occurence of value, record.
+        Remove first occurrence of ``(value, record)``.
         """
         if value is NotSet:
             self._bins[0].remove(record)

@@ -72,8 +72,8 @@ class TestTable(object):
 
     def setup(self):
         class T(Table):
-            oid = Field(index=True)
-            name = Field(index=True)
+            oid = Field()
+            name = Field()
             age = Field()
         self.T = T
 
@@ -146,13 +146,6 @@ class TestTable(object):
             expect = "T(age=..., name=u'tee', oid=4)"
         assert repr(t) == expect, repr(t)
 
-    def test_indexes(self):
-        'Test that indexes are created.'
-        assert self.T.name.index
-        assert self.T.oid.index
-        assert hasattr(self.T.name, '_index')
-        assert hasattr(self.T.name, '_index')
-
     def test_len(self):
         'len(Table) returns the number of records.'
         self.T(oid=1)
@@ -166,24 +159,6 @@ class TestTable(object):
         t2 = self.T(oid=2)
         assert t1 in self.T
 
-    def test_indexes_updated(self):
-        'Test that indexes are updated when a value changes'
-        t = self.T(oid=1)
-        b = self.T.oid._index._bins
-        assert b == (set(), ([1], [t]))
-
-    def test_index_speed(self):
-        'Getting indexed fields should be ten times faster'
-        assert self.T.oid.index
-        assert not self.T.age.index
-        count = 1000
-        for i in range(count):
-            self.T(oid=i, name='Mike', age=int(i % 10))
-        number = 100
-        fast = timeit.timeit(lambda: list(self.T.oid == 300), number=number)
-        slow = timeit.timeit(lambda: list(self.T.age == 5), number=number)
-        assert fast * 10 < slow, (fast, slow)
-
     def test_delete_instance(self):
         'Test deleting a single instance'
         p1 = self.T(oid=1, name='Mike', age=23)
@@ -193,7 +168,6 @@ class TestTable(object):
         assert p1 not in self.T
         assert p2 in self.T
         assert p3 in self.T
-        assert self.T.oid._index._bins == (set(), ([2, 3], [p2, p3]))
 
     def test_delete_instances(self):
         'Test deleting a list of instances'
@@ -256,7 +230,7 @@ class TestTable(object):
             assert False
 
         class T(Table):
-            f = Field(validate=[fail])
+            f = Field(validators=[fail])
 
         with assert_raises(ValidationError):
             T(f=3)
@@ -269,7 +243,7 @@ class TestInheritance(object):
             f = Field()
 
         class B(Table):
-            a = Field(index=True)
+            a = Field()
             j = Join(Other.f)
 
         class I(B):
@@ -288,7 +262,6 @@ class TestInheritance(object):
 
     def test_different_fields(self):
         assert self.B.a is not self.I.a
-        assert self.B.a._index is not self.I.a._index
 
     def test_owner(self):
         assert self.B.a.owner is self.B
@@ -341,10 +314,6 @@ class TestUnique(object):
         class T(Table):
             oid = Field(unique=True)
         self.T = T
-
-    def test_unique_implies_index(self):
-        'Unique implies index'
-        assert self.T.oid.index
 
     def test_unique_init(self):
         'Test the initialisation of a duplicate record.'

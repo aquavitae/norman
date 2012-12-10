@@ -21,9 +21,8 @@ from __future__ import with_statement
 from __future__ import unicode_literals
 
 import functools
+import numbers
 import operator
-import weakref
-from collections import defaultdict
 
 from ._except import ConsistencyError, ValidationError
 from ._query import Query
@@ -43,59 +42,31 @@ NotSet = NotSet()
 
 
 def _op(op):
-    def inner(field, value):
-        if field.index:
-            return set(op(field._index, value))
-        else:
-            return set(r for r, v in field.owner._store.iter_field(field)
-                       if op(v, value))
+    inner = lambda field, value: set(op(field.owner._store.indexes[field], value))
     inner.__name__ = op.__name__
     return inner
+
+def _key(value):
+    if isinstance(value, numbers.Real):
+        return '0Real', value
+    elif isinstance(value, str):
+        return '1str', value
+    elif isinstance(value, bytes):
+        return '2bytes', value
+    else:
+        raise TypeError
+
 
 class Field(object):
 
     """
-    A `Field` is used in tables to define attributes of data.
-
-    When a table is created, fields can be identified by using a `Field`
-    object:
+    A `Field` is used in tables to define attributes.
 
     >>> class MyTable(Table):
     ...     name = Field()
 
-    Field options are set as keyword arguments when it is initialised.
-
-    ========== ============ ===================================================
-    Keyword    Default      Description
-    ========== ============ ===================================================
-    unique     False        True if records should be unique on this field.
-                            In database terms, this is the same as setting
-                            a primary key.  If more than one field have this
-                            set then records are expected to be unique on all
-                            of them.  Unique fields are always indexed.
-    index      autoindex    True if the field should be indexed.  Indexed
-                            fields are much faster to look up.  Setting
-                            ``unique = True`` implies ``index = True``
-    default    None         If missing, `NotSet` is used.
-    readonly   False        Prohibits setting the variable, unless its value
-                            is `NotSet`.  This can be used with *default*
-                            to simulate a constant.
-    validate   None         If set, should be a list of functions which are
-                            to be used as validators for the field.  Each
-                            function should accept a and return a single value,
-                            and should raise an exception if the value is
-                            invalid.  The return value is the value passed
-                            to the next validator.
-    ========== ============ ===================================================
-
-    A class attribute, *autoindex* can be set to automatically index new
-    fields if *index* or *unique* are not given.  This can be changed at
-    any time and does not effect already created fields.  The default value
-    is `False`, but this will change to `True` in version 0.7.
-
-    Fields have read-only properties, *name* and *owner* which are
-    set to the assigned name and the owning table respectively when
-    the table class is created.
+    Fields may be created with a combination of properties as keyword arguments,
+    including `default`, `key`, `readonly`, `unique` and `validators`.
 
     Fields can be used with comparison operators to return a `Query`
     object containing matching records.  For example::
@@ -109,10 +80,19 @@ class Field(object):
         >>> Table.value == 1
         Query(MyTable(oid=0, value=1), MyTable(oid=2, value=1))
 
-    The following comparisons are supported for a `Field` object: ``==``,
-    ``<``, ``>``, ``<=``, ``>==``, ``!=``.  The ``&`` operator is used to
-    test for containment, e.g. `` Table.field & mylist`` returns all records
-    where the value of ``field`` is in ``mylist``.
+    The following comparisons are supported for a `Field` object, provided
+    the data stored supports them: ``==``, ``<``, ``>``, ``<=``, ``>==``,
+    ``!=``.  The ``&`` operator is used to test for containment, e.g.
+    `` Table.field & mylist`` returns all records where the value of
+    ``field`` is in ``mylist``.
+
+
+    .. changed:: 0.7
+
+        All fields are automatically indexed, and the *index* argument
+        has been removed.   *key* has been added to control how data is
+        indexed.
+
 
     .. seealso::
 
@@ -123,31 +103,123 @@ class Field(object):
             For more information of queries in Norman.
     """
 
-    autoindex = False
+    def __init__(self, unique=False, default=NotSet,
+                 readonly=False, validators=None, key=_key):
+        self._unique = unique
+        self._default = default
+        self._readonly = readonly
+        self._validators = [] if validators is None else validators
+        self._key = key
 
-    def __init__(self, **kwargs):
-        self.unique = kwargs.get('unique', False)
-        self.index = kwargs.get('index', self.autoindex) or self.unique
-        self.default = kwargs.get('default', NotSet)
-        self.readonly = kwargs.get('readonly', False)
-        self.validators = kwargs.get('validate', [])
-        if self.index:
-            from ._index import Index
-            self._index = Index()
+    @property
+    def default(self):
+        """
+        The value to use when nothing has been set (default: `NotSet`).
+        """
+        return self._default
+
+    @default.setter
+    def default(self, value):
+        self.owner._store.setdefault(self, value)
+        self._default = value
+
+    @property
+    def key(self):
+        """
+        A key function used for indexing, similar to that used by `sorted`.
+        All values returned by this function should be sortable in the same
+        list. For example, if the field is known to contain a mixture
+        of strings and integers, `str` would be a valid function, but
+        ``lambda x: x`` would not, since a list of strings and integers
+        cannot be sorted.  `key` should raise `TypeError` for any value
+        it cannot handle.  These will be indexed separately, so that equality
+        lookups are still optimised, but comparisons will not be supported.
+        As an illustrative example, consider the following case which
+        orders values by length::
+
+            >>> class T(Table):
+            ...     value = Field(key=len)
+            ...
+            >>> t1 = T(value='abc')
+            >>> t2 = T(value='defg')
+            >>> t3 = T(value=42)
+            >>> (T.value > 'xxx').one()  # Find values longer than 3 characters
+            T(value='abc')
+            >>> (T.value == 42).one()  # Find the numerical value 42
+            T(value=42)
+            >>> (T.value() > 42).one()  # len(42) raises TypeError
+            Traceback (most recent call last)
+                ...
+            TypeError
+
+        The default implementation orders data by type first, then value, for
+        the following types: `numbers.Real`, `str`, `bytes`.  This might lead
+        to unexpected results, since ``42 < 'text'`` will evaluate True.
+
+        `NotSet` values are handled slightly differently, and are never passed
+        through this function.  Comparison queries on `NotSet` will always
+        fail.
+        """
+        return self._key
 
     @property
     def name(self):
+        """
+        This is the assigned name of the field and is set when the `Table` is
+        created.  This attribute is readonly.
+        """
         return self._name
 
     @property
     def owner(self):
+        """
+        This is the owning `Table` of the field and is set when the `Table` is
+        created.  This attribute is readonly.
+        """
         return self._owner
+
+    @property
+    def readonly(self):
+        """
+        If `True`, prohibits setting the variable, unless its value is
+        `NotSet` (default: `False`).  This can be used with `default`
+        to simulate a constant.
+
+        This attribute is readonly and can only be set when the `Field` is
+        created.
+        """
+        return self._readonly
+
+    @property
+    def unique(self):
+        """
+        `True` if records should be unique on this field (default: `False`).
+        In database terms, this is the same as setting a primary key.  If
+        more than one field have this set then records are expected to be
+        unique on all of them.
+
+        This attribute is readonly and can only be set when the `Field` is
+        created.
+        """
+        return self._unique
+
+    @property
+    def validators(self):
+        """
+        A list of functions which are used as validators for the field.  Each
+        function should accept and return a single value (i.e. the value to be
+        set), and should raise an exception if the value is invalid.  The
+        validators are called sequentially, e.g.
+        ``validator3(validator2(validator1(value)))``.
+        """
+        return self._validators
 
     def __copy__(self):
         return Field(unique=self.unique,
-                     index=self.index,
                      default=self.default,
-                     readonly=self.readonly)
+                     key=self.key,
+                     readonly=self.readonly,
+                     validators=self.validators)
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -180,14 +252,9 @@ class Field(object):
 
     def __and__(self, values):
         def _and(field, value):
-            if field.index:
-                r = set()
-                for v in value:
-                    r |= set(field._index == v)
-                return r
-            else:
-                return set(r for r, v in field.owner._store.iter_field(field)
-                           if v in value)
+            index = field.owner._store.indexes[field]
+            return  functools.reduce(operator.or_,
+                                     (set(index == v) for v in values))
         return Query(_and, self, values)
 
     def __str__(self):
@@ -294,8 +361,8 @@ class Join(object):
             from ._table import TableMeta, Table
 
             t1, t2 = self.owner, target.owner
-            f1 = Field(validate=[istype(t1)])
-            f2 = Field(validate=[istype(t2)])
+            f1 = Field(validators=[istype(t1)])
+            f2 = Field(validators=[istype(t2)])
             JT = TableMeta(name, (Table,), {t1.__name__: f1, t2.__name__: f2})
             t1.hooks['delete'].append(functools.partial(delete, f1))
             t2.hooks['delete'].append(functools.partial(delete, f2))

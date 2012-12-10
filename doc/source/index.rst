@@ -27,7 +27,7 @@ This is a small database for a personal library::
     @db.add
     class Book(Table):
         name = Field(unique=True)
-        author = Field(index=True)
+        author = Field()
 
         def validate(self):
             assert isinstance(self.name, str)

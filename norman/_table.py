@@ -28,7 +28,7 @@ import uuid
 from ._except import ConsistencyError, ValidationError
 from ._field import Field, Join, NotSet
 from ._compat import unicode, long, recursive_repr
-from .store import DefaultStore
+from .store import Store
 
 
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -55,18 +55,16 @@ class TableMeta(type):
                 fulldict[n] = value
         fulldict.update(cdict)
         cls = type.__new__(mcs, name, bases, fulldict)
-        cls._fields = {}
         if '_store' not in cdict:
-            cls._store = DefaultStore(cls)
+            cls._store = Store()
         for n, value in fulldict.items():
             if isinstance(value, (Field, Join)):
                 value._name = n
                 value._owner = cls
             if isinstance(value, Field):
-                cls._fields[value.name] = value
+                cls._store.add_field(value)
 
         cls.hooks = collections.defaultdict(list)
-
         return cls
 
     def __init__(cls, name, bases, cdict):
@@ -90,7 +88,7 @@ class TableMeta(type):
             value._name = name
             value._owner = cls
             if isinstance(value, Field):
-                cls._fields[value.name] = value
+                cls._store.add_field(value)
         super(TableMeta, cls).__setattr__(name, value)
 
     #TODO: addhook decorator, or something similar
@@ -118,19 +116,13 @@ class TableMeta(type):
                 except:
                     raise
                 else:
-                    # Remove all index references
-                    for field in cls._fields.values():
-                        if field.index:
-                            value = getattr(r, field.name)
-                            field._index.remove(value, r)
-                    # Remove from instances
                     cls._store.remove_record(r)
 
     def fields(cls):
         """
         Return an iterator over field names in the table
         """
-        return cls._fields.keys()
+        return cls._store.fields.keys()
 
 
 _TableBase = TableMeta(str('_TableBase'), (object,), {})
@@ -154,6 +146,7 @@ class Table(_TableBase):
     """
 
     def __init__(self, **kwargs):
+        self.__class__._store.add_record(self)
         data = dict([(f, getattr(self, f)) for f in self.__class__.fields()])
         badkw = set(kwargs.keys()) - set(data.keys())
         if badkw:
@@ -166,7 +159,6 @@ class Table(_TableBase):
                 setattr(self, k, v)
         finally:
             self._validate = validate
-        self._store.add_record(self)
         try:
             self._validate()
         except ValidationError:
@@ -176,7 +168,7 @@ class Table(_TableBase):
     def __setattr__(self, attr, value):
         cls = self.__class__
         try:
-            field = cls._fields[attr]
+            field = cls._store.fields[attr]
         except KeyError:
             super(Table, self).__setattr__(attr, value)
         else:
@@ -199,7 +191,7 @@ class Table(_TableBase):
                     if field.unique:
                         # construct query
                         query = (f == cls._store.get(self, f)
-                                 for f in cls._fields.values() if f.unique)
+                                 for f in cls._store.fields.values() if f.unique)
                         query = functools.reduce(lambda a, b: a & b, query)
                         existing = set(query) - set([self])
                         if existing:
@@ -208,14 +200,6 @@ class Table(_TableBase):
                 except:
                     cls._store.set(self, field, oldvalue)
                     raise
-                # Update the index
-                if field.index:
-                    index = field._index
-                    try:
-                        index.remove(value, self)
-                    except (KeyError, ValueError):
-                        pass
-                    index.insert(value, self)
 
     @recursive_repr()
     def __repr__(self):

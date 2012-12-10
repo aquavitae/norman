@@ -30,9 +30,9 @@ db = Database()
 @db.add
 class Person(Table):
     custno = Field(unique=True)
-    name = Field(index=True)
+    name = Field()
     age = Field(default=20)
-    address = Field(index=True)
+    address = Field()
 
     def validate(self):
         if not isinstance(self.age, int):
@@ -56,17 +56,6 @@ class Address(Table):
 @db.add
 class Town(Table):
     name = Field(unique=True)
-
-
-def test_indexes():
-    'All these indexes should be True'
-    assert Person.custno.index
-    assert Person.name.index
-    assert not Person.age.index
-    assert Person.address.index
-    assert Address.street.index
-    assert Address.town.index
-    assert Town.name.index
 
 
 class TestCase1(object):

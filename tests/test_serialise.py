@@ -35,9 +35,9 @@ db = Database()
 @db.add
 class Person(Table):
     custno = Field(unique=True)
-    name = Field(index=True)
+    name = Field()
     age = Field(default=20)
-    address = Field(index=True)
+    address = Field()
 
     def validate(self):
         if not isinstance(self.age, int):
@@ -91,11 +91,12 @@ class TestCase(object):
         assert set(p.age for p in address.people) == set([43, 3])
 
 
-class TestAPI:
+class TestAPI(object):
 
     class S(serialise.Serialiser):
 
         def __init__(self, filedata):
+            serialise.Serialiser.__init__(self, db)
             self.filedata = filedata
 
         def isuid(self, field, value):

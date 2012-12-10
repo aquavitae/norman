@@ -31,29 +31,6 @@ class TestNotSet(object):
         assert not NotSet
 
 
-class TestAutoIndex(object):
-
-    def setup(self):
-        self.autoindex = Field.autoindex
-
-    def teardown(self):
-        Field.autoindex = self.autoindex
-
-    def check(self, auto, kwargs, expect):
-        Field.autoindex = auto
-        f = Field(**kwargs)
-        assert f.index == expect
-
-    def test_combinations(self):
-        c = [[True, {}, True],
-             [False, {}, False],
-             [True, {'index': False}, False],
-             [False, {'index': True}, True],
-             [False, {'unique': True, 'index': False}, True]]
-        for a, k, e in c:
-            yield self.check, a, k, e
-
-
 class TestSingleField(object):
 
     def setup(self):
@@ -63,8 +40,8 @@ class TestSingleField(object):
 
     def test_kwargs(self):
         'Test that kwargs are set'
-        f = Field(index=True, default=1, readonly=True)
-        assert f.index
+        f = Field(key=len, default=1, readonly=True)
+        assert f.key is len
         assert f.default == 1
         assert f.readonly
 
@@ -87,13 +64,13 @@ class TestSingleField(object):
         'Test that readonly fields cannot be written to'
         t = self.T()
         t.a = 4
-        self.T.a.readonly = True
+        self.T.a._readonly = True
         with assert_raises(TypeError):
             t.a = 5
 
     def test_readonly_notset(self):
         'Test that readonly fields can be written to if they are NotSet'
-        self.T.a.readonly = True
+        self.T.a._readonly = True
         t = self.T()
         assert t.a is NotSet
         t.a = 4
@@ -149,8 +126,8 @@ class TestOperations(object):
     def test_indexed_and(self):
         # Test a bug where multiple matches on an indexed field were removed
         class T(Table):
-            a = Field(index=True)
-            b = Field(index=True)
+            a = Field()
+            b = Field()
 
         r = [T(a=1, b=1), T(a=2, b=2), T(a=3, b=1), T(a=2, b=2)]
         got = set(T.a & [1, 2])
@@ -251,7 +228,7 @@ class TestValidator(object):
 
     def test_convert(self):
         class T(Table):
-            number = Field(validate=[float])
+            number = Field(validators=[float])
 
         t = T(number=3)
         assert t.number == 3
@@ -260,7 +237,7 @@ class TestValidator(object):
 
     def test_except(self):
         class T(Table):
-            number = Field(validate=[float])
+            number = Field(validators=[float])
 
         t = T(number=3)
         with assert_raises(TypeError):
@@ -269,8 +246,8 @@ class TestValidator(object):
 
     def test_chain(self):
         class T(Table):
-            a = Field(validate=[float, lambda v: v * 2])
-            b = Field(validate=[lambda v: v * 2, float])
+            a = Field(validators=[float, lambda v: v * 2])
+            b = Field(validators=[lambda v: v * 2, float])
 
         t = T(a=3, b=3)
         assert t.a == 6
@@ -282,14 +259,14 @@ class TestValidator(object):
 
     def test_notset(self):
         class T(Table):
-            a = Field(validate=[float])
+            a = Field(validators=[float])
 
         with assert_raises(TypeError):
             t = T()
 
     def test_default(self):
         class T(Table):
-            a = Field(default=None, validate=[float])
+            a = Field(default=None, validators=[float])
 
         with assert_raises(TypeError):
             t = T()

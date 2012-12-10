@@ -88,9 +88,6 @@ class Database(object):
         """
         for table in self._tables:
             table._store.clear()
-            for field in table._fields.values():
-                if field.index:
-                    field._index.clear()
 
 
     # TODO: delete(record)

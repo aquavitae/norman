@@ -21,7 +21,7 @@ import os
 import tempfile
 
 from nose.tools import assert_raises
-from norman import Database, Table
+from norman import Database, Table, Field
 
 
 class TestDatabase(object):
@@ -77,3 +77,11 @@ class TestDatabase(object):
         assert tb in Tb
         self.db.reset()
         assert len(Tb) == 0
+
+    def test_reset_field(self):
+        'Reset should keep fields'
+        class Tb(Table):
+            f = Field()
+        self.db.add(Tb)
+        self.db.reset()
+        assert Tb.f.name in Tb.fields()
