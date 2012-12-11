@@ -98,7 +98,7 @@ class Query(object):
                         ``q1`` which are not in ``q2``.
     =================== =======================================================
 
-    Queries are evaluate to `True` if they contain any results, and `False`
+    Queries evaluate to `True` if they contain any results, and `False`
     if they do not.
 
     Calling a query forces it to be re-evaluated, and the query object is
