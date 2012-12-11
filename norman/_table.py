@@ -220,18 +220,18 @@ class Table(_TableBase):
 
     def _assert_unique(self, replacevalues):
         store = self.__class__._store
-        # construct query
-        queries = []
+        # Don't use a Query here because it is too slow
+        matches = []
         for field in store.fields.values():
             if field.unique:
                 if field in replacevalues:
                     value = replacevalues[field]
                 else:
                     value = store.get(self, field)
-                queries.append(field == value)
+                matches.append(set(store.indexes[field] == value))
 
-        query = functools.reduce(operator.and_, queries)
-        existing = set(query) - set([self])
+        matches = functools.reduce(operator.and_, matches)
+        existing = set(matches) - set([self])
         if existing:
             raise ValidationError('Not unique: ', existing)
 
