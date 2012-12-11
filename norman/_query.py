@@ -129,7 +129,7 @@ class Query(object):
                 args.append(a._results)
             else:
                 args.append(a)
-        self._results = self._op(*args)
+        self._results = set(self._op(*args))
         return self
 
     def __contains__(self, record):

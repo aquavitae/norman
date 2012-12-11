@@ -231,30 +231,29 @@ class Field(object):
         return id(self)
 
     def __eq__(self, value):
-        q = Query(_op(operator.eq), self, value)
+        q = Query(operator.eq, self.owner._store.indexes[self], value)
         q._setaddargs(self.owner, {self.name: value})
         return q
 
     def __ne__(self, value):
-        return Query(_op(operator.ne), self, value)
+        return Query(operator.ne, self.owner._store.indexes[self], value)
 
     def __gt__(self, value):
-        return Query(_op(operator.gt), self, value)
+        return Query(operator.gt, self.owner._store.indexes[self], value)
 
     def __lt__(self, value):
-        return Query(_op(operator.lt), self, value)
+        return Query(operator.lt, self.owner._store.indexes[self], value)
 
     def __ge__(self, value):
-        return Query(_op(operator.ge), self, value)
+        return Query(operator.ge, self.owner._store.indexes[self], value)
 
     def __le__(self, value):
-        return Query(_op(operator.le), self, value)
+        return Query(operator.le, self.owner._store.indexes[self], value)
 
     def __and__(self, values):
-        def _and(field, value):
-            index = field.owner._store.indexes[field]
-            return  functools.reduce(operator.or_,
-                                     (set(index == v) for v in values))
+        def _and(f, vals):
+            i = f.owner._store.indexes[f]
+            return functools.reduce(operator.or_, (set(i == v) for v in vals))
         return Query(_and, self, values)
 
     def __str__(self):

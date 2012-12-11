@@ -204,6 +204,9 @@ class Index(object):
         i = bisect_right(self._ordered[0], key)
         return iter(self._ordered[1][i:])
 
+    def __str__(self):
+        return str(self.field)
+
 
 class Store(object):
 
@@ -215,6 +218,10 @@ class Store(object):
     Tables are exposed as an array of cells, where each cell is identified
     by `Table` and `Field` instances.  Cells are unordered, although
     implementations may order them internally.
+
+    The Store is tolerant of missing values.  `get` will return defaults if
+    the record requested does not exist.  `set` will add a new record
+    if the record does not exist.
     """
 
     def __init__(self):
@@ -249,9 +256,9 @@ class Store(object):
         """
         Return the value in a cell specified by *record* and *field*.  This
         should respect any field defaults.  If this is called with a record
-        or field that has not been added, the behaviour is unspecified.
+        that has not been added, it will be added.
         """
-        return self._data[record].get(field, field.default)
+        return self._data.get(record, {}).get(field, field.default)
 
     def has_record(self, record):
         """
@@ -308,10 +315,11 @@ class Store(object):
         Set the data in a record.
         """
         old = self.get(record, field)
-        self._data[record][field] = value
-        index = self.indexes[field]
-        index.remove(old, record)
-        index.insert(value, record)
+        if old is not value:
+            self._data[record][field] = value
+            index = self.indexes[field]
+            index.remove(old, record)
+            index.insert(value, record)
 
     def setdefault(self, field, value):
         """

@@ -148,27 +148,42 @@ class Table(_TableBase):
 
     def __init__(self, **kwargs):
         store = self.__class__._store
-        store.add_record(self)
-        data = dict([(f, getattr(self, f)) for f in self.__class__.fields()])
-        badkw = set(kwargs.keys()) - set(data.keys())
+        badkw = set(kwargs.keys()) - set(store.fields.keys())
         if badkw:
             raise AttributeError(badkw)
-        data.update(kwargs)
-        _assert_unique = self._assert_unique
-        _validate = self._validate
-        self._assert_unique = lambda a: None
-        self._validate = lambda: None
+        kwargs
+        # Get new values by validation
+        data = {}
+        for field in store.fields.values():
+            if field.name in kwargs:
+                if field.readonly:
+                    raise ValidationError('Field is read only')
+                value = kwargs[field.name]
+            else:
+                value = field.default
+            try:
+                for validator in field.validators:
+                    value = validator(value)
+            except Exception as err:
+                if isinstance(err, AssertionError):
+                    raise ValidationError(*err.args)
+                else:
+                    raise
+            data[field] = value
+
+        # Check uniqueness
+        if any(f.unique for f in store.fields.values()):
+            self._assert_unique(data)
+
+        # All good so far, so add the data to the store
+        store.add_record(self)
+        for field, value in data.items():
+            store.set(self, field, value)
+
+        # Validate record
         try:
-            for k, v in data.items():
-                setattr(self, k, v)
-        finally:
-            self._assert_unique = _assert_unique
-            self._validate = _validate
-        try:
-            if any(f.unique for f in store.fields.values()):
-                self._assert_unique({})
             self._validate()
-        except ValidationError:
+        except:
             store.remove_record(self)
             raise
 
@@ -206,13 +221,16 @@ class Table(_TableBase):
     def _assert_unique(self, replacevalues):
         store = self.__class__._store
         # construct query
-        values = dict([(f, store.get(self, f))
-                       for f in store.fields.values()
-                       if f.unique])
-        for f, v in replacevalues.items():
-            values[f] = v
-        query = functools.reduce(operator.and_,
-                             (f == v for f, v in values.items()))
+        queries = []
+        for field in store.fields.values():
+            if field.unique:
+                if field in replacevalues:
+                    value = replacevalues[field]
+                else:
+                    value = store.get(self, field)
+                queries.append(field == value)
+
+        query = functools.reduce(operator.and_, queries)
         existing = set(query) - set([self])
         if existing:
             raise ValidationError('Not unique: ', existing)
