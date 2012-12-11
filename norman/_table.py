@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import collections
 import copy
 import functools
+import operator
 import re
 import uuid
 
@@ -146,60 +147,75 @@ class Table(_TableBase):
     """
 
     def __init__(self, **kwargs):
-        self.__class__._store.add_record(self)
+        store = self.__class__._store
+        store.add_record(self)
         data = dict([(f, getattr(self, f)) for f in self.__class__.fields()])
         badkw = set(kwargs.keys()) - set(data.keys())
         if badkw:
             raise AttributeError(badkw)
         data.update(kwargs)
-        validate = self._validate
+        _assert_unique = self._assert_unique
+        _validate = self._validate
+        self._assert_unique = lambda a: None
         self._validate = lambda: None
         try:
             for k, v in data.items():
                 setattr(self, k, v)
         finally:
-            self._validate = validate
+            self._assert_unique = _assert_unique
+            self._validate = _validate
         try:
+            if any(f.unique for f in store.fields.values()):
+                self._assert_unique({})
             self._validate()
         except ValidationError:
-            self._store.remove_record(self)
+            store.remove_record(self)
             raise
 
     def __setattr__(self, attr, value):
-        cls = self.__class__
+        store = self.__class__._store
         try:
-            field = cls._store.fields[attr]
+            field = store.fields[attr]
         except KeyError:
-            super(Table, self).__setattr__(attr, value)
-        else:
-            # Get new value by validation
+            return super(Table, self).__setattr__(attr, value)
+
+        # Get new value by validation
+        try:
+            for validator in field.validators:
+                value = validator(value)
+        except Exception as err:
+            if isinstance(err, AssertionError):
+                raise ValidationError(*err.args)
+            else:
+                raise
+        oldvalue = store.get(self, field)
+        # To avoid endless recursion if validate changes a value
+        if oldvalue != value:
+            if field.readonly and oldvalue is not NotSet:
+                raise ValidationError('Field is read only')
+            # This is expensive, only do it once on record creation
+            if field.unique:
+                self._assert_unique({field: value})
+            store.set(self, field, value)
             try:
-                for validator in field.validators:
-                    value = validator(value)
-            except Exception as err:
-                if isinstance(err, AssertionError):
-                    raise ValidationError(*err.args)
-                else:
-                    raise
-            oldvalue = cls._store.get(self, field)
-            # To avoid endless recursion if validate changes a value
-            if oldvalue != value:
-                if field.readonly and oldvalue is not NotSet:
-                    raise ValidationError('Field is read only')
-                cls._store.set(self, field, value)
-                try:
-                    if field.unique:
-                        # construct query
-                        query = (f == cls._store.get(self, f)
-                                 for f in cls._store.fields.values() if f.unique)
-                        query = functools.reduce(lambda a, b: a & b, query)
-                        existing = set(query) - set([self])
-                        if existing:
-                            raise ValidationError('Not unique')
-                    self._validate()
-                except:
-                    cls._store.set(self, field, oldvalue)
-                    raise
+                self._validate()
+            except:
+                store.set(self, field, oldvalue)
+                raise
+
+    def _assert_unique(self, replacevalues):
+        store = self.__class__._store
+        # construct query
+        values = dict([(f, store.get(self, f))
+                       for f in store.fields.values()
+                       if f.unique])
+        for f, v in replacevalues.items():
+            values[f] = v
+        query = functools.reduce(operator.and_,
+                             (f == v for f, v in values.items()))
+        existing = set(query) - set([self])
+        if existing:
+            raise ValidationError('Not unique: ', existing)
 
     @recursive_repr()
     def __repr__(self):
