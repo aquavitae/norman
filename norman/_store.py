@@ -16,9 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-import abc
 import collections
-import itertools
 from bisect import bisect_left, bisect_right
 from ._field import NotSet
 
@@ -157,7 +155,7 @@ class Index(object):
                 key = hash(value)
             except TypeError:
                 key = id(value)
-            for k, l in self._unordered.items():
+            for l in self._unordered.values():
                 for d in l:
                     if d[0] != value:
                         yield d[1]

@@ -128,6 +128,7 @@ def map(mapping):
         return mapping.setdefault(value, value)
     return inner
 
+
 def settype(t, default):
     """
     Return a `~norman.Field` validator which converts the value to type *t*.
@@ -176,7 +177,7 @@ def todate(fmt=None):
 def todatetime(fmt=None):
     """
     Return a validator which converts a string to a `datetime.datetime`.  If
-    *fmt* is omitted, the ISO representation used by 
+    *fmt* is omitted, the ISO representation used by
     `datetime.datetime.__str__` is used, otherwise it should be a format
     string for `datetime.datetime.strptime`.
 

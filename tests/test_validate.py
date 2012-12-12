@@ -24,10 +24,9 @@ from norman import validate, NotSet
 class Test_ifset(object):
 
     """
-    Return ``func(value)`` if *value* is not `NotSet, otherwise return `NotSet`.
-
-    This is normally used as a wrapper around another validator to permit
-    `NotSet` values to pass.
+    Return ``func(value)`` if *value* is not `NotSet`, otherwise return
+    `NotSet`.  This is normally used as a wrapper around another validator
+    to permit `NotSet` values to pass.
     """
 
     def test(self):
@@ -209,7 +208,7 @@ class Test_todatetime(object):
         d = datetime.date(2013, 12, 23)
         assert v(d) == datetime.datetime(2013, 12, 23, 0, 0, 0)
 
-    def test_datetime(self):
+    def test_time(self):
         v = validate.todatetime()
         d = datetime.time(12, 23, 34)
         assert v(d) == datetime.datetime(1900, 1, 1, 12, 23, 34)

@@ -24,7 +24,7 @@ import functools
 import numbers
 import operator
 
-from ._except import ConsistencyError, ValidationError
+from ._except import ConsistencyError
 from ._query import Query
 
 
@@ -38,13 +38,7 @@ class NotSet(object):
 
 
 # Sentinel indicating that the field value has not yet been set.
-NotSet = NotSet()
-
-
-def _op(op):
-    inner = lambda field, value: set(op(field.owner._store.indexes[field], value))
-    inner.__name__ = op.__name__
-    return inner
+NotSet = NotSet()
 
 def _key(value):
     if isinstance(value, numbers.Real):
@@ -65,8 +59,9 @@ class Field(object):
     >>> class MyTable(Table):
     ...     name = Field()
 
-    Fields may be created with a combination of properties as keyword arguments,
-    including `default`, `key`, `readonly`, `unique` and `validators`.
+    Fields may be created with a combination of properties as keyword
+    arguments, including `default`, `key`, `readonly`, `unique` and
+    `validators`.
 
     Fields can be used with comparison operators to return a `Query`
     object containing matching records.  For example::

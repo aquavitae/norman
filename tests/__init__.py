@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 import pickle
 import os
 
-from norman import Database, Table, Field, tools
+from norman import Database, Table, Field, validate
 
 db = Database()
 
@@ -31,12 +31,10 @@ db = Database()
 class Person(Table):
     custno = Field(unique=True)
     name = Field()
-    age = Field(default=20)
+    age = Field(default=20, validators=validate.settype(int, 0))
     address = Field()
 
     def validate(self):
-        if not isinstance(self.age, int):
-            self.age = tools.int2(self.age, 0)
         assert isinstance(self.address, Address)
 
 

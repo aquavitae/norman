@@ -35,15 +35,20 @@ if sys.version >= '3':
     unicode = str
     long = int
     from reprlib import recursive_repr
+    range = range
 
 else:
     unicode = unicode
     long = long
+    range = xrange
 
     # Copied directly from Python 3.2 reprlib
     from thread import get_ident
+
     def recursive_repr(fillvalue='...'):
-        'Decorator to make a repr function return fillvalue for a recursive call'
+        """
+        Decorator to make a repr function return fillvalue for a recursive call
+        """
 
         def decorating_function(user_function):
             repr_running = set()
@@ -63,8 +68,8 @@ else:
             wrapper.__module__ = getattr(user_function, '__module__')
             wrapper.__doc__ = getattr(user_function, '__doc__')
             wrapper.__name__ = getattr(user_function, '__name__')
-            wrapper.__annotations__ = getattr(user_function, '__annotations__', {})
+            wrapper.__annotations__ = getattr(user_function,
+                                              '__annotations__', {})
             return wrapper
 
         return decorating_function
-

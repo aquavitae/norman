@@ -154,6 +154,7 @@ class TestJoin(object):
 
     def test_name(self):
         db = Database()
+
         @db.add
         class Parent(Table):
             children = Join(db, 'Child.parent')
@@ -190,10 +191,12 @@ class TestJoin(object):
         p1.children.add(id=1)
         assert p1.children.one().id == 1
 
+
 class TestManyJoin(object):
 
     def setup(self):
         self.db = Database()
+
         @self.db.add
         class Left(Table):
             rights = Join(self.db, 'Right.lefts')
@@ -262,11 +265,11 @@ class TestValidator(object):
             a = Field(validators=[float])
 
         with assert_raises(TypeError):
-            t = T()
+            T()
 
     def test_default(self):
         class T(Table):
             a = Field(default=None, validators=[float])
 
         with assert_raises(TypeError):
-            t = T()
+            T()

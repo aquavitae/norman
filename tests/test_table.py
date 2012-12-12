@@ -17,18 +17,10 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
-import collections
 import re
-import weakref
-import timeit
-
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, Join, _table, ValidationError
-from norman._query import Query
-
-import sys
-if sys.version < '3':
-    range = xrange
+from norman import Table, Field, NotSet, Join, ValidationError
+from norman._compat import range
 
 
 class TestFields(object):
@@ -140,6 +132,7 @@ class TestTable(object):
         'Test repr(table)'
         t = self.T(oid=4, name='tee', age=23)
         t.age = t   # Test self-reference
+        import sys
         if sys.version >= '3':
             expect = "T(age=..., name='tee', oid=4)"
         else:
@@ -158,6 +151,7 @@ class TestTable(object):
         t1 = self.T(oid=1)
         t2 = self.T(oid=2)
         assert t1 in self.T
+        assert t2 in self.T
 
     def test_delete_instance(self):
         'Test deleting a single instance'
@@ -181,9 +175,9 @@ class TestTable(object):
 
     def test_delete_all(self):
         'Test that delete with no args clears all instances.'
-        p1 = self.T(oid=1, name='Mike', age=23)
-        p2 = self.T(oid=2, name='Mike', age=22)
-        p3 = self.T(oid=3, name='Mike', age=23)
+        self.T(oid=1, name='Mike', age=23)
+        self.T(oid=2, name='Mike', age=22)
+        self.T(oid=3, name='Mike', age=23)
         self.T.delete()
         assert len(self.T) == 0
 
@@ -279,7 +273,10 @@ class TestInheritance(object):
 class TestUid(object):
 
     def setup(self):
-        class T(Table): pass
+
+        class T(Table):
+            pass
+
         self.t = T()
 
     def test_default(self):
@@ -317,9 +314,9 @@ class TestUnique(object):
 
     def test_unique_init(self):
         'Test the initialisation of a duplicate record.'
-        t1 = self.T(oid=3)
+        self.T(oid=3)
         with assert_raises(ValueError):
-            t2 = self.T(oid=3)
+            self.T(oid=3)
 
     def test_unique_set(self):
         'Test setting a record to a duplicate value.'
@@ -352,8 +349,10 @@ class TestUnique(object):
         class T(Table):
             a = Field(unique=True)
             b = Field()
+
             def validate(self):
                 self.a = self.b
+
         t1 = T(b=1)
         t2 = T(b=2)
         assert t1.a == 1
@@ -367,8 +366,10 @@ class TestValidateDelete(object):
     def setup(self):
         class T(Table):
             value = Field()
+
             def validate_delete(self):
                 assert self.value > 1
+
         self.T = T
 
     def test_valid(self):
@@ -387,6 +388,7 @@ class TestValidateDelete(object):
     def test_propogate(self):
         class T(Table):
             value = Field()
+
             def validate_delete(self):
                 if self.value != 3:
                     self.__class__.delete(t3)
@@ -402,8 +404,10 @@ class TestHooks:
 
     def test_validate(self):
         calls = []
+
         class T(Table):
             value = Field()
+
             def validate(self):
                 calls.append('validate')
 
@@ -417,13 +421,15 @@ class TestHooks:
 
         T.hooks['validate'] += [one, two]
 
-        t = T(value=4)
+        dummy = T(value=4)
         assert calls == ['validate', 'one', 'two']
 
     def test_validate_delete(self):
         calls = []
+
         class T(Table):
             value = Field()
+
             def validate_delete(self):
                 calls.append('delete')
 

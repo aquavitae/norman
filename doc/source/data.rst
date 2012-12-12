@@ -69,10 +69,10 @@ records should always be contained in the table.  To avoid problems, use
 
 .. attribute:: Table._store
 
-    A `Store` instanced used as a storage backend.  This may be overridden
+    A `Store` instance used as a storage backend.  This may be overridden
     when the class is created to use a customised `Store` object.
-     
-    
+
+
 .. attribute:: Table.hooks
 
     A `dict` containing lists of callables to be run when an event occurs.
@@ -130,13 +130,13 @@ indicate this.
 .. autoclass:: Field
 
     .. autoattribute:: default
-    
+
     .. autoattribute:: key
-    
+
     .. autoattribute:: name
 
     .. autoattribute:: owner
-   
+
     .. autoattribute:: readonly
 
     .. autoattribute:: unique
@@ -217,7 +217,7 @@ Warnings
     Currently all warnings use this class.  In the future, this behaviour
     will change, and subclasses will be used.
 
-    
+
 Advanced API
 ============
 

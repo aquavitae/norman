@@ -44,5 +44,8 @@ from ._table import Table
 from ._field import Field, Join, NotSet
 from ._query import query, Query
 from ._database import Database
-from ._except import NormanWarning, NormanError, ConsistencyError, ValidationError
+from ._except import (NormanWarning,
+                      NormanError,
+                      ConsistencyError,
+                      ValidationError)
 from ._store import Store, Index

@@ -62,9 +62,9 @@ Serialiser framework
 
 
     .. attribute:: options
-    
+
         A dict containing keyword arguments passed at initialisation.
-        
+
 
     .. classmethod:: dump(db, filename)
 

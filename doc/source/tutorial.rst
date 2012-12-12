@@ -237,16 +237,16 @@ Depending on the application, it is possible to change how the data
 is indexed, allowing for more control over how data can be queried.
 For example, if we were more concerned about querying books by title length,
 we could use `len` as the index key function::
-        
+
     class Book(Table):
         ...
         name = Field(key=len)
         ...
-        
+
 Then we could query all books with a title longer than 10 characters::
 
-    Book.name > ' '*10 
-    
+    Book.name > ' '*10
+
 Note that the target of the query is also affected by the key, so we need
 to give it a value such that ``len(value)`` returns 10.
 

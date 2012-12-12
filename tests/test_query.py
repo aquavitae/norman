@@ -16,11 +16,8 @@
 
 from __future__ import with_statement
 
-import copy
-import random
-
 from nose.tools import assert_raises
-from norman import Table, Field, Join, query, tools
+from norman import Table, Field, Join, query
 
 
 class TestCase(object):
@@ -205,4 +202,5 @@ class TestQuery(TestCase):
 
     def test_str2(self):
         q = (self.A.a >= 1) | ((self.A.b != 4) & (self.A.c & [1, 2, 3]))
-        assert str(q) == '(A.a >= 1) | ((A.b != 4) & (A.c & [1, 2, 3]))', str(q)
+        expect = '(A.a >= 1) | ((A.b != 4) & (A.c & [1, 2, 3]))'
+        assert str(q) == expect, str(q)

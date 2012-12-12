@@ -32,6 +32,7 @@ class NormanWarning(UserWarning):
 #    Field set to record outside database
 #    record used which has been deleted.
 
+
 class NormanError(Exception):
     """
     Base class for all Norman exceptions.
@@ -47,7 +48,7 @@ class ConsistencyError(NormanError):
 class ValidationError(NormanError, ValueError, TypeError):
     """
     Raised when an operation resulting in table validation failing.
-    
+
     For now this inherits from `NormanError`, `ValueError` and `TypeError`
     to keep it backwardly compatible.  This will change in version 0.7.0
     """

@@ -26,7 +26,7 @@ try:
 except ImportError:
     from mock import patch
 
-from norman import Database, Table, Field, tools, serialise, NotSet
+from norman import Database, Table, Field, serialise, NotSet, validate
 from norman._compat import unicode
 
 db = Database()
@@ -36,12 +36,10 @@ db = Database()
 class Person(Table):
     custno = Field(unique=True)
     name = Field()
-    age = Field(default=20)
+    age = Field(default=20, validators=[validate.settype(int, 0)])
     address = Field()
 
     def validate(self):
-        if not isinstance(self.age, int):
-            self.age = tools.int2(self.age, 0)
         assert isinstance(self.address, Address)
 
 
@@ -136,9 +134,12 @@ class TestAPI(object):
                 (Town, 2, {'name': 'up'}),
                 (Address, 3, {'street': 'easy', 'town': 1}),
                 (Address, 4, {'street':'some', 'town': 2}),
-                (Person, 5, {'custno': '1', 'name': 'matt', 'age': 43, 'address': 3}),
-                (Person, 6, {'custno': '2', 'name': 'bob', 'age': 13, 'address': 3}),
-                (Person, 7, {'custno': '3', 'name': 'peter', 'age': 29, 'address': 4})]
+                (Person, 5, {'custno': '1', 'name': 'matt', 'age': 43,
+                             'address': 3}),
+                (Person, 6, {'custno': '2', 'name': 'bob', 'age': 13,
+                             'address': 3}),
+                (Person, 7, {'custno': '3', 'name': 'peter', 'age': 29,
+                             'address': 4})]
 
         s = self.S(data)
         s.read(None)
