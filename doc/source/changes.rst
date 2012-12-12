@@ -13,16 +13,19 @@ Norman-0.7.0
 
 *Release Date: Not yet released*
 
+-   Many internal changes in the way data is stored and indexed, centred
+    around the introduction of two new classes, `Store` and `Index`.
+-   All fields are now automatically indexed.  As a results the *index*
+    parameter to `Field` objects falls away, and a new *key* argument
+    is introduced.
+-   `Table` objects have a new attribute, ~`Table._store`, which refers
+    to the `Store` used for the table.  This may be changed when the
 -   Add a `serialise.Serialiser.uid` convenience method.
 -   Add support for optional keyword arguments to serialisers.
 -   Add a new `~serialise.CSV` serialiser.
--   Add an *autoindex* class attribute to `Field` objects.
 -   Add `validate.map` validator to convert values.
+-   Improved the string representation of `Query` and `Field` instances.
 -   Deprecated functionality removed
--   Improved the implementation of indexes.  This results in several major
-    internal changes.
--   Abstract the table data into a new `Store` object.
--   Improved implementation of `Query.__str__`
 
 
 Norman-0.6.2
@@ -37,7 +40,7 @@ Norman-0.6.2
 -   Add a return value when calling `Query` objects.
 -   `Field` level validation added, including some validator factories.
 -   Add `validate.todatetime`, `validate.todate` and `validate.totime`.
--   Deprecated the `tools` module.
+-   Deprecated the `!tools` module.
 
 
 Norman-0.6.1
@@ -67,13 +70,13 @@ Norman-0.6.0
 -   Add sensible `repr` to `Table` and `NotSet` objects
 -   `Query` object added, introducing a new method of querying tables,
     involving `Field` and `Query` comparison operators.
--   `Join` class created, which will replace `Group` in 0.7.0.
--   `!Field.name` and `!Field.owner`, which previously existed, have now been
+-   `Join` class created, which will replace `!Group` in 0.7.0.
+-   `Field.name` and `Field.owner`, which previously existed, have now been
     formalised and documented.
--   `!Field.default` is respected when initialising tables
+-   `Field.default` is respected when initialising tables
 -   `Table._uid` property added for Table objects.
 -   Allow `Table.validate_delete` to make changes.
--   Two new `tools` functions added: `tools.dtfromiso` and `tools.reduce2`.
+-   Two new `!tools` functions added: `!tools.dtfromiso` and `!tools.reduce2`.
 -   `Database.add` method added.
 -   Documentation updated to align with docstrings.
 -   Fix a bunch of style and PEP8 related issues
@@ -86,7 +89,7 @@ Norman-0.5.2
 *Release Date: 2012-04-20*
 
 -   Fixed failing tests
--   `Group.add` implemented and documented
+-   `!Group.add` implemented and documented
 -   Missing documentation fixed
 
 

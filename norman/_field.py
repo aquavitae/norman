@@ -82,7 +82,7 @@ class Field(object):
     ``field`` is in ``mylist``.
 
 
-    .. changed:: 0.7
+    .. versionchanged:: 0.7
 
         All fields are automatically indexed, and the *index* argument
         has been removed.   *key* has been added to control how data is

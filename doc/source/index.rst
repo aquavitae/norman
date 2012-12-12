@@ -11,7 +11,7 @@ Norman Documentation
 Norman provides a framework for creating complex data structures using
 an database-like approach.  The range of potential application is wide,
 for example in-memory databases, multi-keyed dictionaries or node graphs.
-These applications are illustrated in the following examples.
+Some of these applications are illustrated in the following examples.
 
 
 Example Applications
@@ -26,11 +26,10 @@ This is a small database for a personal library::
 
     @db.add
     class Book(Table):
-        name = Field(unique=True)
+        name = Field(unique=True, validators=[istype(str)])
         author = Field()
 
         def validate(self):
-            assert isinstance(self.name, str)
             assert isinstance(self.author, Author)
 
     @db.add
@@ -104,5 +103,4 @@ Contents
     data
     queries
     serialise
-    tools
     validate

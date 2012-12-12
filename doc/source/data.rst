@@ -113,6 +113,51 @@ methods.
 .. automethod:: Table.validate_delete
 
 
+Notes on Validation
+^^^^^^^^^^^^^^^^^^^
+
+Data is validated whenever a record is added or removed, and there is the
+opportunity to influence this process through validation hooks.  When a
+new record is created, there are three sets of validation criteria which
+must pass in order for the record to actually be created.  The first step
+is to run the validators specified in `Field.validators`.  These can change
+or verify the value in each field independently of context.  The second
+validation check is applied whenever there are unique fields, and confirms
+that the combination of values in unique fields in actually unique.  The
+final stage is to run all the validation hooks in `Table.hooks`.  These affect
+the entire record, and may be used to perform changes across multiple fields.
+If at any stage an Exception is raised, the record will not be created.
+
+The following example illustrates how the validation occurs.  When a new
+record is created, the value is first converted to a string by the field
+validator, then checked for uniqueness, and finally the `validate`
+method creates the extra *parts* value.
+
+    >>> class TextTable(Table):
+    ...     'A Table of text values.'
+    ...
+    ...     # A text value stored in the table
+    ...     value = Field(unique=True, validators=[str])
+    ...     # A pre-populated, calculated value.
+    ...     parts = Field()
+    ...
+    ...     def validate(self):
+    ...         self.parts = self.value.split()
+    ...
+    >>> r = TextTable(value='a string')
+    >>> r.value
+    'a string'
+    >>> r.parts
+    ['a', 'string']
+    >>> r = TextTable(value=3)
+    >>> r.value
+    '3'
+    >>> r = TextTable(value='3')
+    Traceback (most recent call last):
+        ...
+    norman._except.ValidationError: Not unique: TextTable(parts=['3'], value='3')
+
+
 Fields
 ------
 
@@ -140,6 +185,8 @@ indicate this.
     .. autoattribute:: readonly
 
     .. autoattribute:: unique
+
+    .. autoattribute:: validators
 
 
 Joins

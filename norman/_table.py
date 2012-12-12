@@ -141,9 +141,6 @@ class Table(_TableBase):
     for internal use.  Fields may be added to a `Table` after the `Table`
     is created, provided they do not already belong to another `Table`, and
     the `Field` name is not already used in the `Table`.
-
-    The internal data store used can be set by assigning an instance of
-    a `Store` to `_store`.  The default is to use `DefaultStore`.
     """
 
     def __init__(self, **kwargs):
@@ -233,7 +230,7 @@ class Table(_TableBase):
         matches = functools.reduce(operator.and_, matches)
         existing = set(matches) - set([self])
         if existing:
-            raise ValidationError('Not unique: ', existing)
+            raise ValidationError('Not unique: ' + str(existing.pop()))
 
     @recursive_repr()
     def __repr__(self):
