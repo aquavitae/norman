@@ -18,8 +18,7 @@
 
 from nose.tools import assert_raises
 
-from norman import NotSet, Field
-from norman.store import Store, Index
+from norman import NotSet, Field, Store, Index
 
 try:
     from unittest.mock import Mock, patch
@@ -120,8 +119,8 @@ class TestIndex_UnOrdered(object):
                 return -int(v)
             except ValueError:
                 raise TypeError
-        patch('norman.store.hash', mockhash, create=True).start()
-        patch('norman.store.id', lambda v: 10, create=True).start()
+        patch('norman._store.hash', mockhash, create=True).start()
+        patch('norman._store.id', lambda v: 10, create=True).start()
 
     def teardown(self):
         patch.stopall()

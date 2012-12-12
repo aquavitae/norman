@@ -29,7 +29,7 @@ import uuid
 from ._except import ConsistencyError, ValidationError
 from ._field import Field, Join, NotSet
 from ._compat import unicode, long, recursive_repr
-from .store import Store
+from ._store import Store
 
 
 _re_uuid = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
