@@ -15,9 +15,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import contextlib
 import os
 from nose.tools import assert_raises
@@ -27,9 +24,9 @@ try:
 except ImportError:
     from mock import patch
 
-from norman import Database, Table, Field, serialise, NotSet, Join
+from norman import Database, Table, Field, serialise, Join
 from norman.validate import ifset, settype, istype
-from norman._compat import unicode
+from norman._six import u, get_unbound_function
 
 db = Database()
 
@@ -79,7 +76,7 @@ class TestCase(object):
         assert set(db.tablenames()) == set(['Town', 'Address', 'Person'])
         streets = set(a.street for a in db['Address'])
         assert streets == set(['easy', 'some']), streets
-        address = db['Address'].street == 'easy'
+        address = db['Address'].street & ('easy', u('easy'))
         address = address.one()
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])
@@ -109,9 +106,10 @@ class TestAPI(object):
         db.reset()
 
     def test_isuid(self):
-        f = unicode('field')
-        v = unicode('a8098c1a-f86e-11da-bd1a-00112444be1e')
-        assert serialise.Serialiser.isuid(None, f, v)
+        f = u('field')
+        v = u('a8098c1a-f86e-11da-bd1a-00112444be1e')
+        s = get_unbound_function(serialise.Serialiser.isuid)
+        assert s(None, f, v)
 
     def test_simple(self):
         data = [(Town, 1, {'name': 'A'}),

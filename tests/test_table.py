@@ -14,13 +14,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import re
 from nose.tools import assert_raises
 from norman import Table, Field, NotSet, Join, ValidationError
-from norman._compat import range
 
 
 class TestFields(object):
@@ -132,11 +128,7 @@ class TestTable(object):
         'Test repr(table)'
         t = self.T(oid=4, name='tee', age=23)
         t.age = t   # Test self-reference
-        import sys
-        if sys.version >= '3':
-            expect = "T(age=..., name='tee', oid=4)"
-        else:
-            expect = "T(age=..., name=u'tee', oid=4)"
+        expect = "T(age=..., name='tee', oid=4)"
         assert repr(t) == expect, repr(t)
 
     def test_len(self):

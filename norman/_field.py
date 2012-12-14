@@ -17,15 +17,13 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import functools
 import numbers
 import operator
 
 from ._except import ConsistencyError
 from ._query import Query
+from ._six.moves import reduce
 
 
 class NotSet(object):
@@ -248,7 +246,7 @@ class Field(object):
     def __and__(self, values):
         def _and(f, vals):
             i = f.owner._store.indexes[f]
-            return functools.reduce(operator.or_, (set(i == v) for v in vals))
+            return reduce(operator.or_, (set(i == v) for v in vals))
         return Query(_and, self, values)
 
     def __str__(self):

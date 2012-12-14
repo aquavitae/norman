@@ -16,19 +16,17 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import collections
 import copy
-import functools
 import operator
 import re
 import uuid
 
 from ._except import ConsistencyError, ValidationError
 from ._field import Field, Join, NotSet
-from ._compat import unicode, long, recursive_repr
+from ._six import (integer_types, recursive_repr, string_types, u,
+                   with_metaclass)
+from ._six.moves import reduce
 from ._store import Store
 
 
@@ -126,10 +124,7 @@ class TableMeta(type):
         return cls._store.fields.keys()
 
 
-_TableBase = TableMeta(str('_TableBase'), (object,), {})
-
-
-class Table(_TableBase):
+class Table(with_metaclass(TableMeta)):
 
     """
     Each instance of a Table subclass represents a record in that Table.
@@ -227,7 +222,7 @@ class Table(_TableBase):
                     value = store.get(self, field)
                 matches.append(set(store.indexes[field] == value))
 
-        matches = functools.reduce(operator.and_, matches)
+        matches = reduce(operator.and_, matches)
         existing = set(matches) - set([self])
         if existing:
             raise ValidationError('Not unique: ' + str(existing.pop()))
@@ -252,15 +247,15 @@ class Table(_TableBase):
         try:
             return self.__uid
         except AttributeError:
-            self._uid = unicode(uuid.uuid4())
+            self._uid = u(str(uuid.uuid4()))
             return self.__uid
 
     @_uid.setter
     def _uid(self, value):
-        if isinstance(value, (int, long)):
+        if isinstance(value, integer_types):
             if value == 0:
                 raise ValueError('_uid cannot be 0')
-        elif isinstance(value, unicode):
+        elif isinstance(value, string_types):
             if not _re_uuid.match(value):
                 raise ValueError('_uid must be a valid UUID')
         else:

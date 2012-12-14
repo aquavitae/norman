@@ -16,22 +16,26 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 """ Some system test for the database. """
-from __future__ import with_statement
-from __future__ import unicode_literals
 
 import pickle
 import os
 
-from norman import Database, Table, Field, validate
+from norman import Database, Table, Field, Join
+from norman.validate import settype, istype, ifset
 
 db = Database()
+
+
+@db.add
+class Town(Table):
+    name = Field(unique=True)
 
 
 @db.add
 class Person(Table):
     custno = Field(unique=True)
     name = Field()
-    age = Field(default=20, validators=validate.settype(int, 0))
+    age = Field(default=20, validators=[settype(int, 0)])
     address = Field()
 
     def validate(self):
@@ -41,19 +45,8 @@ class Person(Table):
 @db.add
 class Address(Table):
     street = Field(unique=True)
-    town = Field(unique=True)
-
-    @property
-    def people(self):
-        return list(Person.address == self)
-
-    def validate(self):
-        assert isinstance(self.town, Town)
-
-
-@db.add
-class Town(Table):
-    name = Field(unique=True)
+    town = Field(unique=True, validators=[ifset(istype(Town))])
+    people = Join(Person.address)
 
 
 class TestCase1(object):

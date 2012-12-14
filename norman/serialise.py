@@ -16,9 +16,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import abc
 import contextlib
 import csv
@@ -30,7 +27,8 @@ import uuid
 
 from ._table import Table
 from ._field import NotSet
-from ._compat import unicode
+from ._six import u, string_types, with_metaclass
+from ._six.moves import zip
 
 _re_hex = ''
 _re_uuid = re.compile(r'[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}', re.I)
@@ -91,10 +89,10 @@ def uid():
     Create a new uid value.  This is useful for files which do not
     natively provide a uid.
     """
-    return unicode(uuid.uuid4())
+    return u(uuid.uuid4())
 
 
-class Reader(abc.ABCMeta(str('Base'), (object,), {})):
+class Reader(with_metaclass(abc.ABCMeta)):
 
     """
     An abstract base class providing a framework for readers.
@@ -180,7 +178,7 @@ class Reader(abc.ABCMeta(str('Base'), (object,), {})):
         By default, this returns `True` for all strings which match a UUID
         regular expression, e.g. ``'a8098c1a-f86e-11da-bd1a-00112444be1e'``.
         """
-        return (isinstance(value, unicode) and
+        return (isinstance(value, string_types) and
                 len(value) == 36 and _re_uuid.match(value))
 
     def read(self, source, db):
@@ -239,7 +237,7 @@ class Reader(abc.ABCMeta(str('Base'), (object,), {})):
                 created[u] = r
 
 
-class Writer(abc.ABCMeta(str('Base'), (object,), {})):
+class Writer(with_metaclass(abc.ABCMeta)):
 
     """
     An abstract base class providing a framework for writers.
@@ -354,9 +352,8 @@ class Sqlite(Serialiser):
     contains the record's `~Table._uid`.  *uidname* may be empty or None,
     in which case uids are ignored and the field is omitted.
 
-
-    The sqlite database is created without any constraints.
-
+    The sqlite database is created without any constraints.  As described in
+    the `sqite3` docs, under Python 2, text is always returned as unicode.
     """
 
     def __init__(self, uidname='_uid_'):

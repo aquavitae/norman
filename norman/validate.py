@@ -16,9 +16,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from __future__ import with_statement
-from __future__ import unicode_literals
-
 import datetime
 
 from ._except import ValidationError
@@ -46,7 +43,7 @@ def ifset(func):
         >>> validator(None)
         Traceback (most recent call last):
             ...
-        norman._except.ValidationError: None
+        ValidationError: None
     """
     def inner(value):
         if value is NotSet:
