@@ -17,12 +17,13 @@ Norman-0.7.0
     is introduced.
 -   `Table` objects have a new attribute, ~`Table._store`, which refers
     to the `Store` used for the table.  This may be changed when the
--   Add a `serialise.Serialiser.uid` convenience method.
--   Add support for optional keyword arguments to serialisers.
+-   The `serialise` framework has been completely overhauled and the API
+    simplified.  Extensive changes in this module.
 -   Add a new `~serialise.CSV` serialiser.
 -   Add `validate.map` validator to convert values.
 -   Improved the string representation of `Query` and `Field` instances.
 -   Deprecated functionality removed
+
 
 
 Norman-0.6.2
@@ -47,7 +48,7 @@ Norman-0.6.1
 
 -   New serialiser framework added, based on `serialise.Serialiser`.
     A sample serialiser, `serialise.Sqlite` is included.
--   `serialise.Sqlite3` has been deprecated.
+-   `!serialise.Sqlite3` has been deprecated.
 -   Documentation overhauled introducing major changes to the documentation
     layout.
 -   Add boolean comparisons, `Query.delete` and `Query.one` methods to `Query`.

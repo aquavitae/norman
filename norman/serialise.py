@@ -103,7 +103,7 @@ class Reader(with_metaclass(abc.ABCMeta)):
     The entry point in the `read` method, which iterates of over records
     yielded by `iter_source`, identifies possible foreign keys by `isuid` and
     dereferences them by identifying loops and processing them with
-    `create_groups`.  This method calls `create_record` to actually create the
+    `create_group`.  This method calls `create_record` to actually create the
     record.
     """
 
@@ -117,7 +117,7 @@ class Reader(with_metaclass(abc.ABCMeta)):
         for the record, possibly containing other uids.  If *uid* is omitted,
         then one is automatically generated using `uuid`.
 
-        :param db:      The `Database` being read into.
+        :param db:      The `~norman.Database` being read into.
         :param source:  The data source, as specified in `read`.
         """
         raise NotImplementedError
@@ -125,7 +125,7 @@ class Reader(with_metaclass(abc.ABCMeta)):
     def create_record(self, table, uid, data):
         """
         Create a single record in *table*, using *uid* and *data*, as given
-        by `itersource`. This is called by `create_records`, so any
+        by `iter_source`. This is called by `create_group`, so any
         foreign uid in *data* should have been dereferenced.  The record
         created should be returned.
 
@@ -144,7 +144,7 @@ class Reader(with_metaclass(abc.ABCMeta)):
 
         Each record returned by *records* is a tuples of
         ``(table, uid, data, cycles)`` .  The first three values are the same
-        as those returned by `iterfile`, except that foreign uids in *data*
+        as those returned by `iter_source`, except that foreign uids in *data*
         have been dereferenced.  *cycles* is a set of field names which
         contain the cyclic references.
 
@@ -185,12 +185,12 @@ class Reader(with_metaclass(abc.ABCMeta)):
         """
         Read data from a *source* into *db*.
 
-        This converts each value returned by `itersource` into a record using
-        `create_records`.  It also attempts to re-map nested records by
+        This converts each value returned by `iter_source` into a record using
+        `create_record`.  It also attempts to re-map nested records by
         searching for matching uids.
 
         Cycles in the data are detected, and all records involved in
-        in a cycle are created in `create_records`.
+        in a cycle are created in `create_group`.
         """
         # Dict of record dictionaries, keyed by UID.
         records = {}
@@ -326,7 +326,7 @@ class Writer(with_metaclass(abc.ABCMeta)):
         """
         Write *record* to *target*.
 
-        This is called by `run_write` for every record yielded by `iterdb`.
+        This is called by `write` for every record yielded by `iterdb`.
         *record* is the values returned by `simplify` and *target* is the
         value returned by `context`.
         """
@@ -349,11 +349,11 @@ class Sqlite(Serialiser):
 
     Each table is dumped to a sqlite table with the same field names.
     An additional field specified by *uidname* is included which
-    contains the record's `~Table._uid`.  *uidname* may be empty or None,
-    in which case uids are ignored and the field is omitted.
+    contains the record's `~norman.Table._uid`.  *uidname* may be empty or
+    `None`, in which case uids are ignored and the field is omitted.
 
     The sqlite database is created without any constraints.  As described in
-    the `sqite3` docs, under Python 2, text is always returned as unicode.
+    the `sqlite3` docs, under Python2, text is always returned as unicode.
     """
 
     def __init__(self, uidname='_uid_'):
@@ -423,17 +423,18 @@ class CSV(Serialiser):
     of table fields.  This is only used for writing.
 
     An additional field specified by *uidname* is prepended which
-    contains the record's `~Table._uid`.   *uidname* may be empty or None,
-    in which case uids are ignored and the field is omitted.
+    contains the record's `~norman.Table._uid`.   *uidname* may be empty or
+    `None`, in which case uids are ignored and the field is omitted.
 
     Since csv files can only contain text, all values are converted to
     strings when writing, and it is up to the database to convert them back
     into other objects when reading.  The exception to this is uid keys, which
-    are handled by the `Reader`.  `NotSet` values are omitted when writing,
-    and empty field values are converted to `NotSet` when reading.
+    are handled by the `Reader`.  `~norman.NotSet` values are omitted when
+    writing, and empty field values are converted to `~norman.NotSet` when
+    reading.
 
-    The target and source specified in `read` and `write` should be a mapping
-    of table name to file name, for example::
+    The target and source specified in `~Reader.read` and `~Writer.write`
+    should be a mapping of table name to file name, for example::
 
         mapping = {Table1: '/path/table1.csv', Table2: '/path/table2.csv'}
         CSV().read(mapping, db)
