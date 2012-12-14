@@ -18,6 +18,7 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import contextlib
 import os
 from nose.tools import assert_raises
 
@@ -26,17 +27,23 @@ try:
 except ImportError:
     from mock import patch
 
-from norman import Database, Table, Field, serialise, NotSet, validate
+from norman import Database, Table, Field, serialise, NotSet, Join
+from norman.validate import ifset, settype, istype
 from norman._compat import unicode
 
 db = Database()
 
 
 @db.add
+class Town(Table):
+    name = Field(unique=True)
+
+
+@db.add
 class Person(Table):
     custno = Field(unique=True)
     name = Field()
-    age = Field(default=20, validators=[validate.settype(int, 0)])
+    age = Field(default=20, validators=[settype(int, 0)])
     address = Field()
 
     def validate(self):
@@ -46,19 +53,8 @@ class Person(Table):
 @db.add
 class Address(Table):
     street = Field(unique=True)
-    town = Field(unique=True)
-
-    @property
-    def people(self):
-        return set(Person.address == self)
-
-    def validate(self):
-        assert isinstance(self.town, (type(NotSet), Town)), self.town
-
-
-@db.add
-class Town(Table):
-    name = Field(unique=True)
+    town = Field(unique=True, validators=[ifset(istype(Town))])
+    people = Join(Person.address)
 
 
 class TestCase(object):
@@ -94,36 +90,35 @@ class TestAPI(object):
     class S(serialise.Serialiser):
 
         def __init__(self, filedata):
-            serialise.Serialiser.__init__(self, db)
             self.filedata = filedata
 
         def isuid(self, field, value):
             return isinstance(value, int)
 
-        def open(self, filename):
-            return
-
-        def close(self):
-            return
-
-        def iterfile(self):
+        def iter_source(self, source, db):
             return iter(self.filedata)
+
+        @contextlib.contextmanager
+        def context(self, targetname, db):
+            yield
+
+        def write_record(self, record, db):
+            pass
 
     def teardown(self):
         db.reset()
 
     def test_isuid(self):
-        s = serialise.Serialiser(None)
         f = unicode('field')
         v = unicode('a8098c1a-f86e-11da-bd1a-00112444be1e')
-        assert s.isuid(f, v)
+        assert serialise.Serialiser.isuid(None, f, v)
 
     def test_simple(self):
         data = [(Town, 1, {'name': 'A'}),
                 (Town, 2, {'name': 'B'}),
                 (Town, 3, {'name': 'C'})]
         s = self.S(data)
-        s.read(None)
+        s.read('source', db)
         got = set(Town)
         assert len(got) == 3
         assert set((g._uid, g.name) for g in got) == \
@@ -142,7 +137,7 @@ class TestAPI(object):
                              'address': 4})]
 
         s = self.S(data)
-        s.read(None)
+        s.read('source', db)
         assert len(Town) == 2
         assert len(Address) == 2
         assert len(Person) == 3
@@ -165,7 +160,7 @@ class TestAPI(object):
                 (Address, 3, {'street': 4, 'town': 1}),
                 (Address, 4, {'street': 3, 'town': 2})]
         s = self.S(data)
-        s.read(None)
+        s.read('source', db)
         t1 = (Town.name == '1').one()
         t2 = (Town.name == '2').one()
         a1 = (Address.town == t1).one()
@@ -176,10 +171,17 @@ class TestAPI(object):
 
 class TestSqlite(TestCase):
 
+    def teardown(self):
+        super(TestSqlite, self).teardown()
+        try:
+            os.unlink('sqltest')
+        except OSError:
+            pass
+
     def test_tofromsql(self):
-        serialise.Sqlite.dump(db, 'test')
+        serialise.Sqlite().write('sqltest', db)
         db.reset()
-        serialise.Sqlite.load(db, 'test')
+        serialise.Sqlite().read('sqltest', db)
         self.check_integrity(db)
 
     def test_bad_sql(self):
@@ -197,56 +199,25 @@ class TestSqlite(TestCase):
             INSERT INTO "cycles" VALUES (2, 'bad value');
             INSERT INTO "cycles" VALUES (3, '2009/10');
         """
-        conn = sqlite3.connect('test')
-        conn.executescript(sql)
-        conn.close()
-        serialise.Sqlite.load(db, 'test')
-
-    def test_tosqlite_exception(self):
-        'Make sure sqlite3 closes on an exception.'
-        with patch.object(Person, 'fields', side_effect=TypeError):
-            with assert_raises(TypeError):
-                serialise.Sqlite().dump(db, 'file')
-        try:
-            os.stat('file')
-        except OSError:
-            assert True
-        else:
-            assert False
+        with contextlib.closing(sqlite3.connect('sqltest')) as conn:
+            conn.executescript(sql)
+        serialise.Sqlite().read('sqltest', db)
 
 
 class TestCSV(TestCase):
 
-    def setup(self):
-        class T(Table):
-            name = Field()
-            age = Field()
-            number = Field()
-        self.T = T
-        self.expect = ['age,name,number\n', '43,matt,2\n',
-                       '3,bob,4\n', '29,peter,-9.32\n']
+    def teardown(self):
+        super(TestCSV, self).teardown()
+        try:
+            os.unlink('Town')
+            os.unlink('Address')
+            os.unlink('Person')
+        except OSError:
+            pass
 
-    def test_init(self):
-        for args in [(self.T,), (self.T, db)]:
-            s = serialise.CSV(*args)
-            assert s.table is self.T
-            assert s.db is None
-
-    def test_tocsv(self):
-        self.T(name='matt', age=43, number=2)
-        self.T(name='bob', age=3, number=4)
-        self.T(name='peter', age=29, number= -9.32)
-        serialise.CSV.dump(self.T, 'test')
-        with open('test', 'rt') as f:
-            data = set(l for l in f)
-        assert data == set(self.expect), data
-
-    def text_fromcsv(self):
-        with open('test', 'wt') as f:
-            for l in self.expect:
-                f.write(l)
-        serialise.CSV.load(self.T, 'test')
-        assert len(self.T) == 3
-        assert (self.T.name == 'matt' & self.T.age == 43).one().number == 2
-        assert (self.T.name == 'bob' & self.T.age == 3).one().number == 4
-        assert (self.T.name == 'peter' & self.T.age == 29).one().number == -9.32
+    def test_tofromsql(self):
+        names = dict((t, t.__name__) for t in db)
+        serialise.CSV().write(names, db)
+        db.reset()
+        serialise.CSV().read(names, db)
+        self.check_integrity(db)

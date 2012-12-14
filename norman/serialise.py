@@ -19,13 +19,16 @@
 from __future__ import with_statement
 from __future__ import unicode_literals
 
+import abc
+import contextlib
 import csv
 import re
 import sqlite3
+import sys
 import logging
 import uuid
 
-from ._table import Table, TableMeta
+from ._table import Table
 from ._field import NotSet
 from ._compat import unicode
 
@@ -83,90 +86,59 @@ def tarjan(graph):
                 yield r
 
 
-class Serialiser(object):
+def uid():
+    """
+    Create a new uid value.  This is useful for files which do not
+    natively provide a uid.
+    """
+    return unicode(uuid.uuid4())
+
+
+class Reader(abc.ABCMeta(str('Base'), (object,), {})):
 
     """
-    An abstract base class providing a framework for serialisers.  Subclasses
-    are instantiated with a `~norman.Database` object, and serialisation
-    and de-serialisation is done through the `write` and `read`
-    methods.  Class methods `dump` and `load` may also be used.
+    An abstract base class providing a framework for readers.
 
-    Subclasses are required to implement `iterfile` and its counterpart,
-    `write_record`, but may re-implement any other methods to customise
-    behaviour.
+    Subclasses are required to implement `iter_source` and may re-implement
+    any other methods to customise behaviour.
 
-    Serialisers are created with a single required argument, specifying the
-    database upon which it acts.  They also support arbitrary keyword
-    arguments which are set to an `options` dict and are intended to be used
-    for setting serialisation options used by specific serialisers.
+    The entry point in the `read` method, which iterates of over records
+    yielded by `iter_source`, identifies possible foreign keys by `isuid` and
+    dereferences them by identifying loops and processing them with
+    `create_groups`.  This method calls `create_record` to actually create the
+    record.
     """
 
-    def __init__(self, db, **kwargs):
-        self._db = db
-        self._fh = None
-        self._mode = None
-        self.options = kwargs
+    @abc.abstractmethod
+    def iter_source(self, source, db):
+        """
+        Iterate over record in the source file, yielding tuples of
+        ``(table, data)`` or ``(table, uid, data)``.  *table* is the
+        `~norman.Table` containing the record, *uid* is a globally unique
+        value identifying the record and *data* is a dict of field values
+        for the record, possibly containing other uids.  If *uid* is omitted,
+        then one is automatically generated using `uuid`.
 
-    @property
-    def db(self):
+        :param db:      The `Database` being read into.
+        :param source:  The data source, as specified in `read`.
         """
-        The database handled by the serialiser.
-        """
-        return self._db
+        raise NotImplementedError
 
-    @property
-    def fh(self):
+    def create_record(self, table, uid, data):
         """
-        An open file (or database connection), or `None`.   This is set to
-        the result of `open`.  If a file is not currently open, then this
-        is `None`.
-        """
-        return self._fh
+        Create a single record in *table*, using *uid* and *data*, as given
+        by `itersource`. This is called by `create_records`, so any
+        foreign uid in *data* should have been dereferenced.  The record
+        created should be returned.
 
-    @property
-    def mode(self):
+        The default implementation simply calls ``table(**data)`` and sets the
+        *uid*.
         """
-        Indicates the current mode of operation.  This is set to ``'w'``
-        during *dump* operations and ``'r'`` during *load*.  At other
-        times it is `None`.
-        """
-        return self._mode
+        r = table(**data)
+        r._uid = uid
+        return r
 
-    @classmethod
-    def dump(cls, db, filename, **kwargs):
-        """
-        This is a convenience method for calling `write` and is equivalent
-        to ``Serialise(db, **kwargs).write(filename)``.
-        """
-        return cls(db, **kwargs).write(filename)
-
-    @classmethod
-    def load(cls, db, filename, **kwargs):
-        """
-        This is a convenience method for calling `read` and is equivalent
-        to ``Serialise(db, **kwargs).read(filename)``.
-        """
-        return cls(db, **kwargs).read(filename)
-
-    @classmethod
-    def uid(cls):
-        """
-        Create a new uid value.  This is useful for files which do not
-        natively provide a uid, and can be used to generate one in
-        `iterfile`.
-        """
-        return unicode(uuid.uuid4())
-
-    def close(self):
-        """
-        Close the currently opened file.  The default behaviour is to call
-        the file object's `!close` method.  This method is always called
-        once a file has been opened, even if an exception occurs during
-        writing.
-        """
-        self.fh.close()
-
-    def create_records(self, records):
+    def create_group(self, records):
         """
         Create a group of records.  *records* is an iterable containing
         co-dependant records, i.e. records which cyclically reference each
@@ -179,66 +151,21 @@ class Serialiser(object):
         contain the cyclic references.
 
         The default behaviour is to remove the cyclic fields from *data*
-        for each record, create the records using ``table(**data)``
-        and assign the created records to the cyclic fields.  The *uid*
-        of each record is also assigned to its *_uid* attribute.
+        for each record, create the records using `create_record`
+        and assign the created records to the cyclic fields.
 
         The return value is an iterator over ``(uid, record)`` pairs.
         """
         created = {}
         for table, uid, data, cycles in records:
             fuids = set((field, data.pop(field)) for field in cycles)
-            record = table(**data)
-            record._uid = uid
+            record = self.create_record(table, uid, data)
             created[uid] = (record, fuids)
 
         for uid, (record, fuids) in created.items():
             for field, fuid in fuids:
                 setattr(record, field, created[fuid][0])
             yield uid, record
-
-    def finalise_read(self):
-        """
-        Finalise the file after reading data.  This is called after
-        `run_read` but before `close`, and can be re-implemented for
-        implementation-specific finalisation.
-
-        The default implementation does nothing.
-        """
-        return
-
-    def finalise_write(self):
-        """
-        Finalise the file after writing data.
-
-        This is called after `run_write` but before `close`, and can be
-        re-implemented to for implementation-specific finalisation.
-
-        The default implementation does nothing.
-        """
-        return
-
-    def initialise_read(self):
-        """
-        Prepare the file for reading data.
-
-        This is called before `run_read` but after `open`, and can be
-        re-implemented to for implementation-specific setup.
-
-        The default implementation does nothing.
-        """
-        return
-
-    def initialise_write(self):
-        """
-        Prepare the file for writing data.
-
-        This is called before `run_write` but after `open`, and can be
-        re-implemented to for implementation-specific setup.
-
-        The default implementation does nothing.
-        """
-        return
 
     def isuid(self, field, value):
         """
@@ -256,66 +183,11 @@ class Serialiser(object):
         return (isinstance(value, unicode) and
                 len(value) == 36 and _re_uuid.match(value))
 
-    def iterdb(self):
+    def read(self, source, db):
         """
-        Return an iterator over records in the database.
+        Read data from a *source* into *db*.
 
-        Records should be returned in the order they are to be written.  The
-        default implementation is a generator which iterates over records in
-        each table.
-        """
-        for table in self.db:
-            for record in table:
-                yield record
-
-    def iterfile(self):
-        """
-        Return an iterator over records read from the file.
-
-        Each item returned by the iterator should be a tuple of
-        ``(table, uid, data)`` where  *table* is the `~norman.Table`
-        containing the record, *uid* is a globally unique value identifying
-        the record and *data* is a dict of field values for the record,
-        possibly containing other uids.
-
-        This is commonly implemented as a generator.
-        """
-        raise NotImplementedError
-
-    def read(self, filename):
-        """
-        Load data into `db` from *filename*.
-
-        *fieldname* is used only to open the file using `open`, so, depending
-        on the implementation could be anything (e.g. a URL) which `open`
-        recognises.  It could even be omitted entirely if, for example,
-        the serialiser reads from stdin.
-        """
-        self._mode = 'r'
-        self._fh = self.open(filename)
-        try:
-            self.initialise_read()
-            self.run_read()
-            self.finalise_read()
-        finally:
-            self.close()
-
-    def open(self, filename):
-        """
-        Open *filename* for the current `mode`.
-
-        The return value should be a handle to the open file.  The default
-        behaviour is to open the file as binary using the builtin *open*
-        function.
-        """
-        return open(filename, self.mode + 'b')
-
-    def run_read(self):
-        """
-        Read data from the currently opened file.
-
-        This is called between `initialise_read` and `finalise_read`, and
-        converts each value returned by `iterfile` into a record using
+        This converts each value returned by `itersource` into a record using
         `create_records`.  It also attempts to re-map nested records by
         searching for matching uids.
 
@@ -327,8 +199,15 @@ class Serialiser(object):
         created = {}
 
         # Load records.
-        for table, uid, data in self.iterfile():
+        for datatuple in self.iter_source(source, db):
+            if len(datatuple) == 3:
+                table, uid, data = datatuple
+            else:
+                table, data = datatuple
+                uid = self.uid()
             records[uid] = (table, data)
+
+        # TODO: Can optimise this if uid is never specified.
 
         # Build a dependancy graph
         graph = {}
@@ -356,18 +235,59 @@ class Serialiser(object):
                     else:
                         cycles.add(f)
                 iterrecords.append((table, uid, data, cycles))
-            for u, r in self.create_records(iterrecords):
+            for u, r in self.create_group(iterrecords):
                 created[u] = r
 
-    def run_write(self):
-        """
-        Called by `dump` to write data.
 
-        This is called after `initialise_write` and before `finalise_write`,
-        and simply calls `write_record` for each value yielded by `iterdb`.
+class Writer(abc.ABCMeta(str('Base'), (object,), {})):
+
+    """
+    An abstract base class providing a framework for writers.
+
+    Subclasses are required to implement `context` and `write_record` and may
+    re-implement any other methods to customise behaviour.
+
+    The entry point in the `write` method, which opens the target file
+    with `context` and iterates of over records in the database with `iterdb`.
+    Each record is converted to a simple python structure with `simplify`
+    and written using `write_record`.
+    """
+
+    @abc.abstractmethod
+    def context(self, targetname, db):
         """
-        for record in self.iterdb():
-            self.write_record(self.simplify(record))
+        Return a context manager which opens and closes the file, including
+        and preparation and finalisation needed.  A common implementation
+        might be::
+
+            def context(self, file):
+                return open(file, 'w')
+
+        This can also be implemented using `contextlib.contextmanager`, which
+        is useful for more complicated examples::
+
+            @contextlib.contextmanager
+            def context(self, targetname, db):
+                fh = open(targetname, 'w')
+                fh.write('### Header line ###')
+                yield fh
+                fh.write('### Footer line ###')
+                fh.close()
+
+        """
+        raise NotImplementedError
+
+    def iterdb(self, db):
+        """
+        Return an iterator over records in the database.
+
+        Records should be returned in the order they are to be written.  The
+        default implementation is a generator which iterates over records in
+        each table.
+        """
+        for table in db:
+            for record in table:
+                yield record
 
     def simplify(self, record):
         """
@@ -375,8 +295,10 @@ class Serialiser(object):
 
         The default implementation converts *record* to a `dict` of
         field values, omitting `~norman.NotSet` values and replacing other
-        records with their *_uid* properties.  The return value of this
-        implementation is a tuple of ``(tablename, record._uid, record_dict)``.
+        records with their *_uid* properties.  The return value is passed
+        directly to `write_record`, so it can be anything recognised by it.
+        This implementation returns a tuple of
+        ``(tablename, record._uid, record_dict)``.
         """
         keys = record.__class__.fields()
         d = dict()
@@ -388,7 +310,7 @@ class Serialiser(object):
                 d[k] = value
         return (record.__class__.__name__, record._uid, d)
 
-    def write(self, filename):
+    def write(self, targetname, db):
         """
         Write the database to *filename*.
 
@@ -397,23 +319,29 @@ class Serialiser(object):
         recognises.  It could even be omitted entirely if, for example,
         the serialiser dumps the database as formatted text to stdout.
         """
-        self._mode = 'w'
-        self._fh = self.open(filename)
-        try:
-            self.initialise_write()
-            self.run_write()
-            self.finalise_write()
-        finally:
-            self.close()
+        with self.context(targetname, db) as fh:
+            for record in self.iterdb(db):
+                self.write_record(self.simplify(record), fh)
 
-    def write_record(self, record):
+    @abc.abstractmethod
+    def write_record(self, record, target):
         """
-        Write *record* to the current file.
+        Write *record* to *target*.
 
         This is called by `run_write` for every record yielded by `iterdb`.
-        *record* is the values returned by `simplify`.
+        *record* is the values returned by `simplify` and *target* is the
+        value returned by `context`.
         """
         raise NotImplementedError
+
+
+class Serialiser(Reader, Writer):
+
+    """
+    This simply inherits from `Reader` and `Writer` to combine the
+    functionality into one class for interfaces which support both reading
+    and writing.
+    """
 
 
 class Sqlite(Serialiser):
@@ -421,176 +349,143 @@ class Sqlite(Serialiser):
     """
     This is a `Serialiser` which reads and writes to a sqlite database.
 
-    Each table in `~Serialiser.db` is dumped to a sqlite table with the
-    same field names.  An additional field, *_uid_* is included which
-    contains the record's *_uid*.  The sqlite database does not have any
-    constraints, not even primary key constraints, as it is intended to
-    be used purely for storage.
+    Each table is dumped to a sqlite table with the same field names.
+    An additional field specified by *uidname* is included which
+    contains the record's `~Table._uid`.  *uidname* may be empty or None,
+    in which case uids are ignored and the field is omitted.
 
-    The following methods are re-implemented from `Serialiser`:
 
-    *   `~Serialiser.finalise_write` commits changes to the database.
-    *   `~Serialiser.initialise_write` starts a database transaction and
-        create tables.
-    *   `~Serialiser.initialise_read` sets the `sqlite3` row factory.
-    *   `~Serialiser.iterfile` yield records from each valid table in the
-        file which matches a table in `~Serialiser.db`.
-    *   `~Serialiser.open` returns an open database connection to *filename*.
-    *   `~Serialiser.write_record` adds a record to the sqlite database.
+    The sqlite database is created without any constraints.
+
     """
 
-    def finalise_write(self):
-        """
-        Commit changes to the database.
-        """
-        self.fh.commit()
+    def __init__(self, uidname='_uid_'):
+        self.uidname = uidname
 
-    def initialise_write(self):
+    def iter_source(self, source, db):
         """
-        Start a database transaction and create tables.
-
-        The database schema is set here and assigned to a *schema* attribute.
-        """
-        self.fh.execute('BEGIN;')
-        self.schema = {}
-        for table in self.db:
-            tname = table.__name__
-            fields = list(table.fields())
-            self.schema[tname] = fields
-            fstr = '"_uid_", ' + ', '.join('"{}"'.format(f) for f in fields)
-            try:
-                self.fh.execute('DROP TABLE "{}"'.format(tname))
-            except sqlite3.OperationalError:
-                pass
-            query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
-            self.fh.execute(query)
-
-    def initialise_read(self):
-        self.fh.row_factory = sqlite3.Row
-
-    def iterfile(self):
-        """
-        Yield records from each valid table in the file.
-
         Only tables which match those in *db* and have a *_uid_* field
         are read.
         """
-        for table in self.db:
+        with contextlib.closing(sqlite3.connect(source)) as conn:
+            conn.row_factory = sqlite3.Row
+            for table in db:
+                tname = table.__name__
+                query = 'SELECT * FROM "{}";'.format(tname)
+                try:
+                    cursor = conn.execute(query)
+                except sqlite3.OperationalError:
+                    logging.warning("Table '{}' not found".format(tname))
+                else:
+                    for row in cursor:
+                        row = dict(row)
+                        if not self.uidname:
+                            yield table, row
+                        elif self.uidname in row:
+                            uid = row.pop(self.uidname)
+                            yield table, uid, row
+
+    @contextlib.contextmanager
+    def context(self, targetname, db):
+        conn = sqlite3.connect(targetname)
+        conn.execute('BEGIN;')
+        self.schema = {}
+        for table in db:
             tname = table.__name__
-            query = 'SELECT * FROM "{}";'.format(tname)
+            fields = list(table.fields())
+            self.schema[tname] = fields
+            fstr = '"{}", '.format(self.uidname)
+            fstr += ', '.join('"{}"'.format(f) for f in fields)
             try:
-                cursor = self.fh.execute(query)
+                conn.execute('DROP TABLE "{}"'.format(tname))
             except sqlite3.OperationalError:
-                logging.warning("Table '{}' not found".format(tname))
-            else:
-                for row in cursor:
-                    row = dict(row)
-                    if '_uid_' in row:
-                        uid = row.pop('_uid_')
-                        yield table, uid, row
+                pass
+            query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
+            conn.execute(query)
+        yield conn
+        conn.commit()
+        conn.close()
 
-    def open(self, filename):
-        """
-        Return a connection to the database *filename*
-        """
-        return sqlite3.connect(filename)
-
-    def write_record(self, record):
+    def write_record(self, record, target):
         tname, uid, rdict = record
         values = [uid] + [rdict.get(f, None) for f in self.schema[tname]]
         qmarks = ', '.join('?' * len(values))
         query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
-        self.fh.execute(query, values)
+        target.execute(query, values)
 
 
 class CSV(Serialiser):
 
     """
-    This is a `Serialiser` which reads and writes to a csv file.
+    This is a `Serialiser` which reads and writes to a collection of csv files.
 
-    Since csv files can only represent a single table, this serialiser
-    expects a `~norman.Table` in place of a `~norman.Database` as the
-    required argument.  For internal consistency, *db* may still be specified,
-    but is not required or used.  This means that `Serialiser`,
-    `~Serialiser.load` and `~Serialiser.dump` can be called in two ways,
-    although the first shown is preferred:
+    Each table in the database is written to a separate file, which is
+    managed by `csv.DictReader` and `csv.DictWriter`.  Any extra initialisation
+    parameters are passed to these.  If this includes *fieldnames*, it should
+    be a mapping of table to fieldnames.  This defaults to a sorted list
+    of table fields.  This is only used for writing.
 
-        CSV.load(MyTable, filename)
-        CSV.load(db, MyTable, filename)
+    An additional field specified by *uidname* is prepended which
+    contains the record's `~Table._uid`.   *uidname* may be empty or None,
+    in which case uids are ignored and the field is omitted.
 
-    *db* and *table* can also be set using keyword arguments.  Any additional
-    keyword arguments and passed to `csv.DictReader` and `csv.DictWriter`.
-    If *fieldnames*  as required by `csv.DictWriter` is missing, it will be
-    set to a sorted list of the fields in the table.
+    Since csv files can only contain text, all values are converted to
+    strings when writing, and it is up to the database to convert them back
+    into other objects when reading.  The exception to this is uid keys, which
+    are handled by the `Reader`.  `NotSet` values are omitted when writing,
+    and empty field values are converted to `NotSet` when reading.
 
-    Note that this currently does not support any sort of complex objects in
-    fields (such as other records), and all objects contained in the table
-    are serialised as strings.  Likewise, all data is read in as text, and it
-    is up to the table to format the data is required.
+    The target and source specified in `read` and `write` should be a mapping
+    of table name to file name, for example::
 
-    The following methods are re-implemented from `Serialiser`:
+        mapping = {Table1: '/path/table1.csv', Table2: '/path/table2.csv'}
+        CSV().read(mapping, db)
 
-    *   `~Serialiser.load`, `~Serialiser.dump` and `~Serialiser` require a
-        `~norman.Table` instead of a `~norman.Database` (see above).
-    *   `~Serialiser.initialise_write` writes the header row.
-    *   `~Serialiser.isuid` always returns `False`.
-    *   `~Serialiser.iterdb` iterates over records in the specified table.
-    *   `~Serialiser.iterfile` yields records the csv file.
-    *   `~Serialiser.open` opens the csv file in the appropriate mode for the
-        current Python version (see `csv` for details) and returns a
-        `csv.DictReader` or `csv.DictWriter` object.
-    *   `~Serialiser.write_record` writes a row to the `csv.DictWriter` object.
+    Any missing tables are omitted.
     """
 
-    def __init__(self, db=None, table=None, **kwargs):
-        if isinstance(db, TableMeta):
-            table = db
-            db = None
-        super(CSV, self).__init__(db, **kwargs)
-        self._table = table
-
-    @property
-    def table(self):
-        return self._table
-
-    @classmethod
-    def load(cls, db=None, table=None, **kwargs):
-        super(CSV, cls).load(db, table, **kwargs)
-
-    @classmethod
-    def dump(cls, db=None, table=None, **kwargs):
-        super(CSV, cls).dump(db, table, **kwargs)
-
-    def initialise_write(self):
-        fieldnames = self.options['fieldnames']
-        self.fh.writerow(dict(zip(fieldnames, fieldnames)))
-
-    def isuid(self, field, value):
-        return False
-
-    def iterdb(self):
-        for record in self.table:
-            yield record
-
-    def iterfile(self):
-        for record in self.fh:
-            yield self.table, self.uid(), record
-
-    def open(self, filename):
-        import sys
+    def __init__(self, uidname='_uid_', **kwargs):
+        self.uidname = uidname
+        self.kwargs = kwargs
+        self.fieldnames = self.kwargs.pop('fieldnames', {})
         if sys.version >= '3':
-            csvfile = open(filename, self.mode, newline='')
+            self._open = lambda name, mode: open(name, mode, newline='')
         else:
-            csvfile = open(filename, self.mode + 'b')
+            self._open = lambda name, mode: open(name, mode + 'b')
 
-        if self.mode == 'w':
-            if 'fieldnames' not in self.options:
-                self.options['fieldnames'] = sorted(self.table.fields())
-            fh = csv.DictWriter(csvfile, **self.options)
-        else:
-            fh = csv.DictReader(csvfile, **self.options)
-        fh.close = csvfile.close
-        return fh
+    def iter_source(self, source, db):
+        for table in db:
+            try:
+                filename = source[table]
+            except KeyError:
+                pass
+            with self._open(filename, 'r') as fh:
+                for row in csv.DictReader(fh, **self.kwargs):
+                    if not self.uidname:
+                        yield table, row
+                    elif self.uidname in row:
+                        uid = row.pop(self.uidname)
+                        yield table, uid, row
 
-    def write_record(self, record):
-        self.fh.writerow(record[2])
+    @contextlib.contextmanager
+    def context(self, targetname, db):
+        files = []
+        writers = {}
+        for table, path in targetname.items():
+            fh = self._open(path, 'w')
+            files.append(fh)
+            fieldnames = self.fieldnames.get(table, sorted(table.fields()))
+            if self.uidname:
+                fieldnames = [self.uidname] + fieldnames
+            writer = csv.DictWriter(fh, fieldnames=fieldnames, **self.kwargs)
+            writer.writerow(dict(zip(fieldnames, fieldnames)))
+            writers[table.__name__] = writer
+        yield writers
+        for fh in files:
+            fh.close()
+
+    def write_record(self, record, target):
+        table, uid, record = record
+        if self.uidname:
+            record[self.uidname] = uid
+        target[table].writerow(record)
