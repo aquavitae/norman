@@ -153,6 +153,12 @@ class TestQuery(TestCase):
         assert a.a == 1
         assert a.c == '5'
 
+    def test_add_query(self):
+        'Test that add is available for table queries.'
+        q = query(self.A)
+        r = q.add(a=10)
+        assert r.a == 10
+
     def test_add_and(self):
         q = (self.A.a == 1) & (self.A.c == '5')
         assert len(q) == 0

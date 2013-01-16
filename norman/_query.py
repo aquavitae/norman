@@ -40,7 +40,11 @@ def query(arg1, arg2=None):
         return set(r for r in t if func(r))
 
     op.__name__ = func.__name__
-    return Query(op, table)
+    q = Query(op, table)
+    # In its just a table, add function should be available
+    if arg2 is None:
+        q._setaddargs(table, {})
+    return q
 
 
 def _or(a, b):
