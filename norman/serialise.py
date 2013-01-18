@@ -127,7 +127,8 @@ class Reader(with_metaclass(abc.ABCMeta)):
         Create a single record in *table*, using *uid* and *data*, as given
         by `iter_source`. This is called by `create_group`, so any
         foreign uid in *data* should have been dereferenced.  The record
-        created should be returned.
+        created should be returned, or, if it cannot be created, `None` should
+        be returned.
 
         The default implementation simply calls ``table(**data)`` and sets the
         *uid*.
@@ -158,7 +159,8 @@ class Reader(with_metaclass(abc.ABCMeta)):
         for table, uid, data, cycles in records:
             fuids = set((field, data.pop(field)) for field in cycles)
             record = self.create_record(table, uid, data)
-            created[uid] = (record, fuids)
+            if record is not None:
+                created[uid] = (record, fuids)
 
         for uid, (record, fuids) in created.items():
             for field, fuid in fuids:
