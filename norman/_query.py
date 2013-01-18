@@ -251,7 +251,7 @@ class Query(object):
         If this query supports addition, then the resultant query will too,
         but with slightly different parameters.  For example::
 
-            (Table1.id == 4).field('tble2').add(table2_instance)
+            (Table1.id == 4).field('table2').add(table2_instance)
 
         is the same as::
 
