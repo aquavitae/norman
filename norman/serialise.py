@@ -89,7 +89,7 @@ def uid():
     Create a new uid value.  This is useful for files which do not
     natively provide a uid.
     """
-    return u(uuid.uuid4())
+    return u(str(uuid.uuid4()))
 
 
 class Reader(with_metaclass(abc.ABCMeta)):
@@ -201,40 +201,40 @@ class Reader(with_metaclass(abc.ABCMeta)):
         # Load records.
         for datatuple in self.iter_source(source, db):
             if len(datatuple) == 3:
-                table, uid, data = datatuple
+                table, _uid, data = datatuple
             else:
                 table, data = datatuple
-                uid = self.uid()
-            records[uid] = (table, data)
+                _uid = uid()
+            records[_uid] = (table, data)
 
         # TODO: Can optimise this if uid is never specified.
 
         # Build a dependancy graph
         graph = {}
-        for uid in records:
+        for _uid in records:
             successors = set()
             uidfields = set()
-            table, data = records[uid]
+            table, data = records[_uid]
             for f, v in data.items():
                 if self.isuid(f, v) and v in records:
                     successors.add(v)
                     uidfields.add(f)
-            records[uid] = (table, data, uidfields)
-            graph[uid] = successors
+            records[_uid] = (table, data, uidfields)
+            graph[_uid] = successors
 
         # Use Tarjan's algorithm to return uids in the order in which they
         # must be created, detecting cycles.
         for uids in tarjan(graph):
             iterrecords = []
-            for uid in uids:
-                table, data, uidfields = records[uid]
+            for _uid in uids:
+                table, data, uidfields = records[_uid]
                 cycles = set()
                 for f in uidfields:
                     if data[f] not in uids:
                         data[f] = created[data[f]]
                     else:
                         cycles.add(f)
-                iterrecords.append((table, uid, data, cycles))
+                iterrecords.append((table, _uid, data, cycles))
             for u, r in self.create_group(iterrecords):
                 created[u] = r
 

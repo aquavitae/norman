@@ -26,7 +26,7 @@ except ImportError:
 
 from norman import Database, Table, Field, serialise, Join
 from norman.validate import ifset, settype, istype
-from norman._six import u, get_unbound_function
+from norman._six import u, get_unbound_function, text_type
 
 db = Database()
 
@@ -80,6 +80,12 @@ class TestCase(object):
         address = address.one()
         assert set(p.name for p in address.people) == set(['matt', 'bob'])
         assert set(p.age for p in address.people) == set([43, 3])
+
+
+class TestUID(object):
+
+    def test_type(self):
+        assert isinstance(serialise.uid(), text_type)
 
 
 class TestAPI(object):
