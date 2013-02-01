@@ -224,30 +224,30 @@ class Field(object):
         return id(self)
 
     def __eq__(self, value):
-        q = Query(operator.eq, self.owner._store.indexes[self], value)
-        q._setaddargs(self.owner, {self.name: value})
+        q = Query(operator.eq, self.owner._store.indexes[self], value, table=self.owner)
+        q._adder.add_kwargs(**{self.name: value})
         return q
 
     def __ne__(self, value):
-        return Query(operator.ne, self.owner._store.indexes[self], value)
+        return Query(operator.ne, self.owner._store.indexes[self], value, table=self.owner)
 
     def __gt__(self, value):
-        return Query(operator.gt, self.owner._store.indexes[self], value)
+        return Query(operator.gt, self.owner._store.indexes[self], value, table=self.owner)
 
     def __lt__(self, value):
-        return Query(operator.lt, self.owner._store.indexes[self], value)
+        return Query(operator.lt, self.owner._store.indexes[self], value, table=self.owner)
 
     def __ge__(self, value):
-        return Query(operator.ge, self.owner._store.indexes[self], value)
+        return Query(operator.ge, self.owner._store.indexes[self], value, table=self.owner)
 
     def __le__(self, value):
-        return Query(operator.le, self.owner._store.indexes[self], value)
+        return Query(operator.le, self.owner._store.indexes[self], value, table=self.owner)
 
     def __and__(self, values):
         def _and(f, vals):
             i = f.owner._store.indexes[f]
             return reduce(operator.or_, (set(i == v) for v in vals))
-        return Query(_and, self, values)
+        return Query(_and, self, values, table=self.owner)
 
     def __str__(self):
         return '.'.join([self._owner.__name__, self.name])

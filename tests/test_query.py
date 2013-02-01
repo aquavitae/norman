@@ -16,6 +16,7 @@
 
 from nose.tools import assert_raises
 from norman import Table, Field, Join, query
+from norman._query import _Adder
 
 
 class TestCase(object):
@@ -178,7 +179,7 @@ class TestQuery(TestCase):
 
     def test_add_field2_fails(self):
         q = (self.A.a == 1).field('b').field('e')
-        with assert_raises(AttributeError):
+        with assert_raises(TypeError):
             q.add(self.br[0])
 
     def test_field(self):
@@ -208,3 +209,43 @@ class TestQuery(TestCase):
         q = (self.A.a >= 1) | ((self.A.b != 4) & (self.A.c & [1, 2, 3]))
         expect = '(A.a >= 1) | ((A.b != 4) & (A.c & [1, 2, 3]))'
         assert str(q) == expect, str(q)
+
+
+class TestAdder(TestCase):
+
+    def test_settable(self):
+        a = _Adder()
+        assert a.table is None
+        a.set_table(None)
+        assert a.table is None
+        a.set_table(self.A)
+        assert a.table is self.A
+        a.set_table(self.B)
+        assert a.table is False, a.table
+        a.set_table(self.A)
+        assert a.table is False, a.table
+
+class TestQueryTable(TestCase):
+
+    def setup(self):
+        super(TestQueryTable, self).setup()
+        self.q1 = self.A.a == 1
+        self.q2 = self.B.a == self.ar[1]
+
+    def test_single(self):
+        assert self.q1.table is self.A
+
+    def test_inequality(self):
+        assert (self.A.a > 3).table is self.A
+
+    def test_combination(self):
+        q = self.q1 & (self.A.b < 2)
+        assert q.table is self.A
+
+    def test_field_query(self):
+        q = (self.B.d == 1).field('a')
+        assert q.table is None
+
+    def test_multiple_no_table(self):
+        q = (self.A.a == 1) & (self.B.d == 2)
+        assert q.table is None
