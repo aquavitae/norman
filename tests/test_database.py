@@ -15,7 +15,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 from nose.tools import assert_raises
-from norman import Database, Table, Field
+from norman import AutoDatabase, AutoTable, Database, Table, Field
 
 
 class TestDatabase(object):
@@ -79,3 +79,11 @@ class TestDatabase(object):
         self.db.add(Tb)
         self.db.reset()
         assert Tb.f.name in Tb.fields()
+
+
+class TestAutoDatabase(object):
+
+    def test_getitem(self):
+        db = AutoDatabase()
+        T = db['MyTable']
+        assert issubclass(T, AutoTable)

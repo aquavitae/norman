@@ -16,7 +16,7 @@
 
 import re
 from nose.tools import assert_raises
-from norman import Table, Field, NotSet, Join, ValidationError
+from norman import AutoTable, Table, Field, NotSet, Join, ValidationError
 
 
 class TestFields(object):
@@ -438,3 +438,41 @@ class TestHooks:
         t = T(value=4)
         T.delete(t)
         assert calls == ['delete', 'one', 'two'], calls
+
+
+class TestAutoTable(object):
+
+    def test_bad_init(self):
+        with assert_raises(TypeError):
+            AutoTable()
+
+    def test_subclass_init(self):
+        class T(AutoTable): pass
+        t = T()
+        assert isinstance(t, T)
+
+    def test_init_values(self):
+        class T(AutoTable): pass
+        t = T(a=1)
+        assert t.a == 1
+        assert isinstance(T.a, Field)
+
+    def test_init_no_values(self):
+        class T(AutoTable): pass
+        with assert_raises(AttributeError):
+            t = T(_a=1)
+        assert not hasattr(T, '_a')
+
+    def test_setattr(self):
+        class T(AutoTable): pass
+        t = T()
+        t.a = 1
+        assert t.a == 1
+        assert isinstance(T.a, Field)
+
+    def test_setattr_no_value(self):
+        class T(AutoTable): pass
+        t = T()
+        t._a = 1
+        assert t._a == 1
+        assert not hasattr(T, '_a')

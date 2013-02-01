@@ -27,6 +27,12 @@ A tree-like structure would make extensive used of `Join`\ s::
         children = Join(parent)
 
 
+In addition `AutoTable` is a special type of `Table` which automatically
+creates fields dynamically.  This is used in conjunction with `AutoDatabase`,
+is is particularly useful when de-serialising from a source without knowing
+details of data in the source.
+
+
 Database
 --------
 
@@ -42,6 +48,9 @@ Database
     .. automethod:: reset
 
 
+.. autoclass:: AutoDatabase
+
+
 Tables
 ------
 
@@ -51,6 +60,8 @@ to a `Table`, and others which only apply to records.  The class methods shown
 in `Table` are not visible to instances.
 
 .. autoclass:: Table
+
+.. autoclass:: AutoTable
 
 
 Table objects

@@ -319,3 +319,58 @@ class Table(with_metaclass(TableMeta)):
         Compare by string.
         """
         return str(self) > str(other)
+
+
+class AutoTable(Table):
+
+    """
+    This is a special type of `Table` which automatically creates a new
+    field whenever a value is assigned to an attribute which does not yet
+    exist.  This only occurs for attributes which do not start with `'_'`.
+    This should be subclassed in exactly the same was as `Table`.  Attempting
+    to instantiate AutoClass directly will result in a TypeError being raised.
+
+        >>> class MyTable(AutoTable): pass
+        >>> record = MyTable(a=1)
+        >>> record.a
+        1
+        >>> MyTable.a
+        Field(a)
+        >>> record.b = 2
+        >>> MyTable.b
+        Field(b)
+
+    However:
+
+        >>> record._c = 3
+        >>> MyTable._c
+        Traceback (most recent call last):
+            ...
+        AttributeError: '_c'
+
+    As with `Table` classes, it is also possible to manually add fields or
+    joins:
+
+        >>> MyTable.d = Field()
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if cls is AutoTable:
+            raise TypeError
+        else:
+            return super(AutoTable, cls).__new__(cls, *args, **kwargs)
+
+    def __init__(self, **kwargs):
+        badkw = set(kwargs.keys()) - set(self.__class__._store.fields.keys())
+        for kw in badkw:
+            if not kw.startswith('_'):
+                setattr(self.__class__, kw, Field())
+        super(AutoTable, self).__init__(**kwargs)
+
+    def __setattr__(self, attr, value):
+        try:
+            self.__class__._store.fields[attr]
+        except KeyError:
+            if not attr.startswith('_'):
+                setattr(self.__class__, attr, Field())
+        return super(Table, self).__setattr__(attr, value)

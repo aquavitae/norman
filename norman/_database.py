@@ -16,6 +16,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+from ._table import AutoTable
+
 
 class Database(object):
 
@@ -88,3 +90,14 @@ class Database(object):
 
 
     # TODO: delete(record)
+
+class AutoDatabase(Database):
+
+    def __getitem__(self, name):
+        try:
+            return super(AutoDatabase, self).__getitem__(name)
+        except KeyError:
+            class C(AutoTable): pass
+            C.__name__ = name
+            self.add(C)
+            return C
