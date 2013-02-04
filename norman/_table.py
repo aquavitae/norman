@@ -79,6 +79,7 @@ class TableMeta(type):
         return cls._store.iter_records()
 
     def __setattr__(cls, name, value):
+        #TODO: Use copy on fields which belong to another table
         if isinstance(value, (Field, Join)):
             if hasattr(value, '_owner'):
                 raise ConsistencyError('Field already belongs to a table')
@@ -127,15 +128,22 @@ class TableMeta(type):
 class Table(with_metaclass(TableMeta)):
 
     """
-    Each instance of a Table subclass represents a record in that Table.
+    Records are created by instantiating a `Table` subclass.  Tables
+    are defined by subclassing `Table` and adding `fields <Field>` to it.
+    For example::
 
-    This class should be subclassed to define the fields in the table.
-    It may also optionally provide `validate` and `validate_delete` methods.
+        >>> class MyTable(Table):
+        ...     field1 = Field()
+        ...     field2 = Field()
 
-    `Field` names should not start with ``_``, as these names are reserved
-    for internal use.  Fields may be added to a `Table` after the `Table`
-    is created, provided they do not already belong to another `Table`, and
-    the `Field` name is not already used in the `Table`.
+    `Field` names should not start with ``_``, as these names are generally
+    reserved for internal use.  Fields may also be added to a `Table` after
+    the `Table` is created, but cannot be shared between tables.
+
+    Records are created by simply instantiating the table, optionally with
+    field values as keyword arguments::
+
+        >>> record = MyTable(field1='value', field2='other value')
     """
 
     def __init__(self, **kwargs):
@@ -334,11 +342,11 @@ class AutoTable(Table):
         >>> record = MyTable(a=1)
         >>> record.a
         1
-        >>> MyTable.a
-        Field(a)
+        >>> isinstance(MyTable.a, Field)
+        True
         >>> record.b = 2
-        >>> MyTable.b
-        Field(b)
+        >>> isinstance(MyTable.b, Field)
+        True
 
     However:
 
@@ -348,8 +356,8 @@ class AutoTable(Table):
             ...
         AttributeError: '_c'
 
-    As with `Table` classes, it is also possible to manually add fields or
-    joins:
+    As with other `Table` classes, it is also possible to manually add
+    fields or joins:
 
         >>> MyTable.d = Field()
     """

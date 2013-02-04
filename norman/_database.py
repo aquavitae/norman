@@ -22,12 +22,8 @@ from ._table import AutoTable
 class Database(object):
 
     """
-    `Database` instances act as containers of `Table` objects, and support a
-    basic dict-like interface.  Tables are identified by their name, which is
-    obtained by ``table.__name__``.
-
-    In addition to the methods described below, database support the following
-    operations.
+    `Database` instances act as containers of `Table` objects, which are
+    identified by name.  `Database` supports the following operations.
 
     =================== =======================================================
     Operation           Description
@@ -40,8 +36,9 @@ class Database(object):
                         database.
     =================== =======================================================
 
-    Tables are not required to belong to a database, or may belong to many
-    databases.
+    Databases are mainly provided for convenience, as a way to group
+    related tables.  Tables may beloong to multiple databases, or no database
+    at all.
     """
 
     def __init__(self):
@@ -92,6 +89,18 @@ class Database(object):
     # TODO: delete(record)
 
 class AutoDatabase(Database):
+
+    """
+    A subclass of `Database` which automatically creates `AutoTable`
+    subclasses when a table is looked up by name.  For example::
+
+        >>> adb = AutoDatabase()
+        >>> newtable = adb['NewTable']
+        >>> issubclass(newtable, AutoTable)
+        True
+
+    Apart from this, it behaves exactly the same as `Database`.
+    """
 
     def __getitem__(self, name):
         try:

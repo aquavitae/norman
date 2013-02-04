@@ -79,14 +79,6 @@ class Field(object):
     `` Table.field & mylist`` returns all records where the value of
     ``field`` is in ``mylist``.
 
-
-    .. versionchanged:: 0.7
-
-        All fields are automatically indexed, and the *index* argument
-        has been removed.   *key* has been added to control how data is
-        indexed.
-
-
     .. seealso::
 
         `validate`
@@ -97,12 +89,12 @@ class Field(object):
     """
 
     def __init__(self, unique=False, default=NotSet,
-                 readonly=False, validators=None, key=_key):
+                 readonly=False, validators=None, key=None):
         self._unique = unique
         self._default = default
         self._readonly = readonly
         self._validators = [] if validators is None else validators
-        self._key = key
+        self._key = _key if key is None else key
 
     @property
     def default(self):
@@ -158,16 +150,16 @@ class Field(object):
     @property
     def name(self):
         """
-        This is the assigned name of the field and is set when the `Table` is
-        created.  This attribute is readonly.
+        This is the assigned name of the field and is set when it is
+        added to the `Table`.  This attribute is read-only.
         """
         return self._name
 
     @property
     def owner(self):
         """
-        This is the owning `Table` of the field and is set when the `Table` is
-        created.  This attribute is readonly.
+        This is the owning `Table` of the field and is set when it is
+        added to the `Table`.  This attribute is read-only.
         """
         return self._owner
 
@@ -176,25 +168,22 @@ class Field(object):
         """
         If `True`, prohibits setting the variable, unless its value is
         `NotSet` (default: `False`).  This can be used with `default`
-        to simulate a constant.
-
-        This attribute is readonly and can only be set when the `Field` is
-        created.
+        to simulate a constant.  This attribute is read-only and can only
+        be set when the `Field` is created.
         """
         return self._readonly
+        #TODO: Make this mutable.
 
     @property
     def unique(self):
         """
         `True` if records should be unique on this field (default: `False`).
-        In database terms, this is the same as setting a primary key.  If
-        more than one field have this set then records are expected to be
-        unique on all of them.
-
-        This attribute is readonly and can only be set when the `Field` is
-        created.
+        If more than one field in the table have this set then they are
+        evaluated together as a tuple.  This attribute is read-only and
+        can only be set when the `Field` is created.
         """
         return self._unique
+        #TODO: Make this mutable.
 
     @property
     def validators(self):
@@ -202,8 +191,8 @@ class Field(object):
         A list of functions which are used as validators for the field.  Each
         function should accept and return a single value (i.e. the value to be
         set), and should raise an exception if the value is invalid.  The
-        validators are called sequentially, e.g.
-        ``validator3(validator2(validator1(value)))``.
+        validators are called sequentially in the order specified, i.e.
+        ``newvalue = validator3(validator2(validator1(oldvalue)))``.
         """
         return self._validators
 
@@ -260,10 +249,11 @@ class Join(object):
 
     ``Join(query=queryfactory)``
         Explicitly set the query factory.  `!queryfactory` is a callable which
-        accepts a single argument and returns a `Query`.
+        accepts a single argument (i.e. the owning record) and returns a
+        `Query`.
 
     ``Join(table.field)``
-        This is the most common format, since most joins simply involve looking
+        This is the most common form, since most joins simply involve looking
         up a field value in another table.  This is equivalent to specifying
         the following query factory::
 
@@ -275,17 +265,13 @@ class Join(object):
         foreign field has not yet been created.  In this case, the query
         factory first locates ``'table.field'`` in the `Database` ``db``.
 
-    ``Join(other.join)``
+    ``Join(other.join[, jointable])``
         It is possible set the target of a join to another join, creating a
-        *many-to-many* relationship.  When used in this way, a join table is
-        automatically created, and can be accessed from `Join.jointable`.
-        If the optional keyword parameter *jointable* is used, the join table
-        name is set to it.
-
-        .. seealso::
-
-            http://en.wikipedia.org/wiki/Many-to-many_(data_model)
-                For more information on *many-to-many* joins.
+        `many-to-many <http://en.wikipedia.org/wiki/Many-to-many_(data_model)>`_
+        relationship.  When used in this way, a join table is automatically
+        created, and can be accessed from `Join.jointable`.  If the optional
+        keyword parameter *jointable* is used, it is the name of the new
+        join table.
     """
 
     def __init__(self, *args, **kwargs):
@@ -369,14 +355,16 @@ class Join(object):
     @property
     def name(self):
         """
-        The name of the `Join`. This is read only.
+        This is the assigned name of the join and is set when it is added
+        to the `Table`.
         """
         return self._name
 
     @property
     def owner(self):
         """
-        The `Table` containing the `Join`.  This is read only.
+        This is the owning `Table` of the join and is set when it is added
+        to the `Table`.
         """
         return self._owner
 

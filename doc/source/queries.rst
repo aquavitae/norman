@@ -52,12 +52,11 @@ This is useful for creating a query of a whole table::
 
     q7 = query(MyTable)
 
-The result of each of these is a `Query` object, which is a set-like
-iterable of records.
-
-An existing query can be refreshed after the base data has changed by
-calling it as a function.  The return value is the query iteself, so
-to ensure that the result is up to date, you could call::
+The result of each of these is a `Query` object, which can be iterated over
+to yield records.  The query is not evaluated until a result is requested
+from it (including ``len``).  An existing query can be refreshed after the
+base data has changed by calling it as a function.  The return value is the
+query iteself, so to ensure that the result is up to date, you could call::
 
     latest_size = len(q7())
 

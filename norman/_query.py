@@ -170,16 +170,11 @@ class _FieldAdder(_Adder):
 class Query(object):
 
     """
-    A set-like object which represents the results of a query.
-
     This object should never be instantiated directly, instead it should
     be created as the result of a `Field` comparison or by using the `query`
-    function.
-
-    This object allows most operations permitted on sets, such as unions
-    and intersections.  Comparison operators (such as ``<``) are not
-    supported, except for equality tests.  The following operations are
-    supported:
+    function.  The interface allows most operations permitted on sets, such
+    as unions and intersections, but returns a new `Query` object instead
+    of any results.  The following operations are  supported:
 
     =================== =======================================================
     Operation           Description
@@ -320,15 +315,32 @@ class Query(object):
 
     def add(self, *args, **kwargs):
         """
-        Add a record based on the query criteria.
+        Add a record based on the query criteria, and return the new record.
+        There are two modes of operation for this method, depending on the
+        query.  For either mode, the query must be defined by a clear set
+        of field values for a single `Table.  This includes queries such as
+        ``(MyTable.field1` == 1) & (MyTable.field2` == 2)`` but not
+        ``MyTable.field1` > 1``.
 
-        This method is only available for queries of the form
-        ``field == value``, a ``&`` combination of them, or a `field`
-        query created from a query of this form.  *kwargs* is
-        the same as used for creating a `Table` instance, but is
-        updated to include the query criteria. *arg* is only used for
-        queries created by `field`, and is a record to add to the field.
-        See `field` for more information.
+        The first mode accepts keyword arguments, which are combined with
+        the parameters used to construct the query and passed to the
+        table constructor. For example::
+
+            ``((MyTable.a` == 1) & (MyTable.b` == 2)).add(c=3)``
+
+        evaluates to::
+
+            MyTable(a=1, b=2, c=3)
+
+        The second mode is used when the query has been created by `field`.
+        In this case, a single argument is expected which is the record
+        to apply to the field.  For example::
+
+            (Table1.id == 4).field('table2').add(table2_instance)
+
+        is the same as::
+
+            (Table1.id == 4).add(table2=table2_instance)
         """
         record = self._adder(*args, **kwargs)
         self._results = None
@@ -356,15 +368,6 @@ class Query(object):
         other values are dropped.  This is functionally similar to a SQL
         query on a foreign key.  If the target field is a `Join`, then all
         the results of each join are concatenated.
-
-        If this query supports addition, then the resultant query will too,
-        but with slightly different parameters.  For example::
-
-            (Table1.id == 4).field('table2').add(table2_instance)
-
-        is the same as::
-
-            (Table1.id == 4).add(table2=table2_instance)
         """
         from ._table import Table
         from ._field import Field, Join
@@ -390,8 +393,8 @@ class Query(object):
     def one(self, default=_Sentinal):
         """
         Return a single value from the query results.  If the query is
-        empty and *default* is specified, then it is returned instead.
-        Otherwise an `IndexError` is raised.
+        empty and *default* is specified, then it is returned instead,
+        otherwise an `IndexError` is raised.
         """
         try:
             return next(iter(self))

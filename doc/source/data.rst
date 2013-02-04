@@ -15,8 +15,7 @@ Norman data structures are build on four objects:  `Database`, `Table`, `Field`
 and `Join`.  In overview, a `Database` is a collections of `Table` subclasses.
 `Table` subclasses represent a tabular data structure where each column is
 defined by a `Field` and each row is an instance of the subclass.  A `Join`
-is similar to a `Field`, but behaves as a collection of related records.
-A tree-like structure would make extensive used of `Join`\ s::
+is similar to a `Field`, but behaves as a collection of related records::
 
     class Branch(Table):
 
@@ -27,8 +26,8 @@ A tree-like structure would make extensive used of `Join`\ s::
         children = Join(parent)
 
 
-In addition `AutoTable` is a special type of `Table` which automatically
-creates fields dynamically.  This is used in conjunction with `AutoDatabase`,
+`AutoTable` is a special type of `Table` which automatically creates
+fields dynamically.  This is used in conjunction with `AutoDatabase`,
 is is particularly useful when de-serialising from a source without knowing
 details of data in the source.
 
@@ -61,50 +60,58 @@ in `Table` are not visible to instances.
 
 .. autoclass:: Table
 
+    The following class methods are supported by `Table` objects, but not by
+    instances.  Tables also act as a collection of records,
+    and support the following sequence operations:
+
+    =============== ==========================================================
+    Operation       Description
+    =============== ==========================================================
+    ``len(t)``      Return the number of records in ``t``.
+    ``iter(table)`` Return an iterator over all records in ``t``.
+    ``r in t``      Return `True` if the record ``r`` is an instance of (i.e.
+                    contained by) table ``t``.  This should always return
+                    `True` unless the record has been deleted from the table,
+                    which usually means that it is a dangling reference which
+                    should be deleted.
+    =============== ==========================================================
+
+    Boolean operations on tables evaluate to `True` if the table contains
+    any records.
+
+    .. attribute:: _store
+
+        A `Store` instance used as a storage backend.  This may be overridden
+        when the class is created to use a custom `Store` object.  Usually
+        there is no need to use this.
+
+
+    .. attribute:: hooks
+
+        A `dict` containing lists of callables to be run when an event occurs.
+
+        Two events are supported: validation on setting a field value and
+        deletion, identified by keys ``'validate'`` and ``'delete'``
+        respectively.  When a triggering event occurs, each hook in the list
+        is called in order with the affected table instance as a single
+        argument until an exception occurs.  If the exception is
+        an `AssertionError` it is converted to a `ValueError`.  If no exception
+        occurs, the event is considered to have passed, otherwise it fails
+        and the table record rolls back to its previous state.
+
+        These hooks are called before `Table.validate` and
+        `Table.validate_delete`, and behave in the same way.  They may be set
+        at any time, but do not affect records already created until
+        the record is next validated.
+
+
+    .. automethod:: delete([records=None])
+
+
+    .. automethod:: fields
+
+
 .. autoclass:: AutoTable
-
-
-Table objects
-^^^^^^^^^^^^^
-
-The following class methods are supported by `Table` objects, but not by
-instances (i.e. records).  Tables also act as a collection of records,
-and support limited sequence-like interface, with rapid lookup through
-indexed fields.  ``len(table)`` returns the number of records in the
-table, and ``iter(table)`` returns an iterator over all records in the table.
-``record in table`` is also supported and returns `True` if the instance
-*record* is in the table.  This is usually used as a sanity check, since
-records should always be contained in the table.  To avoid problems, use
-`Table.validate_delete` to automatically clean dangling references.
-
-
-.. attribute:: Table._store
-
-    A `Store` instance used as a storage backend.  This may be overridden
-    when the class is created to use a customised `Store` object.
-
-
-.. attribute:: Table.hooks
-
-    A `dict` containing lists of callables to be run when an event occurs.
-
-    Two events are supported: validation on setting a field value and
-    deletion, identified by keys ``'validate'`` and ``'delete'``
-    respectively.  When a triggering event occurs, each hook in the list
-    is called in order with the affected table instance as a single
-    argument until an exception occurs.  If the exception is
-    an `AssertionError` it is converted to a `ValueError`.  If no exception
-    occurs, the event is considered to have passed, otherwise it fails
-    and the table record rolls back to its previous state.
-
-    These hooks are called before `Table.validate` and
-    `Table.validate_delete`, and behave in the same way.
-
-
-.. automethod:: Table.delete([records=None])
-
-
-.. automethod:: Table.fields
 
 
 Records
@@ -124,8 +131,8 @@ methods.
 .. automethod:: Table.validate_delete
 
 
-Notes on Validation
-^^^^^^^^^^^^^^^^^^^
+Notes on Validation and Deletion
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Data is validated whenever a record is added or removed, and there is the
 opportunity to influence this process through validation hooks.  When a
@@ -168,6 +175,26 @@ method creates the extra *parts* value.
         ...
     norman._except.ValidationError: Not unique: TextTable(parts=['3'], value='3')
 
+When deleting a record, `Table.validate_delete` is first called.  This
+should be used to ensure that any dependent records are dealt with.  For
+example, the following code ensures that all children are deleted when
+a parent is deleted.
+
+    >>> class Child(Table):
+    ...     parent = Field()
+    ...
+    >>> class Parent(Table):
+    ...     children = Join(Child.parent)
+    ...
+    ...     def validate_delete(self):
+    ...         for child in self.children:
+    ...             Child.delete(child)
+    ...
+    >>> parent = Parent()
+    >>> child = Child(parent=parent)
+    >>> Parent.delete(parent)
+    >>> len(Child)
+    0
 
 Fields
 ------
@@ -203,8 +230,8 @@ indicate this.
 Joins
 -----
 
-A `Join` is basically an object which dynamically creates queries for
-a specific record.  This is best explained through an example::
+A `Join` dynamically creates :doc:`queries` for a specific record.  This is best
+explained through an example::
 
     >>> class Child(Table):
     ...     parent = Field()
@@ -215,32 +242,33 @@ a specific record.  This is best explained through an example::
     >>> p = Parent()
     >>> c1 = Child(parent=p)
     >>> c2 = Child(parent=p)
-    >>> p.children
-    {c1, c2}
+    >>> set(p.children) == {c1, c2}
+    True
 
-Here, `!Parent.children` is a factory which returns a `Query` for all
-`!Child` records where ``child.parent == parent_instance`` for a specific
-`!parent_instance`.  Joins have a `~Join.query` attribute which is a `Query`
-factory, returning a `Query` for a given instance of the owning table.
+In this example, `!Parent.children` returns a `Query` for all `!Child`
+records where ``child.parent == parent_instance`` for a specific
+``parent_instance``.  Joins have a `~Join.query` attribute which is a `Query`
+factory function, returning a `Query` for a given instance of the owning table.
 
 
 .. autoclass:: Join(*args, **kwargs)
 
-Joins have the following attributes.
 
-.. autoattribute:: Join.jointable
+    Joins have the following attributes, all of which are read-only.
 
-
-.. autoattribute:: Join.name
+    .. autoattribute:: jointable
 
 
-.. autoattribute:: Join.owner
+    .. autoattribute:: name
 
 
-.. autoattribute:: Join.query
+    .. autoattribute:: owner
 
 
-.. autoattribute:: Join.target
+    .. autoattribute:: query
+
+
+    .. autoattribute:: target
 
 
 Exceptions and Warnings
@@ -277,7 +305,7 @@ Warnings
 
 
 Advanced API
-============
+------------
 
 Two structures, `Store` and `Index` manage the data internally.  These are
 documented for completeness, but should seldom need to be used directly.
