@@ -366,7 +366,7 @@ class AutoTable(Table):
         if cls is AutoTable:
             raise TypeError
         else:
-            return super(AutoTable, cls).__new__(cls, *args, **kwargs)
+            return super(AutoTable, cls).__new__(cls)
 
     def __init__(self, **kwargs):
         badkw = set(kwargs.keys()) - set(self.__class__._store.fields.keys())
