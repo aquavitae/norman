@@ -15,7 +15,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 from nose.tools import assert_raises
-from norman import Database, Field, NotSet, Table, Join
+from norman import Database, Field, NotSet, Table, Join, ValidationError
 
 
 class TestNotSet(object):
@@ -272,3 +272,28 @@ class TestValidator(object):
 
         with assert_raises(TypeError):
             T()
+
+
+class TestMutable(object):
+
+    def test_readonly_set(self):
+        class T(Table):
+            f = Field()
+        t1 = T(f=1)
+        t2 = T()
+        T.f.readonly = True
+        # t2 can still be set once
+        t2.f = 2
+        with assert_raises(ValidationError):
+            t1.f = -1
+        with assert_raises(ValidationError):
+            t2.f = -1
+
+    def test_readonly_unset(self):
+        class T(Table):
+            f = Field(readonly=True)
+        t1 = T()
+        T.f.readonly = False
+        # t2 can still be set once
+        t1.f = -1
+        assert t1.f == -1

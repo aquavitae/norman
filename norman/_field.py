@@ -168,11 +168,15 @@ class Field(object):
         """
         If `True`, prohibits setting the variable, unless its value is
         `NotSet` (default: `False`).  This can be used with `default`
-        to simulate a constant.  This attribute is read-only and can only
-        be set when the `Field` is created.
+        to simulate a constant.  This can be toggled to effectively
+        lock and unlock the field.
         """
         return self._readonly
         #TODO: Make this mutable.
+
+    @readonly.setter
+    def readonly(self, value):
+        self._readonly = bool(value)
 
     @property
     def unique(self):
