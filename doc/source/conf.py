@@ -63,7 +63,9 @@ copyright = '2011, David Townshend'
 # built documents.
 
 # The full version, including alpha/beta/rc tags.
-release = '0.6.2'
+import norman
+release = norman.__version__
+print(release)
 # The short X.Y version.
 version = release.rsplit('.', 1)[0]
 

@@ -318,7 +318,7 @@ class Query(object):
         Add a record based on the query criteria, and return the new record.
         There are two modes of operation for this method, depending on the
         query.  For either mode, the query must be defined by a clear set
-        of field values for a single `Table.  This includes queries such as
+        of field values for a single `Table`.  This includes queries such as
         ``(MyTable.field1` == 1) & (MyTable.field2` == 2)`` but not
         ``MyTable.field1` > 1``.
 

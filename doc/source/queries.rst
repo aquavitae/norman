@@ -69,17 +69,12 @@ API
 
 .. autoclass:: Query
 
-    .. method:: add([arg, **kwargs])
 
-        Add a record based on the query criteria.
+    .. autoattribute:: table
+    
+    
+    .. automethod:: add([arg, **kwargs])
 
-        This method is only available for queries of the form
-        ``field == value``, a ``&`` combination of them, or a `field`
-        query created from a query of this form.  *kwargs* is
-        the same as used for creating a `Table` instance, but is
-        updated to include the query criteria. *arg* is only used for
-        queries created by `field`, and is a record to add to the field.
-        See `field` for more information.
 
     .. automethod:: delete
 
