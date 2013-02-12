@@ -297,3 +297,29 @@ class TestMutable(object):
         # t2 can still be set once
         t1.f = -1
         assert t1.f == -1
+
+    def test_unique_set_ok(self):
+        class T(Table):
+            f = Field()
+        t1 = T(f=1)
+        T.f.unique = True
+        with assert_raises(ValidationError):
+            T(f=1)
+
+    def test_unique_set_fail(self):
+        class T(Table):
+            f = Field()
+        t1 = T(f=1)
+        t2 = T(f=1)
+        with assert_raises(ValidationError):
+            T.f.unique = True
+        assert T.f.unique == False
+
+    def test_unique_unset(self):
+        class T(Table):
+            f = Field(unique=True)
+        t1 = T(f=1)
+        T.f.unique = False
+        t2 = T(f=1)
+        assert t2.f == 1
+

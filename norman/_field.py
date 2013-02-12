@@ -21,9 +21,10 @@ import functools
 import numbers
 import operator
 
-from ._except import ConsistencyError
+from ._except import ConsistencyError, ValidationError
 from ._query import Query
 from ._six.moves import reduce
+from ._six import itervalues
 
 
 class NotSet(object):
@@ -183,11 +184,30 @@ class Field(object):
         """
         `True` if records should be unique on this field (default: `False`).
         If more than one field in the table have this set then they are
-        evaluated together as a tuple.  This attribute is read-only and
-        can only be set when the `Field` is created.
+        evaluated together as a tuple.  If this is set after the field is
+        created, all existing records in the table are evaluated and a
+        `ValidationError` raised if there are duplicates.
         """
         return self._unique
-        #TODO: Make this mutable.
+
+    @unique.setter
+    def unique(self, value):
+        if value == self._unique:
+            return
+        elif value:
+            # Get a list of unique values in the table
+            store = self.owner._store
+            data = [tuple(v for _, v in store.iter_field(self))]
+            for field in store.fields.values():
+                if field.unique:
+                    data.append(tuple(v for _, v in store.iter_fields(field)))
+            data = list(zip(*data))
+            if len(data) != len(set(data)):
+                raise ValidationError
+            else:
+                self._unique = True
+        else:
+            self._unique = False
 
     @property
     def validators(self):
