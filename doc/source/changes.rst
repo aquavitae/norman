@@ -8,10 +8,28 @@ This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
-Norman-0.7.0
+Norman-0.7.1
 ------------
 
 *Release Date: Not yet released*
+
+-   `Query.table` exposed, resulting in a major implementation change in
+    `Query.add`.  This function now exists for all queries, but raises
+    an error if called when it cannot be used.
+-   `Query.add` can now be used for queries of whole tables.
+-   Add `AutoDatabase` and `AutoTable` classes.
+-   Make `Field.readonly` and `Field.unique` mutable.
+-   Allow `Field` definitions to be copied to another `Table`.
+-   Add `Database.delete` method.
+-   Allow a `None` return value from `serialise.Reader.create_record`.
+-   Fix issue in python2 where uuids cannot be converted to strings.
+-   Documentation updated.
+
+
+Norman-0.7.0
+------------
+
+*Release Date: 2012-12-14*
 
 -   Many internal changes in the way data is stored and indexed, centred
     around the introduction of two new classes, `Store` and `Index`.

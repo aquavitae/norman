@@ -340,9 +340,10 @@ class AutoTable(Table):
     """
     This is a special type of `Table` which automatically creates a new
     field whenever a value is assigned to an attribute which does not yet
-    exist.  This only occurs for attributes which do not start with `'_'`.
+    exist.  This only occurs for attributes which do not start with ``'_'``.
     This should be subclassed in exactly the same was as `Table`.  Attempting
-    to instantiate AutoClass directly will result in a TypeError being raised.
+    to instantiate `AutoTable` directly will result in a `TypeError`
+    being raised.
 
         >>> class MyTable(AutoTable): pass
         >>> record = MyTable(a=1)
