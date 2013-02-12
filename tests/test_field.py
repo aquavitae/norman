@@ -323,3 +323,18 @@ class TestMutable(object):
         t2 = T(f=1)
         assert t2.f == 1
 
+
+class TestCopy(object):
+
+    def test_field(self):
+        class T1(Table):
+            f = Field(readonly=True, default=4, key=lambda a:a)
+        class T2(Table):
+            pass
+        T2.f = T1.f
+        assert T1.f.owner is T1
+        assert T2.f.owner is T2
+        assert T1.f.name == T2.f.name == 'f'
+        assert T2.f.readonly
+        assert T2.f.default == 4
+        assert T1.f.key == T2.f.key

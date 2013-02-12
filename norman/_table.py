@@ -79,12 +79,14 @@ class TableMeta(type):
         return cls._store.iter_records()
 
     def __setattr__(cls, name, value):
-        #TODO: Use copy on fields which belong to another table
         if isinstance(value, (Field, Join)):
-            if hasattr(value, '_owner'):
-                raise ConsistencyError('Field already belongs to a table')
             if hasattr(cls, name):
                 raise ConsistencyError("Field '{}' already exists".format(name))
+            if hasattr(value, '_owner'):
+                if isinstance(value, Field):
+                    value = value._copy()
+                else:
+                    raise ConsistencyError("Cannot copy a Join to another table")
             value._name = name
             value._owner = cls
             if isinstance(value, Field):
@@ -137,8 +139,12 @@ class Table(with_metaclass(TableMeta)):
         ...     field2 = Field()
 
     `Field` names should not start with ``_``, as these names are generally
-    reserved for internal use.  Fields may also be added to a `Table` after
-    the `Table` is created, but cannot be shared between tables.
+    reserved for internal use.  `Fields <Field>` and `Joins <Join>` may also
+    be added to a `Table` after  the `Table` is created, but cannot be
+    shared between tables.  If a `Field` which already belongs to
+    a table is assigned to another table, a copy of it is created.  The
+    same cannot be done with a `Join`, since the behaviour of this would
+    be unclear.
 
     Records are created by simply instantiating the table, optionally with
     field values as keyword arguments::

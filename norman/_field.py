@@ -97,6 +97,16 @@ class Field(object):
         self._validators = [] if validators is None else validators
         self._key = _key if key is None else key
 
+    def _copy(self):
+        """
+        Return a blank copy of the field, i.e. without _owner or _name set.
+        """
+        return Field(unique=self._unique,
+                     default=self._default,
+                     readonly=self._readonly,
+                     validators=[v for v in self._validators],
+                     key=self._key)
+
     @property
     def default(self):
         """
@@ -173,7 +183,6 @@ class Field(object):
         lock and unlock the field.
         """
         return self._readonly
-        #TODO: Make this mutable.
 
     @readonly.setter
     def readonly(self, value):
