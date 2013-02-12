@@ -47,6 +47,9 @@ Database
     .. automethod:: reset
 
 
+    .. automethod:: delete
+    
+
 .. autoclass:: AutoDatabase
 
 

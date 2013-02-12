@@ -14,8 +14,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+import warnings
 from nose.tools import assert_raises
-from norman import AutoDatabase, AutoTable, Database, Table, Field
+from norman import AutoDatabase, AutoTable, Database, Table, Field, NormanWarning
 
 
 class TestDatabase(object):
@@ -79,6 +80,22 @@ class TestDatabase(object):
         self.db.add(Tb)
         self.db.reset()
         assert Tb.f.name in Tb.fields()
+
+    def test_delete(self):
+        class Tb(Table):
+            pass
+        self.db.add(Tb)
+        t = Tb()
+        self.db.delete(t)
+        assert len(Tb) == 0
+
+    def test_delete_warn(self):
+        class Tb(Table):
+            pass
+        t = Tb()
+        with warnings.catch_warnings(record=True) as w:
+            self.db.delete(t)
+        assert w[0].category is NormanWarning
 
 
 class TestAutoDatabase(object):

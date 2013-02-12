@@ -16,7 +16,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
+import warnings
+
 from ._table import AutoTable
+from ._except import NormanWarning
 
 
 class Database(object):
@@ -85,8 +88,18 @@ class Database(object):
         for table in self._tables:
             table._store.clear()
 
+    def delete(self, record):
+        """
+        Delete a record from the database.  This is a convenience function
+        which simply calls record.__class__.delete(record), but also
+        checks that the record does actually belong to the database.  If not,
+        a `NormanWarning` is raised, and the record is still deleted.
+        """
+        table = record.__class__
+        if table not in self:
+            warnings.warn('Record does not belong to database', NormanWarning)
+        table.delete(record)
 
-    # TODO: delete(record)
 
 class AutoDatabase(Database):
 
