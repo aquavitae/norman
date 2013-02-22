@@ -370,11 +370,11 @@ class Sqlite(Serialiser):
             conn.row_factory = sqlite3.Row
             for table in db:
                 tname = table.__name__
-                query = 'SELECT * FROM "{}";'.format(tname)
+                query = 'SELECT * FROM "{0}";'.format(tname)
                 try:
                     cursor = conn.execute(query)
                 except sqlite3.OperationalError:
-                    logging.warning("Table '{}' not found".format(tname))
+                    logging.warning("Table '{0}' not found".format(tname))
                 else:
                     for row in cursor:
                         row = dict(row)
@@ -393,13 +393,13 @@ class Sqlite(Serialiser):
             tname = table.__name__
             fields = list(table.fields())
             self.schema[tname] = fields
-            fstr = '"{}", '.format(self.uidname)
-            fstr += ', '.join('"{}"'.format(f) for f in fields)
+            fstr = '"{0}", '.format(self.uidname)
+            fstr += ', '.join('"{0}"'.format(f) for f in fields)
             try:
-                conn.execute('DROP TABLE "{}"'.format(tname))
+                conn.execute('DROP TABLE "{0}"'.format(tname))
             except sqlite3.OperationalError:
                 pass
-            query = 'CREATE TABLE "{}" ({});\n'.format(tname, fstr)
+            query = 'CREATE TABLE "{0}" ({1});\n'.format(tname, fstr)
             conn.execute(query)
         yield conn
         conn.commit()
@@ -409,7 +409,7 @@ class Sqlite(Serialiser):
         tname, uid, rdict = record
         values = [uid] + [rdict.get(f, None) for f in self.schema[tname]]
         qmarks = ', '.join('?' * len(values))
-        query = 'INSERT INTO "{}" VALUES ({})'.format(tname, qmarks)
+        query = 'INSERT INTO "{0}" VALUES ({1})'.format(tname, qmarks)
         target.execute(query, values)
 
 

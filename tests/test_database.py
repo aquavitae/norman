@@ -15,7 +15,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import warnings
-from nose.tools import assert_raises
+from norman._six import assert_raises
 from norman import AutoDatabase, AutoTable, Database, Table, Field, NormanWarning
 
 

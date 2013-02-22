@@ -17,7 +17,7 @@
 
 import contextlib
 import os
-from nose.tools import assert_raises
+from norman._six import assert_raises
 
 try:
     from unittest.mock import patch

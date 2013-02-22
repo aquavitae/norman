@@ -15,7 +15,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import re
-from nose.tools import assert_raises
+from norman._six import assert_raises
 from norman import AutoTable, Table, Field, NotSet, Join, ValidationError
 
 
@@ -127,7 +127,7 @@ class TestTable(object):
     def test_repr(self):
         'Test repr(table)'
         t = self.T(oid=4, name='tee', age=23)
-        t.age = t   # Test self-reference
+        t.age = t  # Test self-reference
         expect = "T(age=..., name='tee', oid=4)"
         assert repr(t) == expect, repr(t)
 
