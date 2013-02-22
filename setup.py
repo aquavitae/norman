@@ -21,7 +21,11 @@ import norman
 
 version = norman.__version__
 author = norman.__author__
-description = 'Lightweight, in-memory database framework implemented in python'
+description = '''
+Norman is a framework for advanced data structures in python using
+an database-like approach.  The range of potential applications is wide,
+for example in-memory databases, multi-keyed dictionaries or node graphs.
+'''
 
 classifiers = [
     'Development Status :: 4 - Beta',

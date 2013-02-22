@@ -62,7 +62,7 @@ Norman is designed for working with relatively small amounts of data (i.e.
 which can fit into memory), but which have complex structures and
 relationships.  A few examples of how Norman can be used are:
 
-1.  Extending python data structures, e.g. a multi-keyed dictionary.
+1.  Extending python data structures, e.g. a multi-keyed dictionary::
 
         >>> class MultiDict(Table):
         ...     key1 = Field(unique=True)
@@ -84,22 +84,23 @@ relationships.  A few examples of how Norman can be used are:
         MultiDict(key1=4, key2='abc', key3=0, value='a')
         MultiDict(key1=4, key2='abc', key3=5, value='d')
 
-2.  A tree, where each node has a parent.
 
-    >>> class Node(Table):
-    ...     parent = Field()
-    ...     children = Join(parent)
-    ...     node_data = Field()
-    ...
-    >>> root = Node(node_data='root node')
-    >>> child1 = Node(node_data='child1', parent=root)
-    >>> child2 = Node(node_data='child2', parent=root)
-    >>> subchild1 = Node(node_data='2nd level child', parent=child1)
-    >>> sorted(n.node_data for n in root.children())
-    ['child1', 'child2']
+2.  A tree, where each node has a parent::
+
+        >>> class Node(Table):
+        ...     parent = Field()
+        ...     children = Join(parent)
+        ...     node_data = Field()
+        ...
+        >>> root = Node(node_data='root node')
+        >>> child1 = Node(node_data='child1', parent=root)
+        >>> child2 = Node(node_data='child2', parent=root)
+        >>> subchild1 = Node(node_data='2nd level child', parent=child1)
+        >>> sorted(n.node_data for n in root.children())
+        ['child1', 'child2']
 
 
-3.  A node graph, where nodes are directionally connected by edges:
+3.  A node graph, where nodes are directionally connected by edges::
 
         >>> class Edge(Table):
         ...     from_node = Field(unique=True)
@@ -116,7 +117,7 @@ relationships.  A few examples of how Norman can be used are:
         ...         self.edges.delete()
 
 
-3.  Even a lightweight database for a personal library:
+3.  Even a lightweight database for a personal library::
 
         >>> db = Database()
         >>>
@@ -139,7 +140,7 @@ relationships.  A few examples of how Norman can be used are:
 4.  Norman provides a sophisticated serialisation system for writing data
     to and loading it from virtually any source.  This example shows how
     it can be used as a converter data from CSV files to a sqlite
-    database:
+    database::
 
         >>> db = AutoDatabase()
         >>> serialise.CSV().read('source files', db)
