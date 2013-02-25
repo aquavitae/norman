@@ -207,6 +207,20 @@ class TestSqlite(TestCase):
             conn.executescript(sql)
         serialise.Sqlite().read('sqltest', db)
 
+    def check_uidname(self, name, expect):
+        import sqlite3
+        serialise.Sqlite(uidname=name).write('sqltest', db)
+        with contextlib.closing(sqlite3.connect('sqltest')) as conn:
+            names = set(r[1] for r in conn.execute('PRAGMA table_info(Town);'))
+            assert names == set(expect), names
+
+    def test_uidname(self):
+        tests = ((None, (u('name'),)),
+                  ('', (u('name'),)),
+                  ('uid', (u('uid'), u('name'))))
+        for name, expect in tests:
+            yield self.check_uidname, name, expect
+
 
 class TestCSV(TestCase):
 

@@ -393,8 +393,9 @@ class Sqlite(Serialiser):
             tname = table.__name__
             fields = list(table.fields())
             self.schema[tname] = fields
-            fstr = '"{0}", '.format(self.uidname)
-            fstr += ', '.join('"{0}"'.format(f) for f in fields)
+            fstr = ', '.join('"{0}"'.format(f) for f in fields)
+            if self.uidname:
+                fstr = '"{0}", '.format(self.uidname) + fstr
             try:
                 conn.execute('DROP TABLE "{0}"'.format(tname))
             except sqlite3.OperationalError:
@@ -407,7 +408,9 @@ class Sqlite(Serialiser):
 
     def write_record(self, record, target):
         tname, uid, rdict = record
-        values = [uid] + [rdict.get(f, None) for f in self.schema[tname]]
+        values = [rdict.get(f, None) for f in self.schema[tname]]
+        if self.uidname:
+            values[0:0] = [uid]
         qmarks = ', '.join('?' * len(values))
         query = 'INSERT INTO "{0}" VALUES ({1})'.format(tname, qmarks)
         target.execute(query, values)
