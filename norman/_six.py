@@ -436,16 +436,10 @@ else:
 
 
 # assert_raises for Python 2.6
-if sys.version[:3] == '2.6':
-
-    class assert_raises(object):
-        def __init__(self, exc):
-            self._exc = exc
-        def __enter__(self):
-            pass
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            return issubclass(exc_type, self._exc)
-
-
-else:
-    from nose.tools import assert_raises
+class assert_raises(object):
+    def __init__(self, exc):
+        self._exc = exc
+    def __enter__(self):
+        pass
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return issubclass(exc_type, self._exc)
