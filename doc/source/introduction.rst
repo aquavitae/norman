@@ -55,6 +55,19 @@ Features
     used as a file type converter.
 
 
+Installation
+------------
+
+Norman supports Python 2.6 or higher (up to 3.3).  The test suite requires
+`nose <https://pypi.python.org/pypi/nose/1.2.1>`_ and
+`mock <https://pypi.python.org/pypi/mock>`_ to run.
+
+Norman in on pypi, so it can be installed using ``pip install norman`` or
+can be installed from `source <https://bitbucket.org/aquavitae/norman/src>`_.
+Please user the `issue tracker <https://bitbucket.org/aquavitae/norman/issues>`_
+to report bugs and feature requests.
+
+
 Examples
 --------
 
