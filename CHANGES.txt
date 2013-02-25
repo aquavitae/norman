@@ -5,10 +5,21 @@ This file lists new features and major changes to **Norman**.  For a detailed
 changelog, see the mercurial log.
 
 
+Norman-0.7.2
+------------
+
+*Release Date: 2012-02-25*
+
+-   Support for Python 2.6 added.
+-   Fixed Issue #1: Using ``uidname=None`` in `serialise.Sqlite` does not
+    behave as documented.
+-   Documentation updated, and installation instructions added.
+
+
 Norman-0.7.1
 ------------
 
-*Release Date: Not yet released*
+*Release Date: 2012-02-12*
 
 -   `Query.table` exposed, resulting in a major implementation change in
     `Query.add`.  This function now exists for all queries, but raises
