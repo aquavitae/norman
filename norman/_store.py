@@ -279,13 +279,6 @@ class Store(object):
         """
         return iter(self._data.keys())
 
-    def iter_unset(self, field):
-        """
-        Iterate over records which do not have a value set on *field*, that is,
-        those for which ``store.get(record, field)`` will return
-        ``field.default``.  This is used for managing indexes.
-        """
-
     def record_count(self):
         """
         Return the number of records in the table.
