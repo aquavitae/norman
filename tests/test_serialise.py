@@ -16,6 +16,7 @@
 # 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import contextlib
+import json
 import os
 from norman._six import assert_raises
 
@@ -23,6 +24,8 @@ try:
     from unittest.mock import patch
 except ImportError:
     from mock import patch
+
+from nose.tools import assert_count_equal
 
 from norman import Database, Table, Field, serialise, Join
 from norman.validate import ifset, settype, istype
@@ -238,4 +241,39 @@ class TestCSV(TestCase):
         serialise.CSV().write(names, db)
         db.reset()
         serialise.CSV().read(names, db)
+        self.check_integrity(db)
+
+
+class TestJSON(TestCase):
+
+    def test_tojson(self):
+        serialise.JSON().write('test', db)
+        expect = {
+            'Town': [
+                {'name': 'down', '_uid': self.t1._uid},
+                {'name': 'up', '_uid': self.t2._uid}
+            ],
+            'Address': [
+                {'street': 'easy', 'town': self.t1._uid, '_uid': self.a1._uid},
+                {'street': 'some', 'town': self.t2._uid, '_uid': self.a2._uid}
+            ],
+            'Person': [
+                {'custno': 1, 'name': 'matt', 'age': 43,
+                    'address': self.a1._uid, '_uid': self.p1._uid},
+                {'custno': 2, 'name': 'bob', 'age': 3,
+                    'address': self.a1._uid, '_uid': self.p2._uid},
+                {'custno': 3, 'name': 'peter', 'age': 29,
+                    'address': self.a2._uid, '_uid': self.p3._uid}
+            ]
+        }
+        with open('test', 'rt') as fh:
+            got = json.load(fh)
+        assert set(got.keys()) == set(expect.keys())
+        for table, data in got.items():
+            assert_count_equal(data, expect[table])
+
+    def test_tofromjson(self):
+        serialise.JSON().write('test', db)
+        db.reset()
+        serialise.JSON().read('test', db)
         self.check_integrity(db)

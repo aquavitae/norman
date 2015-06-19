@@ -19,6 +19,7 @@
 import abc
 import contextlib
 import csv
+import json
 import re
 import sqlite3
 import sys
@@ -492,3 +493,51 @@ class CSV(Serialiser):
         if self.uidname:
             record[self.uidname] = uid
         target[table].writerow(record)
+
+
+class JSON(Serialiser):
+
+    """
+    This is a `Serialiser` which reads and writes json to a text file.
+
+    The format of the json is:
+
+        {
+            tablename: [
+                record1,
+                record2,
+                etc
+            ],
+            next_table...
+        }
+
+    Each record is serialised to a JSON object and includes the
+    `~norman.Table._uid`.
+
+    To be consistent with the `json` module, `dumps` and `loads` methods are
+    also provided to read and write straight to a string.
+    """
+
+    def write_record(self, record, target):
+        tablename, _uid, record = record
+        table = target.setdefault(tablename, [])
+        record['_uid'] = _uid
+        table.append(record)
+
+    @contextlib.contextmanager
+    def context(self, targetname, db):
+        target = {}
+        yield target
+        with open(targetname, 'wt') as fh:
+            json.dump(target, fh)
+
+    def iter_source(self, source, db):
+        with open(source, 'rt') as fh:
+            data = json.load(fh)
+        for table in db:
+            for record in data.get(table.__name__, []):
+                if '_uid' in record:
+                    _uid = record.pop('_uid')
+                    yield table, _uid, record
+                else:
+                    yield table, record

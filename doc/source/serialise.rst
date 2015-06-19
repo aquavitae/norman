@@ -75,3 +75,9 @@ Sqlite
 ------
 
 .. autoclass:: Sqlite
+
+
+JSON
+----
+
+.. autoclass:: JSON
