@@ -1,6 +1,9 @@
 Norman
 ======
 
+[![Build Status](https://travis-ci.org/aquavitae/norman.svg)](https://travis-ci.org/aquavitae/norman)
+[![Coverage Status](https://coveralls.io/repos/aquavitae/norman/badge.svg)](https://coveralls.io/r/aquavitae/norman)
+
 Norman provides a framework for creating complex data structures using
 an database-like approach.  The range of potential application is wide,
 for example in-memory databases, multi-keyed dictionaries or node graphs.
