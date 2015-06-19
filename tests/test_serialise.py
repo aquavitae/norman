@@ -25,7 +25,10 @@ try:
 except ImportError:
     from mock import patch
 
-from nose.tools import assert_count_equal
+try:
+    from nose.tools import assert_count_equal
+except ImportError:
+    from nose.tools import assert_items_equal as assert_count_equal
 
 from norman import Database, Table, Field, serialise, Join
 from norman.validate import ifset, settype, istype
