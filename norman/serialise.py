@@ -513,9 +513,6 @@ class JSON(Serialiser):
 
     Each record is serialised to a JSON object and includes the
     `~norman.Table._uid`.
-
-    To be consistent with the `json` module, `dumps` and `loads` methods are
-    also provided to read and write straight to a string.
     """
 
     def write_record(self, record, target):
