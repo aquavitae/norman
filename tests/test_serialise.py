@@ -280,3 +280,19 @@ class TestJSON(TestCase):
         db.reset()
         serialise.JSON().read('test', db)
         self.check_integrity(db)
+
+
+class TestXLSX(TestCase):
+
+    def teardown(self):
+        db.reset()
+        try:
+            os.unlink('test.xlsx')
+        except OSError:
+            pass
+
+    def test_tofromxlsx(self):
+        serialise.XLSX().write('test.xlsx', db)
+        db.reset()
+        serialise.XLSX().read('test.xlsx', db)
+        self.check_integrity(db)

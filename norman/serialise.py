@@ -538,3 +538,55 @@ class JSON(Serialiser):
                     yield table, _uid, record
                 else:
                     yield table, record
+
+
+class XLSX(Serialiser):
+
+    """
+    This is a `Serialiser` which reads and writes json to an excel spreadsheet.
+
+    This requires `openpyxl <https://openpyxl.readthedocs.org/en/latest/>`_
+    to be installed.
+
+    Each table maps to a worksheet.
+    """
+
+    def write_record(self, record, wb):
+        tablename, _uid, record = record
+        record['_uid'] = _uid
+        fields = sorted(record.keys())
+        try:
+            sheet = wb.get_sheet_by_name(tablename)
+        except KeyError:
+            sheet = wb.create_sheet()
+            sheet.title = tablename
+            sheet.append(fields)
+        sheet.append(record[k] for k in fields)
+
+    @contextlib.contextmanager
+    def context(self, targetname, db):
+        # Optional dependency, so import here
+        from openpyxl import Workbook
+        wb = Workbook()
+        yield wb
+        # Remove initial blank sheet
+        wb.save(targetname)
+
+    def iter_source(self, source, db):
+        from openpyxl import load_workbook
+        wb = load_workbook(source)
+        for table in db:
+            try:
+                sheet = wb.get_sheet_by_name(table.__name__)
+            except KeyError:
+                continue
+            rows = list(sheet.rows)
+            fields = [c.value for c in rows[0]]
+            for row in rows[1:]:
+                row = [c.value for c in row]
+                row = dict(zip(fields, row))
+                if '_uid' in row:
+                    _uid = row.pop('_uid')
+                    yield table, _uid, row
+                else:
+                    yield table, row

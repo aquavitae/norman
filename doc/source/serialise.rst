@@ -81,3 +81,9 @@ JSON
 ----
 
 .. autoclass:: JSON
+
+
+XLSX
+----
+
+.. autoclass:: XLSX
